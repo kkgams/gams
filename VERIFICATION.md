@@ -1,9 +1,9 @@
-# Historical extraction verification — not current split verification
+# Split Host verification and historical extraction evidence
 
-**All dated results below are historical pre-split observations**, including
+**The older dated results below are historical pre-split observations**, including
 station paths, example ZIP tests, old notice digests, and local assembly tools.
-They do not establish verification of the split `gams` and `example.game1`
-repositories or permission to publish either. The Host now targets zero
+They do not by themselves establish verification of the split `gams` and
+`example.game1` repositories or permission to publish either. The Host now targets zero
 example/station source (including pushed history), no station ZIP, and an
 external Project selected with `GAMS_APP_CWD`; example setup, integration, and
 game tests belong in `example.game1`.
@@ -84,21 +84,32 @@ assembly verification passed at `verification/20260928T173047.276947Z`.
 Neither repository has been pushed, no GitHub digest variables were activated,
 and these tests are **not** owner approval or a hosted/Gatekeeper test.
 
-The subsequent release-scope decision removed the example ZIP from Host
-staging. The older two-ZIP and 23-step checks above remain **historical**; none
-verify the new split. Before any Host push, check the generated Host tree and
-pushed branch history for zero example/station source. Regenerate the Host-only
-root NOTICE and evidence and obtain fresh owner approval; prior test-only or
-pre-split notices do not qualify.
+Current split: `kkgams-local/gams` was rebuilt as a new **one-root-commit**
+Host-only Git history; `example.game1` has its own local repository. Both
+remain unpushed. `scripts/check-source-boundary.py` checked the Host worktree
+and every commit ancestor for absent Project/game source. The new Host-only
+NOTICE candidate binds **47** third-party inputs. On 2026-09-28, the
+**24-step** local verification passed at
+`verification/20260928T190839.839796Z`: Host check/test/release build,
+`example.game1` game tests and web build, explicit assembly of 18 Unit files,
+external-Project Host integration and deterministic fixture drift check. The
+Cargo target cache was reused via an ignored local symlink; no assembled
+Project inputs were copied into the Host repository. The split `.app` was
+built, ad-hoc signed and packaged into a **single Host-only app ZIP**. An
+isolated clone, using **temporary test-only environment digests** for the
+unapproved NOTICE, passed source-ancestry, full-text, app-signature and ZIP
+checksum checks; all 35 staged Host notice files matched source bytes. After
+extracting the ZIP, the app invoked layout from the external example Project
+in a local process without a Nix shell. This is **not** owner NOTICE approval,
+a hosted candidate review, a clean-Mac test or a Gatekeeper launch test.
 
 Remaining release checks (not claimed complete):
 
-- verify the new split's repository boundaries, including no Host station ZIP;
-- Host-only compile and bundle on a clean supported macOS machine;
-- `example.game1` assembly, integration against the external Host with
-  `GAMS_APP_CWD`, game tests and browser smoke in its own repository;
-- Host-only third-party inventory and fresh exact NOTICE approval;
-- hosted Apple Silicon Host-only app candidate checksum and clean-machine
-  Gatekeeper/ad-hoc-signature behavior.
+- owner review of the exact split Host NOTICE and its linked third-party terms;
+- independent owner review of `example.game1` source provenance before its
+  public push or any compiled game release;
+- hosted Apple Silicon Host-only app candidate and clean-machine Gatekeeper,
+  ad-hoc-signature and external-Project launch behavior;
+- browser smoke test for the separately built visitor game.
 
 Linux and Windows jobs are README-only roadmap artifacts, not builds.
