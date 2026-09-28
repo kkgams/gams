@@ -7,18 +7,21 @@ history must not appear in the public `gams` repository. This approval does
 **not** relicense fonts, browser bundles, Rust crates, or other third-party
 material.
 
-The new Host-only root `NOTICE` and 47-file evidence manifest are an
-**unapproved candidate**, not permission to distribute. The font provenance,
-Ajv/markdown-it family notices, and locked target-filtered Cargo appendix are
-review inputs, not substitute approval. Obtain explicit owner approval of the
-exact resulting bytes; see `THIRD-PARTY-REVIEW.md`. Earlier
-commits containing example source must also be excluded from public Host Git
-history. Another repository's approval does not transfer.
+On 2026-09-28 the owner approved this Host-only source and the exact root
+`NOTICE` (SHA-256 `829bfb24dadbe1bfa6990527cf4c758c706f173dace0b912b81672d93ac0a3c5`).
+It binds `NOTICE-EVIDENCE.sha256` and 47 browser/font/native inputs, including
+the historical Ajv/markdown-it bundle-version limitation, all referenced
+third-party license texts and original MPL source archives. See
+`THIRD-PARTY-REVIEW.md` and `PUBLISHING.md`. Do not reuse this approval if the
+NOTICE or any linked evidence changes. Earlier commits containing example
+source must be excluded from public Host Git history. Another repository's
+approval does not transfer.
 
 The macOS job may compile/test privately, but candidate upload requires
 repository-scoped Actions variables `LICENSE_SHA256` and `NOTICE_SHA256` matching
-**this repository's freshly approved** root files. Leave them unset until the
-owner approves the clean Host source, exact notice, and Host-only ZIP. No
+**this repository's approved** root files. The owner configures these
+variables as part of the public candidate sequence; no variables or public
+push have yet been made. No
 example/station ZIP is produced by the Host release; Windows/Linux jobs contain
 README-only roadmaps, not supported executables.
 

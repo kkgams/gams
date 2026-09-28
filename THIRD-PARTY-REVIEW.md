@@ -1,10 +1,10 @@
-# Host third-party review — NOT APPROVED FOR DISTRIBUTION
+# Host third-party review — exact NOTICE approved; hosted release pending
 
-The owner approved Apache-2.0 for GAMS-authored code in `kkgams/gams`, **not**
-the following third-party inputs. This is an inventory for source and macOS
-`.app` review, **not** distribution approval. The root `NOTICE` and 47-file Host-only evidence manifest are **new,
-unapproved candidates**; do not push Host source or activate uploads until
-the owner explicitly approves the exact notice and the limitations below.
+The owner approved Apache-2.0 for GAMS-authored code and, on 2026-09-28,
+approved this Host-only root `NOTICE` and its 47-file evidence manifest with
+the bounded historical browser-bundle uncertainty below. Third-party works
+retain their original terms; this review does not relicense them. Hosted
+candidate inspection and clean-Mac launch remain pending.
 
 ## Included in Host frontend source and bundled `.app`
 
@@ -86,16 +86,12 @@ example or station game.
 
 ## Next gates
 
-1. Confirm example source is absent from the Host tree and public history.
-   Prepare and obtain fresh owner approval of the exact Host-only root `NOTICE`,
-   evidence, native appendix, browser and font full texts. Review
-   `example.game1` independently. The
-   transitive versions in historical Ajv/markdown-it bundles are not pinned;
-   conservative family notices are included. Decide whether that bounded
-   uncertainty is acceptable or whether those bundles should be replaced by
-   reproducible, dependency-locked builds. Until the owner approves the
-   **fresh exact Host** notice and terms, do not push Host source or set Actions
-   digest variables.
+1. `check-source-boundary.py` confirms the Host's clean ancestry contains no
+   example source; retain that invariant for any public push. Owner approval
+   covers the exact root `NOTICE` and evidence as recorded in `PUBLISHING.md`,
+   with conservative family notices for the historical Ajv/markdown-it bundles.
+   `example.game1` requires independent review. Any changed Host notice or
+   linked input requires fresh owner review before changing approval digests.
 2. Inspect the built Apple Silicon `.app` contents for further bundled
    dependencies and test launch against a separately provided Project.
 3. The owner chose ad-hoc signed, unnotarized initial Apple Silicon builds.

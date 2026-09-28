@@ -100,12 +100,14 @@ isolated clone, using **temporary test-only environment digests** for the
 unapproved NOTICE, passed source-ancestry, full-text, app-signature and ZIP
 checksum checks; all 35 staged Host notice files matched source bytes. After
 extracting the ZIP, the app invoked layout from the external example Project
-in a local process without a Nix shell. This is **not** owner NOTICE approval,
-a hosted candidate review, a clean-Mac test or a Gatekeeper launch test.
+in a local process without a Nix shell. The owner **subsequently approved**
+the exact Host-only NOTICE on 2026-09-28; the local tests themselves do not
+constitute a hosted candidate review, clean-Mac test or Gatekeeper launch test.
 
 Remaining release checks (not claimed complete):
 
-- owner review of the exact split Host NOTICE and its linked third-party terms;
+- configure only the exact owner-approved Host `LICENSE`/`NOTICE` digests
+  recorded in `PUBLISHING.md`; re-review if any linked text or binary changes;
 - independent owner review of `example.game1` source provenance before its
   public push or any compiled game release;
 - hosted Apple Silicon Host-only app candidate and clean-machine Gatekeeper,

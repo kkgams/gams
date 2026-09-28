@@ -78,9 +78,10 @@ No example source or compiled game WASM is attached. The app ZIP includes
 readable font and browser-bundle license texts, pinned provenance,
 the native-license appendix and original source archives for five MPL-covered
 crates beside the `.app` (Tauri embeds the frontend assets in the executable).
-`NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the new
-**unapproved** root `NOTICE` candidate. Obtain fresh owner approval of this
-exact text and evidence before enabling uploads.
+`NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the root
+`NOTICE` approved by the owner on 2026-09-28. The exact SHA-256 values and
+publication gates are recorded in `PUBLISHING.md`; a changed input requires
+new review.
 
 `release.yml` can rehearse on `release` after notice review and only creates a
 **draft**, Apple Silicon-only Release from a matching owner-pushed tag; it never
@@ -120,13 +121,12 @@ signature or notarization. For the current Host, launch from Terminal with
 `GAMS_APP_CWD` pointing at your own Project as shown above; you must install
 its Project Units separately.
 
-Apache-2.0 is approved for GAMS-authored code; the repository `NOTICE` and
-linked third-party notices are **not approved for this split Host**. Do not push
-Host source or activate artifact variables until the example is absent from
-source and pushed history and the owner approves a freshly prepared Host-only
-notice; see
-`LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`. A clean-machine
-macOS bundle/install smoke is still required.
+Apache-2.0 for GAMS-authored Host code and the exact Host-only root `NOTICE`
+are owner-approved; see `LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and
+`PUBLISHING.md`. The separate `example.game1` repository is **not** approved
+for publication by that Host decision. The owner still needs to configure the
+Host's exact approval digests, push the clean-history branch, inspect hosted
+candidates, and test a downloaded app on a clean Mac before publishing a draft.
 
 The old station integration and game-owned tests belong to `example.game1`,
 not the Host. Host `app-check` covers Host-only compilation; it does not prove

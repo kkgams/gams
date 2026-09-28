@@ -10,9 +10,9 @@ Material Symbols Apache-2.0 text are checked in under
 executable; the app ZIP separately includes readable `FONT-LICENSES/` and
 `FONT-PROVENANCE.md` beside `GAMS.app`.
 
-These font records are review inputs, not approval to publish. The pre-split
-root `NOTICE` is historical and unapproved: prepare a fresh Host-only notice
-covering all material actually bundled (including browser and native inputs),
-then obtain owner approval of its exact bytes. `example.game1` owns the example
-Project and visitor game and reviews their dependencies independently; they
-must not be present in the Host source, history, or app ZIP.
+These font records are linked to the exact Host-only `NOTICE` approved by the
+owner on 2026-09-28; any font or license change needs renewed notice review.
+Approval of notices alone does not prove a hosted binary or clean-Mac launch.
+`example.game1` owns the example Project and visitor game and reviews their
+dependencies independently; they are absent from the Host source/history and
+app ZIP.

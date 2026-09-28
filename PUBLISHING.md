@@ -1,4 +1,4 @@
-# Publishing the GAMS desktop Host — NOT READY
+# Publishing the GAMS desktop Host — source approved, candidate review pending
 
 Target repository: `kkgams/gams`. The standalone Host must have **zero example/station source or pushed history**.
 `example.game1` separately owns the example Project, visitor game, and local
@@ -8,32 +8,37 @@ example, Project Units, Project configuration, or game WASM. No example ZIP
 is built, uploaded or attached. A user supplies a Project folder with `gams.json` and
 working local paths to independently installed Units.
 
-## Blockers before any public source push
+## Approved Host source and notice — 2026-09-28
 
-- Audit the generated Host tree, source archives, staging, and public Git
-  history for example/station source; none may remain. Removing working-tree
-  files alone does not erase earlier commits. Review `example.game1`
-  independently; it does not inherit Host licensing clearance.
-- Apache-2.0 for GAMS-authored Host/Runtime code is approved.
-  The current root `NOTICE` and `NOTICE-EVIDENCE.sha256` are a **fresh Host-only
-  candidate**, not owner approval. The manifest pins 47 browser/font/native
-  inputs; obtain **fresh owner approval** of the exact root `NOTICE` and linked
-  terms. Five unmodified MPL crate
-  source archives are also offered beside the `.app`. The inventory in
-  `THIRD-PARTY-REVIEW.md` records
-  known provenance limits: historical browser bundles do not identify exact
-  resolved transitive versions. **Do not push the public source branch**, set
-  Actions digest variables or upload Host binaries until the Host's clean
-  source/history is verified and the owner approves the exact Host NOTICE and
-  license appendices. Never reuse another Unit's approval.
+The owner approved this **Host-only** source and its exact root `NOTICE` after
+reviewing the disclosed historical Ajv/markdown-it bundle-version limit. The
+notice binds 47 browser/font/native evidence files, including complete license
+texts and five original MPL crate source archives. Apache-2.0 approval applies
+to GAMS-authored Host/Runtime code only; `example.game1` requires its **own**
+source and notice approval. Never reuse another Unit's approval.
 
-## After source/notice review
+Approved bytes (verify again immediately before configuring distribution):
 
-1. After confirming zero example/station source in Host tree and pushed history,
-   and obtaining fresh owner approval of the Host-only `NOTICE` and linked terms,
-   compute root `LICENSE` and `NOTICE` SHA-256 values. Set repository
-   Actions **variables** (`LICENSE_SHA256`, `NOTICE_SHA256`) on `kkgams/gams`;
-   they are not secrets. Actions provides `GITHUB_TOKEN`.
+| File / Actions variable | SHA-256 |
+| --- | --- |
+| `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| `NOTICE` / `NOTICE_SHA256` | `829bfb24dadbe1bfa6990527cf4c758c706f173dace0b912b81672d93ac0a3c5` |
+| `NOTICE-EVIDENCE.sha256` (bound by `NOTICE`) | `3885b014c70012bc60ccb04139fa5513be6ef26ff1e6fa93fbc536fe24da0af7` |
+
+The local Host `release` branch was rebuilt with a clean root history; the
+`check-source-boundary.py` gate rejects example source in the worktree or any
+ancestor. Its local Apple Silicon ZIP passed signature, evidence, checksum and
+external-Project launch checks. **No public Host push, GitHub variable, hosted
+candidate or clean-Mac Gatekeeper test has happened yet.** These are distinct
+from notice approval and still gate release publication.
+
+## Owner publication steps
+
+1. Recompute and compare the table above, then set `kkgams/gams` repository
+   Actions **variables** `LICENSE_SHA256` and `NOTICE_SHA256` to those exact
+   values. They are not secrets. Actions provides `GITHUB_TOKEN`. Confirm the
+   public Host branch will contain no pre-split history; never push the
+   archived old Host checkout.
 2. Owner pushes the local `release` branch. `verify.yml` builds **Apple Silicon
    only**; when both digests match, a branch push uploads one checksummed
    app ZIP. Linux/Windows jobs each upload a ZIP containing only a README
