@@ -1,0 +1,118 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GAMS",
+  "version": "2.0.0",
+  "identifier": "com.github.kkgams.gams",
+  "build": {
+    "frontendDist": "../src",
+    "beforeDevCommand": "python3 -m http.server 1420 -d src",
+    "devUrl": "http://localhost:1420"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "macOS": {
+      "entitlements": "Entitlements.plist"
+    },
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "../../../build.nosync/app/icons/32x32.png",
+      "../../../build.nosync/app/icons/64x64.png",
+      "../../../build.nosync/app/icons/128x128.png",
+      "../../../build.nosync/app/icons/128x128@2x.png",
+      "../../../build.nosync/app/icons/icon.icns",
+      "../../../build.nosync/app/icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "macos-fps": {
+      "enabled": true
+    },
+    "cli": {
+      "description": "GAMS app runtime CLI",
+      "subcommands": {
+        "add": {
+          "description": "Add/cache GAMS resources",
+          "subcommands": {
+            "plugin": {
+              "description": "Compile/cache a Wasm component plugin",
+              "args": [
+                {
+                  "name": "path",
+                  "description": "Path to a .wasm component plugin",
+                  "takesValue": true,
+                  "required": true,
+                  "index": 1
+                }
+              ]
+            },
+            "theme": {
+              "description": "Add a theme (placeholder)"
+            },
+            "view": {
+              "description": "Add a view (placeholder)"
+            }
+          }
+        },
+        "clean": {
+          "description": "Clean compiled component cache"
+        },
+        "init": {
+          "description": "Create an empty gams.json in the runtime root"
+        },
+        "serve": {
+          "description": "Serve the plugged wasi:http/proxy component (placeholder)",
+          "args": [
+            {
+              "name": "addr",
+              "description": "Address to listen on, e.g. 127.0.0.1:8080",
+              "takesValue": true
+            },
+            {
+              "name": "plug",
+              "description": "Plugin/component path to load; exactly one must export wasi:http/proxy",
+              "takesValue": true,
+              "multiple": true,
+              "short": "p"
+            }
+          ]
+        },
+        "run": {
+          "description": "Run a plugin function",
+          "args": [
+            {
+              "name": "plug",
+              "description": "Plugin path to load before invocation",
+              "takesValue": true,
+              "multiple": true,
+              "short": "p"
+            },
+            {
+              "name": "args-file",
+              "description": "Path to JSON arguments for runtime.invoke; overrides positional args",
+              "takesValue": true
+            },
+            {
+              "name": "target",
+              "description": "Runtime target to invoke, e.g. adder/add::add",
+              "takesValue": true,
+              "index": 1
+            },
+            {
+              "name": "args",
+              "description": "JSON arguments for runtime.invoke; defaults to []",
+              "takesValue": true,
+              "index": 2
+            }
+          ]
+        }
+      }
+    }
+  }
+}

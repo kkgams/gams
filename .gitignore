@@ -1,0 +1,7 @@
+/build.nosync/
+/dist/
+__pycache__/
+*.pyc
+/.dev-tools/
+.DS_Store
+**/.DS_Store

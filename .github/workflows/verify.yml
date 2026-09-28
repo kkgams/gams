@@ -1,0 +1,75 @@
+name: Verify desktop Host
+on:
+  pull_request:
+  push:
+    branches: [release]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos-apple-silicon:
+    runs-on: macos-15 # GitHub standard Apple Silicon runner (macos-15-intel is separate)
+    env:
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Require native Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - name: Reject partially configured or mismatched distribution digests
+        if: vars.LICENSE_SHA256 != '' || vars.NOTICE_SHA256 != ''
+        env:
+          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
+          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+        run: bash scripts/check-licensing-digests.sh
+      - name: Verify all linked third-party inputs and full texts
+        run: |
+          python3 scripts/check-native-notices.py
+          python3 scripts/check-mpl-source.py
+          python3 scripts/check-notice-evidence.py
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Offline release gate tests
+        run: nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
+      - name: Check, test, and build Host without a Project or sibling repositories
+        env:
+          # Apple Silicon requires an ad-hoc signature to launch; no paid
+          # Developer ID signature or notarization is requested.
+          APPLE_SIGNING_IDENTITY: '-'
+        run: nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
+      - name: Package reviewed Host candidate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release' && vars.LICENSE_SHA256 != '' && vars.NOTICE_SHA256 != ''
+        env:
+          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
+          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+        run: nix develop --command bash scripts/stage-mac-candidate.sh
+      - name: Upload Apple Silicon Host candidate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release' && vars.LICENSE_SHA256 != '' && vars.NOTICE_SHA256 != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: gams-macos-aarch64-candidate-${{ github.sha }}
+          path: dist/macos-aarch64/
+          if-no-files-found: error
+          retention-days: 7
+  linux-next:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate README-only Linux roadmap — no executable
+        run: python3 scripts/next-platform.py linux dist/next/GAMS-linux-NEXT.zip
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+        with:
+          name: gams-linux-NEXT-${{ github.sha }}
+          path: dist/next/GAMS-linux-NEXT.zip
+          if-no-files-found: error
+  windows-next:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate README-only Windows roadmap — no executable
+        run: python scripts/next-platform.py windows dist/next/GAMS-windows-NEXT.zip
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+        with:
+          name: gams-windows-NEXT-${{ github.sha }}
+          path: dist/next/GAMS-windows-NEXT.zip
+          if-no-files-found: error

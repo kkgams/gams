@@ -1,0 +1,64 @@
+GAMS (Game Assets Management Tool) — distribution notices
+
+GAMS-authored Runtime and desktop Host code are distributed under Apache-2.0;
+see the root LICENSE. This notice does not relicense the
+independent third-party materials below. Their copyright notices and full
+license texts are retained at the indicated paths in this source repository.
+The macOS app ZIP also includes the relevant human-readable third-party
+terms beside GAMS.app, since the Host embeds its browser resources and many
+Rust dependencies in the signed executable. Inside that ZIP the license
+texts are under FONT-LICENSES/ and BUNDLE-LICENSES/, with NATIVE-NOTICES.md,
+NATIVE-SOURCE/ (covered MPL source), and FONT-PROVENANCE.md at ZIP root;
+the source paths below refer to the Git
+repository.
+
+The exact third-party input and notice bytes for this review are listed in
+NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
+linked files to change independently; release checks validate the manifest.
+Third-party evidence SHA-256: `3885b014c70012bc60ccb04139fa5513be6ef26ff1e6fa93fbc536fe24da0af7`
+
+Host browser fonts:
+- Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;
+  Roboto; Roboto Mono; Space Grotesk: unmodified official Google Fonts WOFF2
+  files, SIL Open Font License 1.1, with copyright and any Reserved Font Names
+  in cmd/app/src/fonts/licenses/*.OFL.txt. Exact upstream URLs, SHA-256 values,
+  pinned license revision and mappings: cmd/app/src/fonts/PROVENANCE.md.
+- Material Symbols Rounded: copyright Google LLC, Apache-2.0; full upstream
+  text: cmd/app/src/fonts/licenses/material-symbols.Apache-2.0.txt. Exact
+  pinned official binary and checksum: cmd/app/src/fonts/PROVENANCE.md.
+
+Host browser libraries:
+- Ajv (Evgeny Poberezkin) and its bundled fast-uri, fast-deep-equal,
+  json-schema-traverse and require-from-string dependencies: third-party
+  MIT/BSD-style terms at cmd/app/src/util/licenses/*.LICENSE. The original
+  esm.sh bundle version, official npm tarball receipts, and conservative
+  fast-uri copyright coverage are recorded in
+  cmd/app/src/util/BUNDLE-REVIEW.md. The exact transitive package versions
+  inside this historical bundle are not claimed as known.
+- markdown-it (Vitaly Puzrin, Alex Kocharin): MIT text at
+  cmd/app/src/widgets/markdown-it.LICENSE. Its bundled mdurl, uc.micro,
+  entities, linkify-it and punycode.js license texts are in
+  cmd/app/src/widgets/licenses/*.LICENSE (including entities' BSD terms).
+  Upstream tarball receipts and scope: cmd/app/src/widgets/BUNDLE-REVIEW.md.
+  The adapted bundle also contains its upstream Joyent/Node attribution.
+- GAMS's Aseprite parser is an independent GAMS rewrite informed by the
+  Aseprite format documentation; TheCyberRonin/ase-parser inspired it. Its
+  upstream Ronin MIT permission text is retained for provenance at
+  cmd/app/src/util/aseprite.LICENSE; do not treat the whole GAMS parser as a
+  vendored Ronin work.
+
+Native desktop Host:
+- The target-filtered Cargo.lock crate index and every selected complete
+  upstream or SPDX license text (including Apache-2.0 with LLVM exception,
+  MPL-2.0, Unicode-3.0 and CDLA-Permissive-2.0 where applicable) are in
+  NATIVE-NOTICES.md. The appendix conservatively includes build and dev
+  dependencies in addition to potentially linked runtime crates. Exact
+  unmodified source archives for all five MPL-covered crates (notably the
+  runtime-path option-ext) are at NATIVE-SOURCE/ alongside the app ZIP,
+  verified against Cargo.lock; this provides recipients the covered source.
+  Apple system libraries/frameworks are not copied into the app.
+
+This Host repository does not contain an example Project or game source.
+`example.game1` is a separate Project repository with its own independent
+notice and publication review; the Host ZIP contains neither that source nor
+assembled Project Units or compiled game WASM.

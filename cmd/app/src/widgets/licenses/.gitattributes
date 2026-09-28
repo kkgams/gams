@@ -1,0 +1,2 @@
+# Keep verbatim npm-distributed third-party notices.
+*.LICENSE -whitespace

@@ -1,0 +1,103 @@
+name: Prepare Apple Silicon Host release draft
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+concurrency:
+  group: host-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  macos-candidate:
+    runs-on: macos-15 # Apple Silicon; no Intel build in this release slice
+    env:
+      CARGO_BUILD_JOBS: '2'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Require native Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - name: Require reviewed repository, version and licensing before build
+        env:
+          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
+          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+        run: |
+          bash scripts/check-release-metadata.sh
+          python3 scripts/check-native-notices.py
+          python3 scripts/check-mpl-source.py
+          python3 scripts/check-notice-evidence.py
+      - name: Require tag at current release branch head
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch --no-tags --depth=1 origin refs/heads/release
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Independently check, test and bundle Host
+        env:
+          # Local launch on Apple Silicon needs ad-hoc signing, not a paid
+          # Developer ID certificate or Apple notarization.
+          APPLE_SIGNING_IDENTITY: '-'
+        run: |
+          nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
+          nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
+          nix develop --command bash scripts/stage-mac-candidate.sh
+      # Manual branch dispatch verifies the shell but distributes nothing.
+      - name: Upload tagged Host candidate
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: gams-macos-aarch64-${{ github.ref_name }}
+          path: dist/macos-aarch64/
+          if-no-files-found: error
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: macos-candidate
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Recheck exact owner-reviewed texts and immutable branch identity
+        env:
+          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
+          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+        run: |
+          bash scripts/check-release-metadata.sh
+          python3 scripts/check-native-notices.py
+          python3 scripts/check-mpl-source.py
+          python3 scripts/check-notice-evidence.py
+          git fetch --no-tags --depth=1 origin refs/heads/release
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Refuse to overwrite any existing GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-release-absent.sh
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: gams-macos-aarch64-${{ github.ref_name }}
+          path: dist/macos
+      - name: Verify Host ZIP, checksum and licensing bytes
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          app="dist/macos/GAMS-${version}-macos-aarch64.zip"
+          test -f "$app"
+          test "$(find dist/macos -name '*.zip' | wc -l | tr -d ' ')" = 1
+          (cd dist/macos && shasum -a 256 --check SHA256SUMS-macos-aarch64)
+          unzip -tqq "$app"
+          for file in LICENSE NOTICE NOTICE-EVIDENCE.sha256; do
+            unzip -p "$app" "$file" | cmp - "$file"
+          done
+          unzip -p "$app" README.txt | grep -q 'Project Units'
+          python3 scripts/check-candidate-notices.py "$app"
+          mkdir dist/publish
+          cp "$app" dist/macos/SHA256SUMS-macos-aarch64 dist/publish/
+          test "$(find dist/publish -type f | wc -l | tr -d ' ')" = 2
+      - name: Create macOS Host review draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --latest=false \
+            --title "GAMS Host $GITHUB_REF_NAME (Apple Silicon review draft)" \
+            --notes 'Apple Silicon app ZIP uses ad-hoc signing only (no Developer ID or notarization). No example, Project, or Project Unit package is attached. Review checksums, licensing and Gatekeeper launch instructions before publishing.' \
+            dist/publish/* LICENSE NOTICE
