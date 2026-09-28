@@ -13,6 +13,8 @@ jobs:
       CARGO_BUILD_JOBS: '2'
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # audit complete Host Git ancestry for example/game source
       - name: Require native Apple Silicon runner
         run: test "$(uname -m)" = arm64
       - name: Reject partially configured or mismatched distribution digests
@@ -21,6 +23,8 @@ jobs:
           APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
           APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
         run: bash scripts/check-licensing-digests.sh
+      - name: Refuse Project or game source in Host worktree or history
+        run: python3 scripts/check-source-boundary.py
       - name: Verify all linked third-party inputs and full texts
         run: |
           python3 scripts/check-native-notices.py

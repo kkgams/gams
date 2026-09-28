@@ -14,6 +14,31 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class HostReleaseTests(unittest.TestCase):
+    def test_source_boundary_rejects_removed_game_in_git_ancestry(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shutil.copy2(ROOT / 'scripts/check-source-boundary.py', root / 'check.py')
+            def git(*args):
+                subprocess.run(['git', *args], cwd=root, check=True, capture_output=True)
+            git('init', '-q', '-b', 'release')
+            git('config', 'user.name', 'Test')
+            git('config', 'user.email', 'test@example.invalid')
+            (root / 'README.md').write_text('Host only\n')
+            git('add', 'README.md')
+            git('commit', '-qm', 'Host source')
+            def check():
+                return subprocess.run(['python3', 'check.py'], cwd=root,
+                                      capture_output=True, text=True)
+            self.assertEqual(check().returncode, 0)
+            (root / 'examples/station-demo').mkdir(parents=True)
+            (root / 'examples/station-demo/main.odin').write_text('game source\n')
+            self.assertNotEqual(check().returncode, 0)
+            git('add', 'examples/station-demo/main.odin')
+            git('commit', '-qm', 'Old example')
+            git('rm', '-r', 'examples')
+            git('commit', '-qm', 'Delete example')
+            self.assertNotEqual(check().returncode, 0, 'Deleting the tree must not hide historical game source')
+
     def test_future_platform_zips_are_readme_only(self):
         with tempfile.TemporaryDirectory() as temporary:
             for platform in ("linux", "windows"):
