@@ -1596,6 +1596,8 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "objc2-app-kit",
+ "objc2-foundation",
  "serde",
  "serde_json",
  "tauri",

@@ -62,12 +62,14 @@ that repository's documented tools, not Host-local setup or integration scripts.
 The Host-only release builds are `make app-build-release` and
 `make app-bundle-release APP_BUNDLES=app`; they do not bundle example source,
 Project config, game WASM, or station Project Units.
-The Host uses the chosen Project folder as its working directory (or
-`GAMS_APP_CWD` at runtime); do not compile in a developer's station path.
-After copying `GAMS.app` to `/Applications`, launch an existing Project from
-Terminal using `GAMS_APP_CWD=/absolute/path/to/project
-/Applications/GAMS.app/Contents/MacOS/gams`. Opening the app from Finder does
-**not** choose a Project automatically.
+The Host uses an external Project folder as its runtime root; do not compile
+in a developer's station path. On macOS, double-click `GAMS.app` to choose an
+existing folder containing `gams.json` through a native folder picker. Cancel
+exits. An explicit `GAMS_APP_CWD` skips the picker; to launch an existing
+Project from Terminal, run `GAMS_APP_CWD=/absolute/path/to/project
+/Applications/GAMS.app/Contents/MacOS/gams`. Running the executable from an
+existing Project directory also uses that directory. No Project or Unit is
+bundled with the Host.
 
 `verify.yml` builds **Apple Silicon only**; Intel is deferred. Separate Linux
 and Windows jobs publish conspicuous **README-only** roadmap ZIPs: no binary,
@@ -79,9 +81,10 @@ readable font and browser-bundle license texts, pinned provenance,
 the native-license appendix and original source archives for five MPL-covered
 crates beside the `.app` (Tauri embeds the frontend assets in the executable).
 `NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the root
-`NOTICE` approved by the owner on 2026-09-28. The exact SHA-256 values and
-publication gates are recorded in `PUBLISHING.md`; a changed input requires
-new review.
+`NOTICE`. The 2026-09-28 approval covered the **previous** bytes; a change to
+Cargo.lock and the native notice appendix for the new macOS Project picker
+requires explicit approval of the current exact NOTICE before uploads.
+Publication gates are recorded in `PUBLISHING.md`.
 
 `release.yml` can rehearse on `release` after notice review and only creates a
 **draft**, Apple Silicon-only Release from a matching owner-pushed tag; it never
@@ -121,9 +124,10 @@ signature or notarization. For the current Host, launch from Terminal with
 `GAMS_APP_CWD` pointing at your own Project as shown above; you must install
 its Project Units separately.
 
-Apache-2.0 for GAMS-authored Host code and the exact Host-only root `NOTICE`
-are owner-approved; see `LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and
-`PUBLISHING.md`. The separate `example.game1` repository is **not** approved
+Apache-2.0 for GAMS-authored Host code is owner-approved; the **revised**
+Host-only root `NOTICE` and evidence need renewed exact-text approval before
+uploads. See `LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`.
+The separate `example.game1` repository is **not** approved
 for publication by that Host decision. The owner still needs to configure the
 Host's exact approval digests, push the clean-history branch, inspect hosted
 candidates, and test a downloaded app on a clean Mac before publishing a draft.

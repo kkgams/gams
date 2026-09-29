@@ -10,9 +10,11 @@ Material Symbols Apache-2.0 text are checked in under
 executable; the app ZIP separately includes readable `FONT-LICENSES/` and
 `FONT-PROVENANCE.md` beside `GAMS.app`.
 
-These font records are linked to the exact Host-only `NOTICE` approved by the
-owner on 2026-09-28; any font or license change needs renewed notice review.
-Approval of notices alone does not prove a hosted binary or clean-Mac launch.
+These unchanged font records were covered by the 2026-09-28 Host-only NOTICE
+approval. The **revised** root NOTICE for the native folder chooser changes
+the evidence digest and requires fresh owner approval, even though no font or
+font-license bytes changed. Notice approval alone does not prove a hosted
+binary or clean-Mac launch.
 `example.game1` owns the example Project and visitor game and reviews their
 dependencies independently; they are absent from the Host source/history and
 app ZIP.

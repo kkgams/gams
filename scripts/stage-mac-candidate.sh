@@ -53,8 +53,10 @@ After copying GAMS.app to /Applications, a terminal launch example is:
 
   GAMS_APP_CWD=/absolute/path/to/your-project /Applications/GAMS.app/Contents/MacOS/gams
 
-Finder launch does not select a Project automatically. Confirm that the paths
-in that Project's gams.json are accessible before starting the Host.
+Double-clicking GAMS.app on macOS opens a native folder chooser when no
+Project has been specified. Select a folder containing gams.json; Cancel
+quits without launching the Host. A Terminal launch with GAMS_APP_CWD skips
+the chooser. Confirm the paths in gams.json are accessible.
 
 This is an ad-hoc signed (not Developer ID signed or notarized) build. An
 ad-hoc signature lets Apple Silicon launch locally but proves no publisher

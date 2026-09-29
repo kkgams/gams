@@ -67,12 +67,59 @@ fn runtime_clear_compiled_component_cache(
     runtime.clear_compiled_component_cache()
 }
 
-fn runtime_root() -> anyhow::Result<PathBuf> {
-    let raw = match std::env::var("GAMS_APP_CWD") {
-        Ok(value) if !value.is_empty() => PathBuf::from(value),
-        _ => std::env::current_dir()?,
-    };
-    Ok(raw.canonicalize()?)
+fn needs_project_picker(gui: bool, cwd: &Path) -> bool {
+    gui && !cwd.join("gams.json").is_file()
+}
+
+#[cfg(target_os = "macos")]
+fn choose_project_folder() -> anyhow::Result<Option<PathBuf>> {
+    use objc2_app_kit::{NSModalResponseCancel, NSModalResponseOK, NSOpenPanel};
+    use objc2_foundation::{MainThreadMarker, NSString};
+    use std::ffi::{CStr, OsStr};
+    use std::os::unix::ffi::OsStrExt;
+
+    let mtm = MainThreadMarker::new().expect("Project selection must run on the macOS main thread");
+    let mut message = "Select a GAMS Project folder containing gams.json";
+    loop {
+        let panel = NSOpenPanel::openPanel(mtm);
+        panel.setCanChooseDirectories(true);
+        panel.setCanChooseFiles(false);
+        panel.setAllowsMultipleSelection(false);
+        panel.setMessage(Some(&NSString::from_str(message)));
+        match panel.runModal() {
+            response if response == NSModalResponseCancel => return Ok(None),
+            response if response == NSModalResponseOK => {
+                let url = panel.URL().expect("Selected Project has no file URL");
+                anyhow::ensure!(url.isFileURL(), "Selected Project must be a local folder");
+                // NSURL retains this filesystem representation for its lifetime.
+                let bytes =
+                    unsafe { CStr::from_ptr(url.fileSystemRepresentation().as_ptr()) }.to_bytes();
+                let path = PathBuf::from(OsStr::from_bytes(bytes));
+                if path.join("gams.json").is_file() {
+                    return Ok(Some(path.canonicalize()?));
+                }
+                message = "That folder has no gams.json. Select a GAMS Project folder.";
+            }
+            response => anyhow::bail!("Project folder dialog failed: {response}"),
+        }
+    }
+}
+
+fn runtime_root(gui: bool) -> anyhow::Result<Option<PathBuf>> {
+    if let Some(value) = std::env::var_os("GAMS_APP_CWD") {
+        anyhow::ensure!(!value.is_empty(), "GAMS_APP_CWD must not be empty");
+        return Ok(Some(PathBuf::from(value).canonicalize()?));
+    }
+    let cwd = std::env::current_dir()?;
+    if needs_project_picker(gui, &cwd) {
+        #[cfg(target_os = "macos")]
+        {
+            return choose_project_folder();
+        }
+        #[cfg(not(target_os = "macos"))]
+        anyhow::bail!("Set GAMS_APP_CWD to a Project folder containing gams.json");
+    }
+    Ok(Some(cwd.canonicalize()?))
 }
 
 fn cli_arg_string(args: &HashMap<String, ArgData>, name: &str) -> anyhow::Result<Option<String>> {
@@ -267,20 +314,28 @@ fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let root = runtime_root().expect("failed to resolve GAMS runtime root");
-    let runtime = runtime::Runtime::new_at(
-        root.clone(),
-        preopens_for_root(&root).expect("failed to build GAMS filesystem preopens"),
-    )
-    .expect("failed to initialize GAMS runtime");
-
     tauri::Builder::default()
-        .manage(runtime)
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_macos_fps::init())
         .setup(move |app| {
-            let runtime = app.state::<runtime::Runtime>();
+            let matches = app.cli().matches().map_err(|error| error.to_string())?;
+            let Some(root) =
+                runtime_root(matches.subcommand.is_none()).map_err(|error| error.to_string())?
+            else {
+                // Canceling the native Project chooser is a normal user action.
+                std::process::exit(0);
+            };
+            let runtime = runtime::Runtime::new_at(
+                root.clone(),
+                preopens_for_root(&root).map_err(|error| error.to_string())?,
+            )
+            .map_err(|error| error.to_string())?;
             runtime.attach_app_handle(app.handle().clone())?;
+            assert!(
+                app.manage(runtime),
+                "GAMS runtime must not already be registered"
+            );
+            let runtime = app.state::<runtime::Runtime>();
             let cache_dir = match std::env::var_os("GAMS_WASMTIME_CACHE_DIR") {
                 Some(path) => PathBuf::from(path),
                 None => app
@@ -291,7 +346,6 @@ pub fn run() {
             };
             runtime.set_compiled_component_cache_dir(cache_dir)?;
 
-            let matches = app.cli().matches().map_err(|error| error.to_string())?;
             match run_cli_command(&root, &runtime, &matches) {
                 Ok(true) => std::process::exit(0),
                 Ok(false) => {}
@@ -320,4 +374,18 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod launch_tests {
+    use super::*;
+
+    #[test]
+    fn gui_without_a_project_must_prompt_instead_of_using_finder_working_directory() {
+        let directory = tempfile::tempdir().unwrap();
+        assert!(needs_project_picker(true, directory.path()));
+        assert!(!needs_project_picker(false, directory.path()));
+        std::fs::write(directory.path().join("gams.json"), "{}").unwrap();
+        assert!(!needs_project_picker(true, directory.path()));
+    }
 }

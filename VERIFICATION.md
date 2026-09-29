@@ -104,10 +104,22 @@ in a local process without a Nix shell. The owner **subsequently approved**
 the exact Host-only NOTICE on 2026-09-28; the local tests themselves do not
 constitute a hosted candidate review, clean-Mac test or Gatekeeper launch test.
 
+2026-09-29 Finder-style launch regression: the hosted `a2e1130` app panicked
+before opening a window because LaunchServices' unrelated working directory
+contained a dangling symlink and the Host tried to use it as the Project root.
+Launching the same binary with `GAMS_APP_CWD` pointing at an external assembled
+Project stayed running. The new Host code selects an external Project with a
+native macOS folder picker before building filesystem preopens, unless an
+explicit Project or a working-directory `gams.json` is available. A local
+Apple Silicon build and unit test verified the selector; a directly launched,
+signed local bundle stayed running with the picker instead of panicking.
+**The revised binary has not yet passed a downloaded-CI-artifact or clean-Mac
+test.** Its changed Cargo.lock and NOTICE require renewed owner approval.
+
 Remaining release checks (not claimed complete):
 
-- configure only the exact owner-approved Host `LICENSE`/`NOTICE` digests
-  recorded in `PUBLISHING.md`; re-review if any linked text or binary changes;
+- obtain fresh owner approval of the **revised** Host-only NOTICE, linked
+  evidence and updated `NOTICE_SHA256` before pushing revised source;
 - independent owner review of `example.game1` source provenance before its
   public push or any compiled game release;
 - hosted Apple Silicon Host-only app candidate and clean-machine Gatekeeper,

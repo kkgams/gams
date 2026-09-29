@@ -1,10 +1,12 @@
-# Host third-party review — exact NOTICE approved; hosted release pending
+# Host third-party review — revised NOTICE approval pending
 
 The owner approved Apache-2.0 for GAMS-authored code and, on 2026-09-28,
-approved this Host-only root `NOTICE` and its 47-file evidence manifest with
-the bounded historical browser-bundle uncertainty below. Third-party works
-retain their original terms; this review does not relicense them. Hosted
-candidate inspection and clean-Mac launch remain pending.
+approved the **previous** Host-only root `NOTICE`. The new native macOS folder
+chooser uses objc2-app-kit and objc2-foundation, already represented in the
+386-crate native appendix; only the root Cargo dependency edges changed. The
+revised Cargo.lock, native appendix checksum, 47-file evidence manifest and
+exact root NOTICE require **fresh owner approval**. Third-party works retain
+their original terms. Hosted review of the revised binary is pending.
 
 ## Included in Host frontend source and bundled `.app`
 
@@ -87,11 +89,11 @@ example or station game.
 ## Next gates
 
 1. `check-source-boundary.py` confirms the Host's clean ancestry contains no
-   example source; retain that invariant for any public push. Owner approval
-   covers the exact root `NOTICE` and evidence as recorded in `PUBLISHING.md`,
-   with conservative family notices for the historical Ajv/markdown-it bundles.
-   `example.game1` requires independent review. Any changed Host notice or
-   linked input requires fresh owner review before changing approval digests.
+   example source; retain that invariant for any public push. The prior owner
+   approval does **not** cover the revised root `NOTICE` and evidence recorded
+   in `PUBLISHING.md`; review them before changing approval digests. The
+   historical Ajv/markdown-it version uncertainty remains disclosed.
+   `example.game1` requires independent review.
 2. Inspect the built Apple Silicon `.app` contents for further bundled
    dependencies and test launch against a separately provided Project.
 3. The owner chose ad-hoc signed, unnotarized initial Apple Silicon builds.

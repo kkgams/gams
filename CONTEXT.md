@@ -23,8 +23,10 @@ build caches, and exports are not Host-owned source.
 - **Host**: native/browser shell providing runtime facilities and loading
   Project Units. Host-specific behavior remains thin.
 - **Project**: external directory rooted at `gams.json`; `example.game1` owns an
-  example, not a built-in Host Project. `GAMS_APP_CWD` selects a Project root at
-  runtime; the Host must not compile in a developer-specific Project path.
+  example, not a built-in Host Project. On macOS the native folder chooser
+  selects an external Project for Finder launch; `GAMS_APP_CWD` explicitly
+  selects one for Terminal or automation. The Host must not compile in a
+  developer-specific Project path.
 - **Project Unit**: plugin, View, UI Service, or theme loaded by the Host.
 - **plugin**: WASM component called through the runtime/plugin manager;
   singleton is the target, instance is legacy migration work.
