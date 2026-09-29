@@ -47,8 +47,11 @@ from notice approval and still gate release publication.
    example source, Project config, Project Units, game WASM, or station ZIP. A green compile without an uploaded
    candidate is
    not distribution approval.
-3. Rehearse `release.yml` on the branch (no upload/release on manual dispatch):
-   `gh workflow run release.yml -R kkgams/gams --ref release`. Inspect its job.
+3. The same branch push also rehearses `release.yml`: it builds and checks
+   the Host but **does not upload an artifact or create a Release**. Inspect
+   that workflow's result at the same commit as the `verify.yml` candidate.
+   Optional repeat after GitHub registers the workflow:
+   `gh workflow run release.yml -R kkgams/gams --ref release`.
 4. Only after the app ZIP candidate and the branch rehearsal pass on the
    **same release-branch commit**, the owner checks that `v<tauri.conf.json
    version>` has never been pushed, then pushes a new matching version tag.

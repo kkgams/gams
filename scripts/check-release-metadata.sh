@@ -18,6 +18,6 @@ PY
 if [[ "$GITHUB_REF" == refs/tags/* ]]; then
   [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == "refs/tags/v$version" ]] || { echo 'Unexpected Host tag' >&2; exit 1; }
 else
-  [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$GITHUB_REF" == refs/heads/release && "$GITHUB_REF_TYPE" == branch ]] || { echo 'Manual rehearsal requires release branch' >&2; exit 1; }
+  [[ ( "$GITHUB_EVENT_NAME" == workflow_dispatch || "$GITHUB_EVENT_NAME" == push ) && "$GITHUB_REF" == refs/heads/release && "$GITHUB_REF_TYPE" == branch ]] || { echo 'Branch rehearsal requires release branch' >&2; exit 1; }
 fi
 bash scripts/check-licensing-digests.sh

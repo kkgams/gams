@@ -133,6 +133,12 @@ class HostReleaseTests(unittest.TestCase):
                 return subprocess.run(["bash", "scripts/check-release-metadata.sh"], cwd=root,
                                       env=env, capture_output=True, text=True)
             self.assertEqual(check().returncode, 0)
+            env["GITHUB_EVENT_NAME"] = "push"
+            self.assertEqual(check().returncode, 0, 'release branch push must rehearse without a tag')
+            env["GITHUB_REF"] = "refs/heads/other"
+            self.assertNotEqual(check().returncode, 0)
+            env["GITHUB_REF"] = "refs/heads/release"
+            env["GITHUB_EVENT_NAME"] = "workflow_dispatch"
             env["APPROVED_NOTICE_SHA256"] = ""
             self.assertNotEqual(check().returncode, 0)
             env["APPROVED_NOTICE_SHA256"] = hashlib.sha256((root / "NOTICE").read_bytes()).hexdigest()

@@ -1,6 +1,7 @@
 name: Prepare Apple Silicon Host release draft
 on:
   push:
+    branches: ['release'] # register and rehearse before any version tag
     tags: ['v*']
   workflow_dispatch:
 concurrency:
@@ -45,7 +46,7 @@ jobs:
           nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
           nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
           nix develop --command bash scripts/stage-mac-candidate.sh
-      # Manual branch dispatch verifies the shell but distributes nothing.
+      # Branch pushes and manual dispatch verify the shell but distribute nothing.
       - name: Upload tagged Host candidate
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
