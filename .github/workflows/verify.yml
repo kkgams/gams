@@ -31,6 +31,16 @@ jobs:
           python3 scripts/check-mpl-source.py
           python3 scripts/check-notice-evidence.py
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Restore dependency-only Rust cache for Apple Silicon Host
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          # Makefile builds in the Host root, outside the Cargo workspace.
+          workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
+          shared-key: gams-macos-aarch64
+          cmd-format: nix develop --command {0}
+          cache-bin: 'false'
+          # Untrusted PRs and tags may restore, but only reviewed release can write.
+          save-if: ${{ github.ref == 'refs/heads/release' }}
       - name: Offline release gate tests
         run: nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
       - name: Check, test, and build Host without a Project or sibling repositories

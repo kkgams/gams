@@ -48,17 +48,20 @@ source, hosted candidate and release rehearsal pass at the same commit.
    example source, Project config, Project Units, game WASM, or station ZIP. A green compile without an uploaded
    candidate is
    not distribution approval.
-3. The same branch push also rehearses `release.yml`: it builds and checks
-   the Host but **does not upload an artifact or create a Release**. Inspect
-   that workflow's result at the same commit as the `verify.yml` candidate.
-   Optional repeat after GitHub registers the workflow:
+3. The same branch push also rehearses `release.yml`: it checks identity,
+   notices, history and offline release gates **without repeating the full
+   macOS build**, uploading an artifact or creating a Release. `verify.yml`
+   independently builds and uploads the Host candidate at that same commit.
+   Inspect both workflows. Optional repeat:
    `gh workflow run release.yml -R kkgams/gams --ref release`.
 4. Only after the app ZIP candidate and the branch rehearsal pass on the
    **same release-branch commit**, the owner checks that `v<tauri.conf.json
    version>` has never been pushed, then pushes a new matching version tag.
    Do not move a pushed tag. Tag jobs recheck licensing and require the tag to
-   point to the current `release` branch head. They create a **draft-only**
-   GitHub Release with **one Apple Silicon app ZIP**, a SHA256SUMS file and
+   point to the current `release` branch head. The tag job independently
+   rebuilds, re-tests and stages the Host; it restores only dependency cache
+   entries from successful `release` verification, never a cached app binary.
+   It creates a **draft-only** GitHub Release with **one Apple Silicon app ZIP**, a SHA256SUMS file and
    licensing texts. They
    never attach the Linux/Windows roadmap ZIPs to a Release.
 5. The owner has chosen an **ad-hoc signed, non-Developer-ID and unnotarized**

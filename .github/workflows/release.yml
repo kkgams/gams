@@ -36,8 +36,23 @@ jobs:
         run: |
           git fetch --no-tags --depth=1 origin refs/heads/release
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Branch rehearsal checks release gates without a redundant build
+        if: github.ref == 'refs/heads/release'
+        run: python3 -m unittest discover -s test -p 'test_*.py'
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Restore independently built Host dependencies on tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
+          shared-key: gams-macos-aarch64
+          cmd-format: nix develop --command {0}
+          cache-bin: 'false'
+          # Never publish a tag-scoped cache or reuse a branch binary.
+          save-if: 'false'
       - name: Independently check, test and bundle Host
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           # The staging script rechecks exact owner-approved digests; step
           # environments do not carry over from the earlier metadata check.
@@ -50,7 +65,7 @@ jobs:
           nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
           nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
           nix develop --command bash scripts/stage-mac-candidate.sh
-      # Branch pushes and manual dispatch verify the shell but distribute nothing.
+      # Branch pushes and manual dispatch verify gates only; never build or distribute.
       - name: Upload tagged Host candidate
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

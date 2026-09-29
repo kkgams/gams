@@ -108,6 +108,17 @@ class HostReleaseTests(unittest.TestCase):
             linked.write_text('replaced after approval\n')
             self.assertNotEqual(check().returncode, 0)
 
+    def test_release_branch_rehearsal_only_checks_gates(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        self.assertIn("- name: Branch rehearsal checks release gates without a redundant build\n"
+                      "        if: github.ref == 'refs/heads/release'\n"
+                      "        run: python3 -m unittest discover -s test -p 'test_*.py'", workflow)
+        for step in ('Independently check, test and bundle Host',
+                     'Restore independently built Host dependencies on tags'):
+            gated = workflow.split(f'      - name: {step}\n', 1)[1]
+            self.assertTrue(gated.startswith("        if: startsWith(github.ref, 'refs/tags/v')\n"))
+        self.assertIn("save-if: 'false'", workflow)
+
     def test_release_staging_receives_step_scoped_approval_digests(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         staging_step = workflow.split('      - name: Independently check, test and bundle Host\n', 1)[1].split(
