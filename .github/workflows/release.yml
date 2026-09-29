@@ -39,6 +39,10 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
       - name: Independently check, test and bundle Host
         env:
+          # The staging script rechecks exact owner-approved digests; step
+          # environments do not carry over from the earlier metadata check.
+          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
+          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
           # Local launch on Apple Silicon needs ad-hoc signing, not a paid
           # Developer ID certificate or Apple notarization.
           APPLE_SIGNING_IDENTITY: '-'

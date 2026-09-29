@@ -108,6 +108,14 @@ class HostReleaseTests(unittest.TestCase):
             linked.write_text('replaced after approval\n')
             self.assertNotEqual(check().returncode, 0)
 
+    def test_release_staging_receives_step_scoped_approval_digests(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        staging_step = workflow.split('      - name: Independently check, test and bundle Host\n', 1)[1].split(
+            '      - name: Upload tagged Host candidate\n', 1)[0]
+        self.assertIn('nix develop --command bash scripts/stage-mac-candidate.sh', staging_step)
+        self.assertIn('APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}', staging_step)
+        self.assertIn('APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}', staging_step)
+
     def test_digest_and_version_gates_fail_closed(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
