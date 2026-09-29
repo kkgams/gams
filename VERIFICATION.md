@@ -114,12 +114,13 @@ explicit Project or a working-directory `gams.json` is available. A local
 Apple Silicon build and unit test verified the selector; a directly launched,
 signed local bundle stayed running with the picker instead of panicking.
 **The revised binary has not yet passed a downloaded-CI-artifact or clean-Mac
-test.** Its changed Cargo.lock and NOTICE require renewed owner approval.
+test.** The owner approved its exact revised Cargo.lock-linked NOTICE and
+evidence on 2026-09-29; the old GitHub notice variable still needs updating.
 
 Remaining release checks (not claimed complete):
 
-- obtain fresh owner approval of the **revised** Host-only NOTICE, linked
-  evidence and updated `NOTICE_SHA256` before pushing revised source;
+- set `NOTICE_SHA256` to the **revised owner-approved** Host-only NOTICE
+  digest recorded in `PUBLISHING.md` before pushing revised source;
 - independent owner review of `example.game1` source provenance before its
   public push or any compiled game release;
 - hosted Apple Silicon Host-only app candidate and clean-machine Gatekeeper,

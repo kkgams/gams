@@ -11,10 +11,9 @@ executable; the app ZIP separately includes readable `FONT-LICENSES/` and
 `FONT-PROVENANCE.md` beside `GAMS.app`.
 
 These unchanged font records were covered by the 2026-09-28 Host-only NOTICE
-approval. The **revised** root NOTICE for the native folder chooser changes
-the evidence digest and requires fresh owner approval, even though no font or
-font-license bytes changed. Notice approval alone does not prove a hosted
-binary or clean-Mac launch.
+approval and remain bound by the **revised** root NOTICE approved on 2026-09-29.
+No font or font-license bytes changed. Notice approval alone does not prove a
+hosted binary or clean-Mac launch.
 `example.game1` owns the example Project and visitor game and reviews their
 dependencies independently; they are absent from the Host source/history and
 app ZIP.

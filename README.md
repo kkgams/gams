@@ -81,10 +81,9 @@ readable font and browser-bundle license texts, pinned provenance,
 the native-license appendix and original source archives for five MPL-covered
 crates beside the `.app` (Tauri embeds the frontend assets in the executable).
 `NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the root
-`NOTICE`. The 2026-09-28 approval covered the **previous** bytes; a change to
-Cargo.lock and the native notice appendix for the new macOS Project picker
-requires explicit approval of the current exact NOTICE before uploads.
-Publication gates are recorded in `PUBLISHING.md`.
+`NOTICE`. The owner approved the revised exact bytes on 2026-09-29 for the
+macOS Project picker; the prior approval digest must be replaced in GitHub
+Actions **before pushing**. Publication gates are recorded in `PUBLISHING.md`.
 
 `release.yml` can rehearse on `release` after notice review and only creates a
 **draft**, Apple Silicon-only Release from a matching owner-pushed tag; it never
@@ -124,9 +123,10 @@ signature or notarization. For the current Host, launch from Terminal with
 `GAMS_APP_CWD` pointing at your own Project as shown above; you must install
 its Project Units separately.
 
-Apache-2.0 for GAMS-authored Host code is owner-approved; the **revised**
-Host-only root `NOTICE` and evidence need renewed exact-text approval before
-uploads. See `LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`.
+Apache-2.0 for GAMS-authored Host code and the exact **revised** Host-only
+`NOTICE` are owner-approved. Update the repository's `NOTICE_SHA256` variable
+before pushing and inspect the new hosted candidate; see `LICENSING.md`,
+`THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`.
 The separate `example.game1` repository is **not** approved
 for publication by that Host decision. The owner still needs to configure the
 Host's exact approval digests, push the clean-history branch, inspect hosted

@@ -1,4 +1,4 @@
-# Publishing the GAMS desktop Host — revised NOTICE requires owner review
+# Publishing the GAMS desktop Host — revised NOTICE approved; hosted review pending
 
 Target repository: `kkgams/gams`. The standalone Host must have **zero example/station source or pushed history**.
 `example.game1` separately owns the example Project, visitor game, and local
@@ -8,24 +8,23 @@ example, Project Units, Project configuration, or game WASM. No example ZIP
 is built, uploaded or attached. A user supplies a Project folder with `gams.json` and
 working local paths to independently installed Units.
 
-## Revised candidate — NOT APPROVED for this build
+## Revised Host notice approved — 2026-09-29
 
-The owner approved the **previous** Host-only `NOTICE` on 2026-09-28. The macOS
-Project chooser now directly uses objc2-app-kit and objc2-foundation. Both were
-already covered by the native appendix, and all third-party Cargo packages,
-versions, checksums and edges are unchanged; only the root crate's dependency
-edges changed. This changes the Cargo.lock checksum, native appendix header,
-47-file evidence manifest and root NOTICE. The **new exact bytes below require
-fresh owner approval** before updating `kkgams/gams` Actions variables or
-pushing source that would upload an artifact. The existing CI candidate is
-for an earlier commit and cannot authorize the new binary. Apache-2.0 remains
-approved for GAMS-authored code; `example.game1` has no publication approval.
+The owner approved the exact **revised** Host-only `NOTICE` and linked evidence
+below. The macOS Project chooser directly uses objc2-app-kit and
+objc2-foundation, already covered by the native appendix. All third-party
+Cargo packages, versions, checksums and edges remain unchanged; only the
+GAMS root crate's dependency edges changed. That changed Cargo.lock's
+checksum, the native appendix header, 47-file evidence manifest and root
+NOTICE. The previous CI candidate was built at an earlier commit and cannot
+stand in for hosted review of the revised binary. Apache-2.0 remains approved
+for GAMS-authored code; `example.game1` has **no** publication approval.
 
 | Current file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `54845bd559c3edbbb16c4f31d4b0ce11e9547da4592fd5e20e5e688367bb9fa8` | **pending owner approval** |
-| `NOTICE-EVIDENCE.sha256` | `c38a82a3d8aff8061a69c41bd3c33256ca5117f9d5ea7b2b7535c914a4ad8bb9` | **pending owner review** |
+| `NOTICE` / `NOTICE_SHA256` | `54845bd559c3edbbb16c4f31d4b0ce11e9547da4592fd5e20e5e688367bb9fa8` | **owner approved 2026-09-29** |
+| `NOTICE-EVIDENCE.sha256` | `c38a82a3d8aff8061a69c41bd3c33256ca5117f9d5ea7b2b7535c914a4ad8bb9` | **reviewed and bound by NOTICE** |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
 passes before the next public push. Do not tag `v2.0.0` until this revised
@@ -33,13 +32,13 @@ source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Owner publication steps
 
-1. Obtain renewed owner approval of the **exact current** NOTICE and linked
-   inputs above, then recompute both digests and update `kkgams/gams` Actions
-   **variables** `LICENSE_SHA256` and `NOTICE_SHA256` to the approved bytes.
-   The old `NOTICE_SHA256` must not authorize the revised binary. They are not
-   secrets. Actions provides `GITHUB_TOKEN`. Confirm the
-   public Host branch will contain no pre-split history; never push the
-   archived old Host checkout.
+1. Recompute the table above, then **replace the old** `kkgams/gams` Actions
+   variable `NOTICE_SHA256` with the approved revised digest. Confirm its
+   `LICENSE_SHA256` still matches the unchanged LICENSE. These are variables,
+   not secrets; Actions provides `GITHUB_TOKEN`. **Update the notice variable
+   before pushing** so the branch candidate does not fail closed. Confirm the
+   public Host branch contains no pre-split history; never push the archived
+   old Host checkout.
 2. Owner pushes the local `release` branch. `verify.yml` builds **Apple Silicon
    only**; when both digests match, a branch push uploads one checksummed
    app ZIP. Linux/Windows jobs each upload a ZIP containing only a README
