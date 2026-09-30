@@ -1,16 +1,19 @@
 # Bundled Host fonts — sourced and licensed
 
-## v2.0.2 preparation — exact NOTICE approval pending
+## v2.0.3 preparation — exact NOTICE approval pending
 
-v2.0.2 includes automatic **public** tag releases, tag-named titles, a reusable
-installation/security guide and complete generated commit/author notes.
+v2.0.3 corrects release-notes generation: paginated GitHub API output is
+flattened with external jq, without the incompatible gh --slurp/--jq pairing.
+Regression tests cover multiple pages, no releases and API failures. Releases
+remain automatically **public** after tag gates, with tag-named titles and
+complete commit/author notes. Existing v2.0.0–v2.0.2 tags are immutable.
 The version bump changes only the GAMS package version in Cargo.lock and its
 linked notice evidence; no third-party package or upstream license text changes.
 Earlier notice approvals below are historical, not approval of these new bytes.
 **Do not push until owner approval; a version tag authorizes public publication.**
 
-Current NOTICE SHA-256: `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030`.
-Current evidence SHA-256: `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b`.
+Current NOTICE SHA-256: `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd`.
+Current evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`.
 See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 

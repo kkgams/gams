@@ -1,16 +1,19 @@
-# Publishing the GAMS desktop Host — v2.0.2 notice approval and hosted review pending
+# Publishing the GAMS desktop Host — v2.0.3 notice approval and hosted review pending
 
-## v2.0.2 preparation — exact NOTICE approval pending
+## v2.0.3 preparation — exact NOTICE approval pending
 
-v2.0.2 includes automatic **public** tag releases, tag-named titles, a reusable
-installation/security guide and complete generated commit/author notes.
+v2.0.3 corrects release-notes generation: paginated GitHub API output is
+flattened with external jq, without the incompatible gh --slurp/--jq pairing.
+Regression tests cover multiple pages, no releases and API failures. Releases
+remain automatically **public** after tag gates, with tag-named titles and
+complete commit/author notes. Existing v2.0.0–v2.0.2 tags are immutable.
 The version bump changes only the GAMS package version in Cargo.lock and its
 linked notice evidence; no third-party package or upstream license text changes.
 Earlier notice approvals below are historical, not approval of these new bytes.
 **Do not push until owner approval; a version tag authorizes public publication.**
 
-Current NOTICE SHA-256: `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030`.
-Current evidence SHA-256: `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b`.
+Current NOTICE SHA-256: `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd`.
+Current evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`.
 See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 
@@ -35,14 +38,14 @@ NOTICE. The previous CI candidate was built at an earlier commit and cannot
 stand in for hosted review of the revised binary. Apache-2.0 remains approved
 for GAMS-authored code; `example.game1` has **no** publication approval.
 
-| Current v2.0.2 file / Actions variable | SHA-256 | Status |
+| Current v2.0.3 file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030` | **exact-byte owner approval pending** |
-| `NOTICE-EVIDENCE.sha256` | `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b` | **review pending; bound by NOTICE** |
+| `NOTICE` / `NOTICE_SHA256` | `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd` | **exact-byte owner approval pending** |
+| `NOTICE-EVIDENCE.sha256` | `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781` | **review pending; bound by NOTICE** |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
-passes before the next public push. Do not tag `v2.0.2` until this revised
+passes before the next public push. Do not tag `v2.0.3` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Automatic tag release notes
@@ -62,7 +65,7 @@ addresses are not published and names are not asserted to be GitHub accounts.
 
 New workflow/source changes do not alter existing immutable tags or existing
 drafts. Use a new approved version and tag for future workflow execution; do
-not move `v2.0.0` or `v2.0.1` to pick up these improvements. Existing draft
+not move `v2.0.0`, `v2.0.1` or `v2.0.2` to pick up these improvements. Existing draft
 notes may be edited by the owner without modifying the tag or app assets.
 
 On 2026-09-30 the owner approved **automatic public publication on tag push**.
@@ -122,7 +125,7 @@ all tag build, exact-notice, source-history and overwrite checks remain required
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.2` (Cargo/Tauri), which is different from
+Current source version is `2.0.3` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.
