@@ -45,6 +45,29 @@ The clean Host Git history remains required. Confirm `check-source-boundary.py`
 passes before the next public push. Do not tag `v2.0.1` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
+## Automatic tag release notes
+
+After a matching `vX.Y.Z` tag passes all build/notice/history gates, Actions
+creates a **draft** whose title is exactly the tag name. Its description starts
+with `.github/RELEASE_GUIDE.md` (installation, scope and honest macOS security
+instructions), followed by an automatically generated changelog and authors.
+No manually maintained per-version RELEASE_NOTES.md is required.
+
+`scripts/generate-release-notes.py` includes **every commit**, including direct
+pushes, since the nearest published stable ancestor release. First publication
+includes the full Host history. Drafts, prereleases and failed tags are not
+baselines. Authenticated Releases API errors fail the job rather than silently
+choosing a different history. Author names come from Git; private email
+addresses are not published and names are not asserted to be GitHub accounts.
+
+New workflow/source changes do not alter existing immutable tags or existing
+drafts. Use a new approved version and tag for future workflow execution; do
+not move `v2.0.0` or `v2.0.1` to pick up these improvements. Existing draft
+notes may be edited by the owner without modifying the tag or app assets.
+
+Public publishing remains an owner action after tag-asset and clean-Mac review.
+Changing that policy to automatic public publication requires explicit approval.
+
 ## Owner publication steps
 
 1. Recompute the table above, then **replace the old** `kkgams/gams` Actions

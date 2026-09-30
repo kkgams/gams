@@ -121,11 +121,20 @@ jobs:
           mkdir dist/publish
           cp "$app" dist/macos/SHA256SUMS-macos-aarch64 dist/publish/
           test "$(find dist/publish -type f | wc -l | tr -d ' ')" = 2
-      - name: Create macOS Host review draft
+      - name: Generate complete commit and author release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq 'add' > dist/releases.json
+          python3 scripts/generate-release-notes.py \
+            --tag "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
+            --releases dist/releases.json --output dist/release-notes.md
+      - name: Create tag-named macOS Host review draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --verify-tag --draft --latest=false \
-            --title "GAMS Host $GITHUB_REF_NAME (Apple Silicon review draft)" \
-            --notes 'Apple Silicon app ZIP uses ad-hoc signing only (no Developer ID or notarization). No example, Project, or Project Unit package is attached. Review checksums, licensing and Gatekeeper launch instructions before publishing.' \
+            --title "$GITHUB_REF_NAME" --notes-file dist/release-notes.md \
             dist/publish/* LICENSE NOTICE
