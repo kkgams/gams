@@ -51,4 +51,4 @@ identity or Gatekeeper bypass. Wasmtime 44 requires `allow-jit` and
 if the compiler/JIT changes. The Host substitutes the system libiconv for the
 Nix-linked dylib. A passing compile alone is not release clearance: review the
 hosted candidate and run a clean-machine launch with an external Project before
-publishing a draft.
+pushing the version tag, which now authorizes automatic public publication.

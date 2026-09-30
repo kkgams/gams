@@ -1,4 +1,4 @@
-name: Prepare Apple Silicon Host release draft
+name: Publish Apple Silicon Host release
 on:
   push:
     branches: ['release'] # register and rehearse before any version tag
@@ -73,7 +73,7 @@ jobs:
           name: gams-macos-aarch64-${{ github.ref_name }}
           path: dist/macos-aarch64/
           if-no-files-found: error
-  draft-release:
+  publish-release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: macos-candidate
     runs-on: macos-15
@@ -82,7 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          fetch-depth: 0 # repeat ancestry audit before creating the draft
+          fetch-depth: 0 # repeat ancestry audit before public release creation
       - name: Refuse Project or game source in Host history
         run: python3 scripts/check-source-boundary.py
       - name: Recheck exact owner-reviewed texts and immutable branch identity
@@ -131,10 +131,10 @@ jobs:
           python3 scripts/generate-release-notes.py \
             --tag "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
             --releases dist/releases.json --output dist/release-notes.md
-      - name: Create tag-named macOS Host review draft
+      - name: Publish tag-named macOS Host release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --latest=false \
+          gh release create "$GITHUB_REF_NAME" --verify-tag \
             --title "$GITHUB_REF_NAME" --notes-file dist/release-notes.md \
             dist/publish/* LICENSE NOTICE

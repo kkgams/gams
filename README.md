@@ -100,9 +100,10 @@ crates beside the `.app` (Tauri embeds the frontend assets in the executable).
 macOS Project picker; the prior approval digest must be replaced in GitHub
 Actions **before pushing**. Publication gates are recorded in `PUBLISHING.md`.
 
-`release.yml` can rehearse on `release` after notice review and only creates a
-**draft**, Apple Silicon-only Release from a matching owner-pushed tag; it never
-publishes the draft automatically. Initial builds use an **ad-hoc** local
+`release.yml` rehearses on `release` without publishing. After all gates pass,
+a matching owner-pushed version tag automatically creates a **public** Apple
+Silicon-only Release, named after the tag, with installation instructions and
+a generated commit/author changelog. Tag push is publication authorization. Initial builds use an **ad-hoc** local
 signature so Apple Silicon can launch them—no Developer ID certificate or
 Apple notarization. Wasmtime JIT needs two explicit hardened-runtime memory
 entitlements. The bundle target rewrites the Nix toolchain's **known** libiconv
@@ -110,7 +111,7 @@ reference to the macOS system library, re-signs with those entitlements and
 rejects any remaining non-system library path before staging. A build from a
 Nix shell is not proof that the `.app` runs without Nix. Gatekeeper may warn
 about internet-downloaded builds; test this and invoke a real component on a
-clean machine before making the draft public.
+clean machine **before pushing the version tag**.
 
 ### Installing the initial unnotarized app (after release review)
 
@@ -145,7 +146,7 @@ before pushing and inspect the new hosted candidate; see `LICENSING.md`,
 The separate `example.game1` repository is **not** approved
 for publication by that Host decision. The owner still needs to configure the
 Host's exact approval digests, push the clean-history branch, inspect hosted
-candidates, and test a downloaded app on a clean Mac before publishing a draft.
+candidates, and test a downloaded app on a clean Mac before pushing a release tag.
 
 The old station integration and game-owned tests belong to `example.game1`,
 not the Host. Host `app-check` covers Host-only compilation; it does not prove

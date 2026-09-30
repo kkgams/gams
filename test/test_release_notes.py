@@ -49,10 +49,17 @@ class ReleaseNotesTests(unittest.TestCase):
             prerelease = dict(draft, draft=False, prerelease=True)
             self.assertIn('Change v1.0.1', notes([published, prerelease]))
 
-    def test_workflow_generates_notes_and_keeps_publication_manual(self):
+    def test_workflow_generates_notes_and_publishes_only_after_tag_gates(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         self.assertIn('--title "$GITHUB_REF_NAME"', workflow)
         self.assertIn('--notes-file dist/release-notes.md', workflow)
         self.assertIn('scripts/generate-release-notes.py', workflow)
-        self.assertIn('--verify-tag --draft --latest=false', workflow)
+        self.assertIn('gh release create "$GITHUB_REF_NAME" --verify-tag', workflow)
+        self.assertNotIn('--draft', workflow)
+        self.assertNotIn('--latest=false', workflow)
+        publishing = workflow.split('  publish-release:\n', 1)[1]
+        self.assertTrue(publishing.startswith("    if: startsWith(github.ref, 'refs/tags/v')\n"))
+        self.assertIn('needs: macos-candidate', publishing)
+        self.assertIn('bash scripts/check-release-absent.sh', publishing)
+        self.assertIn('python3 scripts/check-candidate-notices.py', publishing)
         self.assertIn('gh api --paginate --slurp', workflow)

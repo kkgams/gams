@@ -48,7 +48,7 @@ source, hosted candidate and release rehearsal pass at the same commit.
 ## Automatic tag release notes
 
 After a matching `vX.Y.Z` tag passes all build/notice/history gates, Actions
-creates a **draft** whose title is exactly the tag name. Its description starts
+creates a **public release** whose title is exactly the tag name. Its description starts
 with `.github/RELEASE_GUIDE.md` (installation, scope and honest macOS security
 instructions), followed by an automatically generated changelog and authors.
 No manually maintained per-version RELEASE_NOTES.md is required.
@@ -65,8 +65,12 @@ drafts. Use a new approved version and tag for future workflow execution; do
 not move `v2.0.0` or `v2.0.1` to pick up these improvements. Existing draft
 notes may be edited by the owner without modifying the tag or app assets.
 
-Public publishing remains an owner action after tag-asset and clean-Mac review.
-Changing that policy to automatic public publication requires explicit approval.
+On 2026-09-30 the owner approved **automatic public publication on tag push**.
+Pushing the version tag is the publication authorization: there is no draft or
+manual approval after the build. Complete candidate, external Project and
+clean-Mac/Gatekeeper review **before tagging**. GitHub selects Latest using its
+default release rules. Branch pushes/manual branch rehearsals publish nothing;
+all tag build, exact-notice, source-history and overwrite checks remain required.
 
 ## Owner publication steps
 
@@ -98,12 +102,12 @@ Changing that policy to automatic public publication requires explicit approval.
    point to the current `release` branch head. The tag job independently
    rebuilds, re-tests and stages the Host; it restores only dependency cache
    entries from successful `release` verification, never a cached app binary.
-   It creates a **draft-only** GitHub Release with **one Apple Silicon app ZIP**, a SHA256SUMS file and
+   It creates a **public** GitHub Release with **one Apple Silicon app ZIP**, a SHA256SUMS file and
    licensing texts. They
    never attach the Linux/Windows roadmap ZIPs to a Release.
 5. The owner has chosen an **ad-hoc signed, non-Developer-ID and unnotarized**
    initial macOS distribution. Ad-hoc signing enables local Apple Silicon
-   launch but proves no publisher identity. Before publishing the draft,
+   launch but proves no publisher identity. **Before pushing the release tag**,
    verify the app ZIP and Gatekeeper behavior on a clean macOS machine **without
    Nix**. Record the normal first-launch result before any workaround. If
    blocked, a user who trusts the checksummed download may choose
