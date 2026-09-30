@@ -108,6 +108,36 @@ class HostReleaseTests(unittest.TestCase):
             linked.write_text('replaced after approval\n')
             self.assertNotEqual(check().returncode, 0)
 
+    def test_tag_branch_identity_fetch_preserves_full_history(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        import shlex
+        fetches = [line.strip() for line in workflow.splitlines()
+                   if line.strip().startswith('git fetch ')]
+        self.assertEqual(len(fetches), 2)
+        with tempfile.TemporaryDirectory() as temporary:
+            origin = Path(temporary) / 'origin'
+            origin.mkdir()
+            def git(cwd, *args):
+                return subprocess.run(['git', *args], cwd=cwd, check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git(origin, 'init', '-q', '-b', 'release')
+            git(origin, 'config', 'user.name', 'Test')
+            git(origin, 'config', 'user.email', 'test@example.invalid')
+            for i in range(2):
+                (origin / 'README.md').write_text(f'Host {i}\n')
+                git(origin, 'add', 'README.md')
+                git(origin, 'commit', '-qm', f'Host {i}')
+            for i, command in enumerate(fetches):
+                checkout = Path(temporary) / f'checkout{i}'
+                git(origin, 'clone', '--quiet', '--no-local', str(origin), str(checkout))
+                subprocess.run(shlex.split(command), cwd=checkout, check=True,
+                               capture_output=True)
+                self.assertEqual(git(checkout, 'rev-parse', '--is-shallow-repository'),
+                                 'false', command)
+                result = subprocess.run(['python3', str(ROOT / 'scripts/check-source-boundary.py')],
+                                        cwd=checkout, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_release_branch_rehearsal_only_checks_gates(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         self.assertIn("- name: Branch rehearsal checks release gates without a redundant build\n"

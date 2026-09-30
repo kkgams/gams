@@ -34,7 +34,7 @@ jobs:
       - name: Require tag at current release branch head
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          git fetch --no-tags --depth=1 origin refs/heads/release
+          git fetch --no-tags origin refs/heads/release
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
       - name: Branch rehearsal checks release gates without a redundant build
         if: github.ref == 'refs/heads/release'
@@ -94,7 +94,7 @@ jobs:
           python3 scripts/check-native-notices.py
           python3 scripts/check-mpl-source.py
           python3 scripts/check-notice-evidence.py
-          git fetch --no-tags --depth=1 origin refs/heads/release
+          git fetch --no-tags origin refs/heads/release
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
       - name: Refuse to overwrite any existing GitHub Release
         env:
