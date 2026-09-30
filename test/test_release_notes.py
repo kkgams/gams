@@ -49,6 +49,45 @@ class ReleaseNotesTests(unittest.TestCase):
             prerelease = dict(draft, draft=False, prerelease=True)
             self.assertIn('Change v1.0.1', notes([published, prerelease]))
 
+    def test_workflow_fetch_flattens_pages_and_preserves_api_failure(self):
+        # Execute the workflow's real fetch pipeline with a CLI-contract double:
+        # gh forbids --slurp with --jq/--template before sending any request.
+        import os
+        import textwrap
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        fetch = workflow.split('          gh api ', 1)[1].split(
+            '          python3 scripts/generate-release-notes.py', 1)[0]
+        command = 'set -euo pipefail\ngh api ' + textwrap.dedent(fetch)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'dist').mkdir()
+            gh = root / 'gh'
+            gh.write_text('#!/usr/bin/env python3\n'
+                          'import json, os, sys\n'
+                          'if "--slurp" in sys.argv and any(x in sys.argv for x in ("--jq", "--template")):\n'
+                          '    sys.stderr.write("the --slurp option is not supported with --jq or --template\\n")\n'
+                          '    sys.exit(1)\n'
+                          'if os.environ.get("API_FAILURE") == "1":\n'
+                          '    sys.stderr.write("HTTP 403\\n")\n'
+                          '    sys.exit(1)\n'
+                          'assert "--paginate" in sys.argv and "--slurp" in sys.argv\n'
+                          'print(os.environ["API_PAGES"])\n')
+            gh.chmod(0o755)
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                       GITHUB_REPOSITORY='kkgams/gams')
+            for pages, expected in [([[]], []),
+                                    ([[{'tag_name': 'v1.0.0'}], [{'tag_name': 'v1.0.1'}]],
+                                     [{'tag_name': 'v1.0.0'}, {'tag_name': 'v1.0.1'}])]:
+                env['API_PAGES'] = json.dumps(pages)
+                result = subprocess.run(['bash', '-c', command], cwd=root, env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads((root / 'dist/releases.json').read_text()), expected)
+            env['API_FAILURE'] = '1'
+            result = subprocess.run(['bash', '-c', command], cwd=root, env=env,
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'API errors must not become empty successful results')
+
     def test_workflow_generates_notes_and_publishes_only_after_tag_gates(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         self.assertIn('--title "$GITHUB_REF_NAME"', workflow)

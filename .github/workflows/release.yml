@@ -126,8 +126,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # gh's built-in --jq is incompatible with --slurp. Flatten pages
+          # with external jq; pipefail preserves API/authentication failures.
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            --jq 'add' > dist/releases.json
+            | jq -e 'add' > dist/releases.json
           python3 scripts/generate-release-notes.py \
             --tag "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
             --releases dist/releases.json --output dist/release-notes.md
