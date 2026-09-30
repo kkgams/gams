@@ -1,17 +1,17 @@
-# Publishing the GAMS desktop Host — revised NOTICE approved; hosted review pending
+# Publishing the GAMS desktop Host — v2.0.2 notice approval and hosted review pending
 
-## v2.0.1 preparation — new exact NOTICE approval pending
+## v2.0.2 preparation — exact NOTICE approval pending
 
-The immutable v2.0.0 tag's workflow failed because a depth-limited identity
-fetch made the checkout shallow. v2.0.1 preserves full ancestry. Only the GAMS
-package version changed in Cargo.lock; no third-party package or upstream
-license text changed. Updating that lock digest and the evidence binding
-changes the exact NOTICE bytes. The approvals described below are historical
-and do not cover this new candidate. **Do not push until owner approval.**
+v2.0.2 includes automatic **public** tag releases, tag-named titles, a reusable
+installation/security guide and complete generated commit/author notes.
+The version bump changes only the GAMS package version in Cargo.lock and its
+linked notice evidence; no third-party package or upstream license text changes.
+Earlier notice approvals below are historical, not approval of these new bytes.
+**Do not push until owner approval; a version tag authorizes public publication.**
 
-Current NOTICE SHA-256: `aac1de934824782a4b965097200d7ecd26ca2b22f08037a847fbfe0d7b139387`.
-Current evidence SHA-256: `f101ff06a09c911948d27cd750867914ba99e21db23c6c16f0445f8b12df442f`.
-See `PUBLISHING.md` for the two-phase branch/tag procedure.
+Current NOTICE SHA-256: `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030`.
+Current evidence SHA-256: `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b`.
+See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 
 
@@ -23,7 +23,7 @@ example, Project Units, Project configuration, or game WASM. No example ZIP
 is built, uploaded or attached. A user supplies a Project folder with `gams.json` and
 working local paths to independently installed Units.
 
-## Revised Host notice approved — 2026-09-29
+## Historical Host notice approval — 2026-09-29
 
 The owner approved the exact **revised** Host-only `NOTICE` and linked evidence
 below. The macOS Project chooser directly uses objc2-app-kit and
@@ -35,14 +35,14 @@ NOTICE. The previous CI candidate was built at an earlier commit and cannot
 stand in for hosted review of the revised binary. Apache-2.0 remains approved
 for GAMS-authored code; `example.game1` has **no** publication approval.
 
-| Previous approved file / Actions variable (not v2.0.1) | SHA-256 | Status |
+| Current v2.0.2 file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `54845bd559c3edbbb16c4f31d4b0ce11e9547da4592fd5e20e5e688367bb9fa8` | **owner approved 2026-09-29** |
-| `NOTICE-EVIDENCE.sha256` | `c38a82a3d8aff8061a69c41bd3c33256ca5117f9d5ea7b2b7535c914a4ad8bb9` | **reviewed and bound by NOTICE** |
+| `NOTICE` / `NOTICE_SHA256` | `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030` | **exact-byte owner approval pending** |
+| `NOTICE-EVIDENCE.sha256` | `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b` | **review pending; bound by NOTICE** |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
-passes before the next public push. Do not tag `v2.0.1` until this revised
+passes before the next public push. Do not tag `v2.0.2` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Automatic tag release notes
@@ -74,7 +74,8 @@ all tag build, exact-notice, source-history and overwrite checks remain required
 
 ## Owner publication steps
 
-1. Recompute the table above, then **replace the old** `kkgams/gams` Actions
+1. Obtain approval of the **current exact** NOTICE and linked evidence above.
+   Recompute the table, then **replace the old** `kkgams/gams` Actions
    variable `NOTICE_SHA256` with the approved revised digest. Confirm its
    `LICENSE_SHA256` still matches the unchanged LICENSE. These are variables,
    not secrets; Actions provides `GITHUB_TOKEN`. **Update the notice variable
@@ -121,7 +122,7 @@ all tag build, exact-notice, source-history and overwrite checks remain required
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.1` (Cargo/Tauri), which is different from
+Current source version is `2.0.2` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

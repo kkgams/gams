@@ -1,19 +1,29 @@
 # Split Host verification and historical extraction evidence
 
-## v2.0.1 preparation — new exact NOTICE approval pending
+## v2.0.2 preparation — exact NOTICE approval pending
 
-The immutable v2.0.0 tag's workflow failed because a depth-limited identity
-fetch made the checkout shallow. v2.0.1 preserves full ancestry. Only the GAMS
-package version changed in Cargo.lock; no third-party package or upstream
-license text changed. Updating that lock digest and the evidence binding
-changes the exact NOTICE bytes. The approvals described below are historical
-and do not cover this new candidate. **Do not push until owner approval.**
+v2.0.2 includes automatic **public** tag releases, tag-named titles, a reusable
+installation/security guide and complete generated commit/author notes.
+The version bump changes only the GAMS package version in Cargo.lock and its
+linked notice evidence; no third-party package or upstream license text changes.
+Earlier notice approvals below are historical, not approval of these new bytes.
+**Do not push until owner approval; a version tag authorizes public publication.**
 
-Current NOTICE SHA-256: `aac1de934824782a4b965097200d7ecd26ca2b22f08037a847fbfe0d7b139387`.
-Current evidence SHA-256: `f101ff06a09c911948d27cd750867914ba99e21db23c6c16f0445f8b12df442f`.
-See `PUBLISHING.md` for the two-phase branch/tag procedure.
+Current NOTICE SHA-256: `86df311f31799ddbd1b4e9260dce3d6b61021de836c5fcbc0e720c15447d6030`.
+Current evidence SHA-256: `4c8b25cd4edf3f8406d367b19578d761c6f2b4d26f2e9bd39cc63fa4d3c2642b`.
+See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 
+
+## Owner-reported clean-Mac result — 2026-09-30
+
+The owner reports earlier downloaded builds worked on a fresh Mac after
+disabling Gatekeeper. This confirms operation after a security bypass, not
+normal Gatekeeper acceptance; the exact build and bypass method were not
+specified. Do not recommend system-wide security disabling. Release guidance
+retains checksum checks and an explicit app-scoped quarantine bypass for users
+who trust the download. A hosted v2.0.2 candidate has not yet been built or
+reviewed; these earlier results do not establish validation of its new assets.
 
 **The older dated results below are historical pre-split observations**, including
 station paths, example ZIP tests, old notice digests, and local assembly tools.
