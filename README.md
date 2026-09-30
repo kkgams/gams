@@ -1,5 +1,20 @@
 # GAMS Host
 
+## v2.0.1 preparation — new exact NOTICE approval pending
+
+The immutable v2.0.0 tag's workflow failed because a depth-limited identity
+fetch made the checkout shallow. v2.0.1 preserves full ancestry. Only the GAMS
+package version changed in Cargo.lock; no third-party package or upstream
+license text changed. Updating that lock digest and the evidence binding
+changes the exact NOTICE bytes. The approvals described below are historical
+and do not cover this new candidate. **Do not push until owner approval.**
+
+Current NOTICE SHA-256: `aac1de934824782a4b965097200d7ecd26ca2b22f08037a847fbfe0d7b139387`.
+Current evidence SHA-256: `f101ff06a09c911948d27cd750867914ba99e21db23c6c16f0445f8b12df442f`.
+See `PUBLISHING.md` for the two-phase branch/tag procedure.
+
+
+
 `gams` is the standalone GAMS Runtime, Tauri desktop Host, and shared Host UI
 API. It must contain **zero example/station source**, including in the history
 pushed to its public remote. The separate `example.game1` repository owns the
@@ -105,10 +120,10 @@ both the download's origin and the checksum before extracting or running it:
 
 ```sh
 cd ~/Downloads
-awk '$2 == "GAMS-2.0.0-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
-mkdir -p gams-2.0.0
-ditto -x -k GAMS-2.0.0-macos-aarch64.zip gams-2.0.0
-ditto gams-2.0.0/GAMS.app /Applications/GAMS.app
+awk '$2 == "GAMS-2.0.1-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
+mkdir -p gams-2.0.1
+ditto -x -k GAMS-2.0.1-macos-aarch64.zip gams-2.0.1
+ditto gams-2.0.1/GAMS.app /Applications/GAMS.app
 codesign --verify --deep --strict /Applications/GAMS.app
 ```
 

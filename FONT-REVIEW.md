@@ -1,5 +1,20 @@
 # Bundled Host fonts — sourced and licensed
 
+## v2.0.1 preparation — new exact NOTICE approval pending
+
+The immutable v2.0.0 tag's workflow failed because a depth-limited identity
+fetch made the checkout shallow. v2.0.1 preserves full ancestry. Only the GAMS
+package version changed in Cargo.lock; no third-party package or upstream
+license text changed. Updating that lock digest and the evidence binding
+changes the exact NOTICE bytes. The approvals described below are historical
+and do not cover this new candidate. **Do not push until owner approval.**
+
+Current NOTICE SHA-256: `aac1de934824782a4b965097200d7ecd26ca2b22f08037a847fbfe0d7b139387`.
+Current evidence SHA-256: `f101ff06a09c911948d27cd750867914ba99e21db23c6c16f0445f8b12df442f`.
+See `PUBLISHING.md` for the two-phase branch/tag procedure.
+
+
+
 The previous ten untraced WOFF2 files have been replaced with **unmodified
 upstream bytes** from the Google Fonts CSS API and Google's Material Symbols
 repository. See [`cmd/app/src/fonts/PROVENANCE.md`](cmd/app/src/fonts/PROVENANCE.md)

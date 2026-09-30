@@ -1,5 +1,20 @@
 # Publishing the GAMS desktop Host — revised NOTICE approved; hosted review pending
 
+## v2.0.1 preparation — new exact NOTICE approval pending
+
+The immutable v2.0.0 tag's workflow failed because a depth-limited identity
+fetch made the checkout shallow. v2.0.1 preserves full ancestry. Only the GAMS
+package version changed in Cargo.lock; no third-party package or upstream
+license text changed. Updating that lock digest and the evidence binding
+changes the exact NOTICE bytes. The approvals described below are historical
+and do not cover this new candidate. **Do not push until owner approval.**
+
+Current NOTICE SHA-256: `aac1de934824782a4b965097200d7ecd26ca2b22f08037a847fbfe0d7b139387`.
+Current evidence SHA-256: `f101ff06a09c911948d27cd750867914ba99e21db23c6c16f0445f8b12df442f`.
+See `PUBLISHING.md` for the two-phase branch/tag procedure.
+
+
+
 Target repository: `kkgams/gams`. The standalone Host must have **zero example/station source or pushed history**.
 `example.game1` separately owns the example Project, visitor game, and local
 setup/integration tooling; verify the generated repositories actually satisfy
@@ -20,14 +35,14 @@ NOTICE. The previous CI candidate was built at an earlier commit and cannot
 stand in for hosted review of the revised binary. Apache-2.0 remains approved
 for GAMS-authored code; `example.game1` has **no** publication approval.
 
-| Current file / Actions variable | SHA-256 | Status |
+| Previous approved file / Actions variable (not v2.0.1) | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
 | `NOTICE` / `NOTICE_SHA256` | `54845bd559c3edbbb16c4f31d4b0ce11e9547da4592fd5e20e5e688367bb9fa8` | **owner approved 2026-09-29** |
 | `NOTICE-EVIDENCE.sha256` | `c38a82a3d8aff8061a69c41bd3c33256ca5117f9d5ea7b2b7535c914a4ad8bb9` | **reviewed and bound by NOTICE** |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
-passes before the next public push. Do not tag `v2.0.0` until this revised
+passes before the next public push. Do not tag `v2.0.1` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Owner publication steps
@@ -79,7 +94,7 @@ source, hosted candidate and release rehearsal pass at the same commit.
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.0` (Cargo/Tauri), which is different from
+Current source version is `2.0.1` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

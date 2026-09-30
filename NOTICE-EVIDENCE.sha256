@@ -1,4 +1,4 @@
-aee615ffbaafa3ee0c597a69dd1606701fc3ce4d2edde68703122a79e78fe467  NATIVE-NOTICES.md
+6916cdb3c26769457a2b87c27b4953d0298330ebc26dec74a179436c5cc30054  NATIVE-NOTICES.md
 4b69f3c4b0516e3d29b682ac329fa9d7e88ee4cf1698d9cdf51817fde0b5c4f6  NATIVE-SOURCE/README.md
 dae61cf9c0abb83bd659dab65b7e4e38d8236824c85f0f804f173567bda257d2  NATIVE-SOURCE/cssparser-0.36.0.crate
 13b588ba4ac1a99f7f2964d24b3d896ddc6bf847ee3855dbd4366f058cfcd331  NATIVE-SOURCE/cssparser-macros-0.6.1.crate
@@ -43,5 +43,5 @@ cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164  cmd/app/src/wi
 483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a  cmd/app/src/widgets/licenses/uc.micro.LICENSE
 792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473  cmd/app/src/widgets/markdown-it.LICENSE
 2eb56368f6bdd49231bab3ef495fce8e8205ce4ffbd8fb1be4fc3bbe681140ea  cmd/app/src/widgets/markdown-it.js
-f32e1835790c5a687ab9330fc239e6791ba92bbacc89dcff488491208d78efbb  cmd/app/src-tauri/Cargo.lock
+d025233e9ad2ccbf2baae24f05de98acc6b85e385127690e8464840802dae6b1  cmd/app/src-tauri/Cargo.lock
 4d1d9fa8dcea1fc7042b57d29ac137cfa8c952b3543557d019aa860f91e2330a  native-about.toml
