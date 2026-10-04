@@ -1,6 +1,9 @@
-import { runtime, unwrap } from "/core/runtime.js"
+import { runtime } from "/core/runtime.js"
 // import { openSqlVecConnection, sql } from "/core/sql.js"
 import { init } from "/___/services.js"
+
+// Default package folder; runtime.modulesDir supplies the native-selected path.
+const GAMS_MODULES = "gams_modules"
 
 app.innerHTML = ""
 
@@ -9,12 +12,8 @@ async function main() {
     await runtime.ready
     console.timeEnd("runtime.ready")
 
+    const config = runtime.config
     await runtime.addPlugins(["plugins/fs.comp.wasm"], true)
-    console.time("read gams.json")
-    const gamsJsonText2 = unwrap(await runtime.invoke("fs/fs::read-text", "gams.json"))
-    const config = JSON.parse(gamsJsonText2)
-    runtime.setProjectConfig(config)
-    console.timeEnd("read gams.json")
 
     console.time("addPlugins")
     await runtime.addPlugins(config.plugins, true)

@@ -55,6 +55,22 @@ the Project's `plugins` array. The example repository checks assembly before
 its integration/run steps. Host release builds do not assemble or bundle any
 of these Units. Build the visitor game using `example.game1`'s instructions.
 
+## Project bootstrap and Unit storage
+
+After `await runtime.ready`, frontend code can read native-loaded `gams.json`
+as `runtime.config` and the selected Unit storage path as `runtime.modulesDir`.
+Configuration reading does not depend on the filesystem plugin. Existing Unit
+loading still uses the current Project paths; downloading/resolution is not yet
+implemented.
+
+GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
+to a non-empty absolute directory path to select shared storage instead. The
+selected directory is canonicalized and preopened for runtime/filesystem access;
+there is no local fallback when the override is set. CLI commands, including
+`init`, do not require this GUI bootstrap or an existing config.
+
+See `docs/project-unit-installation.md` for the remaining installation design.
+
 ## Host UI URL contract
 
 The Host continues to expose these existing URL roots as owned files:

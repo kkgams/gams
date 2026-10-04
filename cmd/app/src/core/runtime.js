@@ -27,9 +27,18 @@ export class Runtime {
   #callViewListenerReady = null
   #mainPlugins = new Map()
   #projectConfig = null
+  #modulesDir = null
 
   constructor() {
-    this.#callViewListenerReady = this.#setupCallViewBridge()
+    this.#callViewListenerReady = this.#initialize()
+  }
+
+  async #initialize() {
+    const project = await invokeCommand("runtime_project", {})
+    this.setProjectConfig(project.config)
+    assertString(project.modulesDir, "runtime modules directory")
+    this.#modulesDir = project.modulesDir
+    await this.#setupCallViewBridge()
   }
 
   get ready() {
@@ -109,9 +118,18 @@ export class Runtime {
     this.#projectConfig = config
   }
 
-  get projectConfig() {
+  get config() {
     if (!this.#projectConfig) throw new Error("runtime project config is not loaded")
     return this.#projectConfig
+  }
+
+  get projectConfig() {
+    return this.config
+  }
+
+  get modulesDir() {
+    if (!this.#modulesDir) throw new Error("runtime modules directory is not loaded")
+    return this.#modulesDir
   }
 
   async diagnostics() {

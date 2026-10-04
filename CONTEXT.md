@@ -44,7 +44,12 @@ station ZIP. The filesystem plugin is required by bootstrap but must be supplied
 with the external Project; missing required state and artifacts fail fast.
 
 The current `gams.json` format and bootstrap order are pre-release contracts;
-this extraction is not a Project Config or runtime migration. Verification of
-an external Project belongs to the example repository. Host publication still
+this extraction is not a Project Config or runtime migration. The agreed initial
+design for a future breaking migration to explicit prebuilt Unit sources and
+local/shared `gams_modules` storage is in
+[`docs/project-unit-installation.md`](docs/project-unit-installation.md); it is
+implemented only through native config exposure and local/shared modules-directory
+selection/preopening. Source installation is not implemented. Verification of an
+external Project belongs to the example repository. Host publication still
 requires clean source/history, fresh Host-only NOTICE approval, and the release
 checks in `LICENSING.md` and `VERIFICATION.md`.

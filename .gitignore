@@ -1,5 +1,6 @@
 /build.nosync/
 /dist/
+/gams_modules/
 __pycache__/
 *.pyc
 /.dev-tools/

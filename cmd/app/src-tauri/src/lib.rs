@@ -1,3 +1,4 @@
+mod project;
 mod runtime;
 
 use std::collections::HashMap;
@@ -5,6 +6,11 @@ use std::path::{Path, PathBuf};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_cli::{ArgData, Matches};
+
+#[tauri::command]
+fn runtime_project(project: tauri::State<'_, project::Project>) -> project::Project {
+    project.inner().clone()
+}
 
 #[tauri::command]
 async fn runtime_add_plugins(
@@ -325,11 +331,20 @@ pub fn run() {
                 // Canceling the native Project chooser is a normal user action.
                 std::process::exit(0);
             };
-            let runtime = runtime::Runtime::new_at(
-                root.clone(),
-                preopens_for_root(&root).map_err(|error| error.to_string())?,
-            )
-            .map_err(|error| error.to_string())?;
+            // CLI commands (notably `init`) must not require an existing config.
+            let mut preopens = preopens_for_root(&root).map_err(|error| error.to_string())?;
+            if matches.subcommand.is_none() {
+                let shared_modules = std::env::var_os("GAMS_MODULES_DIR");
+                let project = project::Project::load(&root, shared_modules.as_deref())
+                    .map_err(|error| format!("{error:#}"))?;
+                preopens.push(runtime::FsPreopen {
+                    host_path: project.modules_dir.clone(),
+                    guest_path: project.modules_dir.to_string_lossy().into_owned(),
+                });
+                app.manage(project);
+            }
+            let runtime = runtime::Runtime::new_at(root.clone(), preopens)
+                .map_err(|error| error.to_string())?;
             runtime.attach_app_handle(app.handle().clone())?;
             assert!(
                 app.manage(runtime),
@@ -364,6 +379,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            runtime_project,
             runtime_add_plugins,
             runtime_invoke,
             runtime_diagnostics,

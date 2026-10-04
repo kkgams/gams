@@ -24,6 +24,7 @@ app-check: app-icons
 
 # Legacy source-monorepo fixture tests are explicitly ignored, not silently passed.
 app-test: app-icons
+	node --test test/*.test.mjs
 	cd "$(TAURI_SRC_DIR)"
 	CC="$(HOST_CC)" CXX="$(HOST_CXX)" CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo test
 
