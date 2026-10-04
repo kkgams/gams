@@ -1,9 +1,11 @@
 import { runtime } from "/core/runtime.js"
 // import { openSqlVecConnection, sql } from "/core/sql.js"
 import { init } from "/___/services.js"
+import { projectUnits } from "/util/require.js"
 
 // Default package folder; runtime.modulesDir supplies the native-selected path.
 const GAMS_MODULES = "gams_modules"
+const FS_BOOTSTRAP_SOURCE = "plugins/fs.comp.wasm"
 
 app.innerHTML = ""
 
@@ -13,10 +15,11 @@ async function main() {
     console.timeEnd("runtime.ready")
 
     const config = runtime.config
-    await runtime.addPlugins(["plugins/fs.comp.wasm"], true)
+    await projectUnits.bootstrapFilesystem(FS_BOOTSTRAP_SOURCE)
 
     console.time("addPlugins")
-    await runtime.addPlugins(config.plugins, true)
+    const pluginPaths = await Promise.all(config.plugins.map(source => projectUnits.resolve(source)))
+    await runtime.addPlugins(pluginPaths, true)
     console.timeEnd("addPlugins")
 
     console.time("init UI")

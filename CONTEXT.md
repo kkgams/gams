@@ -48,8 +48,10 @@ this extraction is not a Project Config or runtime migration. The agreed initial
 design for a future breaking migration to explicit prebuilt Unit sources and
 local/shared `gams_modules` storage is in
 [`docs/project-unit-installation.md`](docs/project-unit-installation.md); it is
-implemented only through native config exposure and local/shared modules-directory
-selection/preopening. Source installation is not implemented. Verification of an
+partially implemented through native config exposure, local/shared storage,
+direct-file HTTP downloads, JS filesystem-backed installation, and native WASM
+byte loading. See [`docs/direct-file-downloads.md`](docs/direct-file-downloads.md)
+for current scope and testing; archives/Git and the loading screen remain pending. Verification of an
 external Project belongs to the example repository. Host publication still
 requires clean source/history, fresh Host-only NOTICE approval, and the release
 checks in `LICENSING.md` and `VERIFICATION.md`.

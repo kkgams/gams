@@ -11,7 +11,7 @@
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          hostTools = with pkgs; [ rustc cargo cargo-tauri libiconv pkg-config python3 nodejs cacert ];
+          hostTools = with pkgs; [ rustc cargo cargo-tauri libiconv pkg-config python3 nodejs cacert gnumake ];
         in {
           default = pkgs.mkShell {
             name = "gams-host-dev";

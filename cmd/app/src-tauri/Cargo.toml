@@ -1,9 +1,10 @@
 [package]
 name = "gams"
-version = "2.0.3"
+version = "2.0.4"
 description = "Game Assets Management System"
 authors = ["Kazys Kalabibishkis"]
 edition = "2021"
+license = "Apache-2.0"
 
 [lib]
 name = "gams_lib"
@@ -27,6 +28,7 @@ hyper = { version = "1", features = ["http1", "server"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 bytes = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSApplication", "NSOpenPanel"] }

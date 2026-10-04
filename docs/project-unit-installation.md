@@ -1,8 +1,9 @@
 # Project Unit installation — initial design
 
-Status: initial native configuration and modules-directory bootstrap implemented;
-source installation and loading UI are not implemented. Source syntax remains
-provisional.
+Status: native configuration, local/shared storage, direct-file installation,
+binary HTTP transport and WASM byte loading are implemented. Archive/Git sources
+and the loading UI remain pending. Source syntax remains provisional. See
+[`direct-file-downloads.md`](direct-file-downloads.md) for current APIs and tests.
 
 ## Scope
 
@@ -195,8 +196,9 @@ permissions; finer-grained shared-store permissions are deferred.
 Prefer native HTTP transport rather than disabling WebView security. Tauri's
 HTTP plugin exposes a fetch-like JS API backed by Rust and not subject to browser
 CORS, with URL scopes. Alternatively use a small custom `reqwest` command/channel.
-Transport choice is not yet final; `reqwest`/the HTTP plugin is not currently a
-direct Host dependency.
+The initial implementation uses a custom binary `reqwest` GET command and a
+Tauri IPC progress channel. `reqwest` is now a direct Host dependency. HTTPS and
+loopback HTTP testing are supported; arbitrary plain HTTP is rejected.
 
 Downloads are binary, not text. Transport should check unsuccessful HTTP status,
 retain TLS verification, bound time/bytes/redirects, and expose chunk progress to
@@ -224,6 +226,10 @@ Git protocols remain a later slice requiring an explicit transport strategy.
   equals one Unit.
 
 ## Implementation slices
+
+The direct-file transport, byte bootstrap and JS cache flow now have automated
+coverage; a real prebuilt FS/local-server smoke is available. ZIP/Git sources and
+the loading UI have not been implemented.
 
 0. Done: native config exposure, local/shared directory selection and preopen,
    `runtime.config`/`runtime.modulesDir`, and removal of frontend config file I/O.

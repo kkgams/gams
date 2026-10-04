@@ -1,19 +1,21 @@
 # GAMS Host
 
-## v2.0.3 preparation — exact NOTICE approval pending
+## v2.0.4 preparation — exact NOTICE approval and candidate review pending
 
-v2.0.3 corrects release-notes generation: paginated GitHub API output is
-flattened with external jq, without the incompatible gh --slurp/--jq pairing.
-Regression tests cover multiple pages, no releases and API failures. Releases
-remain automatically **public** after tag gates, with tag-named titles and
-complete commit/author notes. Existing v2.0.0–v2.0.2 tags are immutable.
-The version bump changes only the GAMS package version in Cargo.lock and its
-linked notice evidence; no third-party package or upstream license text changes.
-Earlier notice approvals below are historical, not approval of these new bytes.
-**Do not push until owner approval; a version tag authorizes public publication.**
+v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
+prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
+ZIP/Git installation and a loading screen are not part of this release.
+The native appendix has been regenerated against the updated locked Apple
+Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
+removing or changing prior notices. The five MPL source archives are unchanged.
+Root LICENSE, browser bundles, fonts and their license texts are unchanged.
+See `docs/http-license-review.md` for the dependency delta and generation commands.
+Existing v2.0.0–v2.0.3 tags are immutable. Historical approvals below do not
+approve these new exact bytes. **Do not push until owner notice approval; do not
+publish the tag until same-commit candidate and clean-Mac review pass.**
 
-Current NOTICE SHA-256: `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd`.
-Current evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`.
+Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
+Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
 See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 
@@ -31,10 +33,18 @@ Initial Host distribution target: current supported macOS on **Apple Silicon**
 with Xcode command-line tools. Intel release builds are deferred.
 
 ```sh
+nix develop --command make run         # Build/run from source; choose a Project
+nix develop --command make run GAMS_APP_CWD=../example.game1
 nix develop --command make app-check   # Host-only; no sibling repositories required
 nix develop --command make app-build-release
 nix develop --command make app-bundle-release APP_BUNDLES=app
 ```
+
+`make run` aliases `app-run` and starts `cargo tauri dev` with the frontend dev
+server and native source rebuilds. Without `GAMS_APP_CWD`, macOS opens the Project
+folder picker. Explicit relative Project paths are resolved before entering the
+Tauri source directory. Project Units must already be available for bootstrap;
+this target does not build or assemble sibling repositories.
 
 For local example development, use `example.game1`'s setup and integration
 tools. Its assembly copies (not symlinks) artifacts from these independent Unit
@@ -59,9 +69,11 @@ of these Units. Build the visitor game using `example.game1`'s instructions.
 
 After `await runtime.ready`, frontend code can read native-loaded `gams.json`
 as `runtime.config` and the selected Unit storage path as `runtime.modulesDir`.
-Configuration reading does not depend on the filesystem plugin. Existing Unit
-loading still uses the current Project paths; downloading/resolution is not yet
-implemented.
+Configuration reading does not depend on the filesystem plugin. Direct-file
+HTTPS (and loopback HTTP test) sources can now be downloaded and installed via
+`require` and configured WASM/theme loading. Archive/Git sources and the loading
+screen are not implemented. FS bootstrap still defaults to its existing local
+path. See `docs/direct-file-downloads.md` for APIs and the local-server smoke test.
 
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The
@@ -115,9 +127,9 @@ readable font and browser-bundle license texts, pinned provenance,
 the native-license appendix and original source archives for five MPL-covered
 crates beside the `.app` (Tauri embeds the frontend assets in the executable).
 `NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the root
-`NOTICE`. The owner approved the revised exact bytes on 2026-09-29 for the
-macOS Project picker; the prior approval digest must be replaced in GitHub
-Actions **before pushing**. Publication gates are recorded in `PUBLISHING.md`.
+`NOTICE`. Historical Project-picker notice approval does not cover the new
+HTTP dependency bytes. Obtain exact v2.0.4 approval, then replace the prior
+notice digest in GitHub Actions **before pushing**. Publication gates are recorded in `PUBLISHING.md`.
 
 `release.yml` rehearses on `release` without publishing. After all gates pass,
 a matching owner-pushed version tag automatically creates a **public** Apple
@@ -140,10 +152,10 @@ both the download's origin and the checksum before extracting or running it:
 
 ```sh
 cd ~/Downloads
-awk '$2 == "GAMS-2.0.3-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
-mkdir -p gams-2.0.3
-ditto -x -k GAMS-2.0.3-macos-aarch64.zip gams-2.0.3
-ditto gams-2.0.3/GAMS.app /Applications/GAMS.app
+awk '$2 == "GAMS-2.0.4-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
+mkdir -p gams-2.0.4
+ditto -x -k GAMS-2.0.4-macos-aarch64.zip gams-2.0.4
+ditto gams-2.0.4/GAMS.app /Applications/GAMS.app
 codesign --verify --deep --strict /Applications/GAMS.app
 ```
 

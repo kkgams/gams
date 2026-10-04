@@ -103,6 +103,25 @@ export class Runtime {
     return handles
   }
 
+  async download(url, onProgress = () => {}) {
+    assertString(url, "runtime.download URL")
+    const progress = new globalThis.__TAURI__.core.Channel()
+    progress.onmessage = onProgress
+    const bytes = await invokeCommand("runtime_download", { url, onProgress: progress })
+    return new Uint8Array(bytes)
+  }
+
+  async loadFromBytes(bytes, path) {
+    assertString(path, "runtime.loadFromBytes path")
+    if (bytes instanceof ArrayBuffer) bytes = new Uint8Array(bytes)
+    if (!(bytes instanceof Uint8Array))
+      throw new Error("runtime.loadFromBytes requires a Uint8Array or ArrayBuffer")
+    return await invokeCommand("runtime_load_from_bytes", {
+      bytes: Array.from(bytes),
+      path,
+    })
+  }
+
   async #callView(target, args) {
     assertString(target, "runtime.callView target")
     assertString(args, "runtime.callView args")

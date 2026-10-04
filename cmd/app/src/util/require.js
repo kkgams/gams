@@ -1,4 +1,7 @@
 import { runtime } from "/core/runtime.js"
+import { createProjectUnits } from "/core/project-units.js"
+
+export const projectUnits = createProjectUnits(runtime)
 
 function unwrapResult(result, label) {
   if (result && Object.prototype.hasOwnProperty.call(result, "ok"))
@@ -8,7 +11,8 @@ function unwrapResult(result, label) {
   throw new Error(`${label}: expected WIT result object`)
 }
 
-export async function require(path) {
+export async function require(source) {
+  const path = await projectUnits.resolve(source)
   const readResult = unwrapResult(
     await runtime.invoke("fs/fs::read-file", path),
     `require failed "${path}"`,

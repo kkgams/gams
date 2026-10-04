@@ -1,19 +1,21 @@
 # Bundled Host fonts — sourced and licensed
 
-## v2.0.3 preparation — exact NOTICE approval pending
+## v2.0.4 preparation — exact NOTICE approval and candidate review pending
 
-v2.0.3 corrects release-notes generation: paginated GitHub API output is
-flattened with external jq, without the incompatible gh --slurp/--jq pairing.
-Regression tests cover multiple pages, no releases and API failures. Releases
-remain automatically **public** after tag gates, with tag-named titles and
-complete commit/author notes. Existing v2.0.0–v2.0.2 tags are immutable.
-The version bump changes only the GAMS package version in Cargo.lock and its
-linked notice evidence; no third-party package or upstream license text changes.
-Earlier notice approvals below are historical, not approval of these new bytes.
-**Do not push until owner approval; a version tag authorizes public publication.**
+v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
+prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
+ZIP/Git installation and a loading screen are not part of this release.
+The native appendix has been regenerated against the updated locked Apple
+Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
+removing or changing prior notices. The five MPL source archives are unchanged.
+Root LICENSE, browser bundles, fonts and their license texts are unchanged.
+See `docs/http-license-review.md` for the dependency delta and generation commands.
+Existing v2.0.0–v2.0.3 tags are immutable. Historical approvals below do not
+approve these new exact bytes. **Do not push until owner notice approval; do not
+publish the tag until same-commit candidate and clean-Mac review pass.**
 
-Current NOTICE SHA-256: `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd`.
-Current evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`.
+Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
+Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
 See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 

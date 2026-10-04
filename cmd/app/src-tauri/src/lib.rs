@@ -1,3 +1,4 @@
+mod download;
 mod project;
 mod runtime;
 
@@ -10,6 +11,31 @@ use tauri_plugin_cli::{ArgData, Matches};
 #[tauri::command]
 fn runtime_project(project: tauri::State<'_, project::Project>) -> project::Project {
     project.inner().clone()
+}
+
+#[tauri::command]
+async fn runtime_download(
+    url: String,
+    on_progress: tauri::ipc::Channel<download::DownloadProgress>,
+) -> Result<tauri::ipc::Response, String> {
+    let bytes = download::fetch_bytes(&url, |event| {
+        on_progress.send(event).map_err(anyhow::Error::from)
+    })
+    .await
+    .map_err(|error| format!("{error:#}"))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+#[tauri::command]
+async fn runtime_load_from_bytes(
+    bytes: Vec<u8>,
+    path: String,
+    runtime: tauri::State<'_, runtime::Runtime>,
+) -> Result<runtime::ComponentHandle, String> {
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || runtime.load_from_bytes(bytes, path))
+        .await
+        .map_err(|error| format!("runtime byte loading task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -380,6 +406,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             runtime_project,
+            runtime_download,
+            runtime_load_from_bytes,
             runtime_add_plugins,
             runtime_invoke,
             runtime_diagnostics,

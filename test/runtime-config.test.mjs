@@ -5,14 +5,16 @@ import { readFile } from "node:fs/promises"
 const source = await readFile(new URL("../cmd/app/src/core/runtime.js", import.meta.url), "utf8")
 let moduleId = 0
 
-async function loadRuntime(project) {
+async function loadRuntime(project, handleCommand) {
   const calls = []
   globalThis.__TAURI__ = {
     core: {
+      Channel: class { onmessage = () => {} },
       async invoke(command, args) {
         calls.push({ command, args })
         if (command === "runtime_project") return project
         if (command === "runtime_call_view_ready") return
+        if (handleCommand) return handleCommand(command, args)
         throw new Error(`Unexpected command: ${command}`)
       },
     },
@@ -48,6 +50,28 @@ test("ready exposes the shared directory selected by native bootstrap", async ()
 test("invalid native configuration rejects readiness", async () => {
   const { runtime } = await loadRuntime({ config: [], modulesDir: "/shared/units" })
   await assert.rejects(runtime.ready, /config must be an object/)
+})
+
+test("runtime downloads bytes with progress and loads a typed-array slice", async () => {
+  const bytes = new Uint8Array([0, 97, 115, 109, 13, 0, 1, 0])
+  const handle = { handle: "component:1", path: "/project/gams_modules/fs.wasm", imports: [], exports: [] }
+  const { runtime } = await loadRuntime({ config: {}, modulesDir: "/project/gams_modules" }, (command, args) => {
+    if (command === "runtime_download") {
+      assert.equal(args.url, "http://127.0.0.1:8765/fs.wasm")
+      args.onProgress.onmessage({ downloaded: bytes.length, total: bytes.length })
+      return bytes.buffer
+    }
+    assert.equal(command, "runtime_load_from_bytes")
+    assert.deepEqual(args.bytes, Array.from(bytes))
+    assert.equal(args.path, handle.path)
+    return handle
+  })
+  await runtime.ready
+  const progress = []
+  assert.deepEqual(await runtime.download("http://127.0.0.1:8765/fs.wasm", event => progress.push(event)), bytes)
+  assert.equal(progress[0].downloaded, bytes.length)
+  const padded = new Uint8Array([99, ...bytes, 99])
+  assert.deepEqual(await runtime.loadFromBytes(padded.subarray(1, -1), handle.path), handle)
 })
 
 test("app bootstrap uses runtime config instead of reading gams.json via fs", async () => {

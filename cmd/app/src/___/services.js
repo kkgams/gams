@@ -1,4 +1,4 @@
-import { require } from "/util/require.js"
+import { require, projectUnits } from "/util/require.js"
 import { runtime } from "/core/runtime.js"
 import { restoreViewSourceState } from "/util/view-source-state.js"
 
@@ -125,9 +125,10 @@ function createConfiguredViewRegistry(config) {
 }
 
 async function applyThemeStylesheet(config) {
-    const themePath = config?.ui?.theme?.path
-    if (typeof themePath !== "string" || themePath.length === 0)
-        throw new Error("gams config ui.theme.path is required")
+    const themeSource = config?.ui?.theme?.url ?? config?.ui?.theme?.path
+    if (typeof themeSource !== "string" || themeSource.length === 0)
+        throw new Error("gams config ui.theme.url is required")
+    const themePath = await projectUnits.resolve(themeSource)
     const readResult = unwrapResult(await runtime.invoke("fs/fs::read-file", themePath), "theme read")
 
     const blob = new Blob([new Uint8Array(readResult)], { type: "text/css" })

@@ -15,7 +15,7 @@ HOST_CXX_AUTO := $(shell if [ -x /Applications/Xcode.app/Contents/Developer/Tool
 HOST_CC ?= $(if $(CC),$(CC),$(HOST_CC_AUTO))
 HOST_CXX ?= $(if $(CXX),$(CXX),$(HOST_CXX_AUTO))
 
-.PHONY: app-check app-test app-run app-build-release app-bundle-release app-icons clean
+.PHONY: run app-check app-test app-run app-build-release app-bundle-release app-icons clean
 
 # Deliberately independent: this checks Host Rust/Tauri source without sibling repos.
 app-check: app-icons
@@ -33,11 +33,18 @@ app-icons:
 	cd "$(TAURI_SRC_DIR)"
 	cargo tauri icon "$(abspath $(TAURI_APP_DIR)/brand/icon.svg)" -o "$(abspath $(BUILD_DIR)/app/icons)"
 
-# An external Project must be selected explicitly, never silently defaulted.
+# Build/run from source. An omitted Project opens the native folder picker.
+run: app-run
+
 app-run: app-icons
-	[[ -n "$(GAMS_APP_CWD)" && -f "$(GAMS_APP_CWD)/gams.json" ]] || { echo 'Set GAMS_APP_CWD to an external Project root with gams.json' >&2; exit 1; }
+	if [[ -n "$(GAMS_APP_CWD)" ]]; then
+	  [[ -f "$(GAMS_APP_CWD)/gams.json" ]] || { echo 'GAMS_APP_CWD must point to a Project root with gams.json' >&2; exit 1; }
+	  export GAMS_APP_CWD="$$(cd "$(GAMS_APP_CWD)" && pwd -P)"
+	else
+	  unset GAMS_APP_CWD
+	fi
 	cd "$(TAURI_SRC_DIR)"
-	GAMS_APP_CWD="$(GAMS_APP_CWD)" CC="$(HOST_CC)" CXX="$(HOST_CXX)" CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri dev
+	CC="$(HOST_CC)" CXX="$(HOST_CXX)" CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri dev
 
 # The desktop Host is independent of any particular Project.
 app-build-release: app-icons

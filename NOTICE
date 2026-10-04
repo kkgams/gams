@@ -15,7 +15,7 @@ repository.
 The exact third-party input and notice bytes for this review are listed in
 NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
 linked files to change independently; release checks validate the manifest.
-Third-party evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`
+Third-party evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`
 
 Host browser fonts:
 - Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;
@@ -60,6 +60,14 @@ Native desktop Host:
   Project folder chooser uses the already-listed objc2-app-kit and
   objc2-foundation crates; this changes the root Cargo.lock dependency edges,
   but adds no new third-party crates or license texts.
+- Project Unit HTTP downloads directly use reqwest 0.12.28 (Sean McArthur),
+  selected under Apache-2.0. The updated native appendix also covers
+  hyper-rustls, ryu, serde_urlencoded, sync_wrapper, tower, tower-http,
+  tower-layer and tower-service. It retains all previously indexed crates
+  and notices, adds the reqwest Apache text and the two distinct Tower MIT
+  copyright texts, and now indexes 395 third-party crates and 88 full texts.
+  TLS-related crates already present in the Host remain covered there.
+  No additional MPL-covered crate source archive is required by this update.
 
 This Host repository does not contain an example Project or game source.
 `example.game1` is a separate Project repository with its own independent

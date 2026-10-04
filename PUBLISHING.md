@@ -1,19 +1,21 @@
-# Publishing the GAMS desktop Host — v2.0.3 notice approval and hosted review pending
+# Publishing the GAMS desktop Host — v2.0.4 notice approval and hosted review pending
 
-## v2.0.3 preparation — exact NOTICE approval pending
+## v2.0.4 preparation — exact NOTICE approval and candidate review pending
 
-v2.0.3 corrects release-notes generation: paginated GitHub API output is
-flattened with external jq, without the incompatible gh --slurp/--jq pairing.
-Regression tests cover multiple pages, no releases and API failures. Releases
-remain automatically **public** after tag gates, with tag-named titles and
-complete commit/author notes. Existing v2.0.0–v2.0.2 tags are immutable.
-The version bump changes only the GAMS package version in Cargo.lock and its
-linked notice evidence; no third-party package or upstream license text changes.
-Earlier notice approvals below are historical, not approval of these new bytes.
-**Do not push until owner approval; a version tag authorizes public publication.**
+v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
+prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
+ZIP/Git installation and a loading screen are not part of this release.
+The native appendix has been regenerated against the updated locked Apple
+Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
+removing or changing prior notices. The five MPL source archives are unchanged.
+Root LICENSE, browser bundles, fonts and their license texts are unchanged.
+See `docs/http-license-review.md` for the dependency delta and generation commands.
+Existing v2.0.0–v2.0.3 tags are immutable. Historical approvals below do not
+approve these new exact bytes. **Do not push until owner notice approval; do not
+publish the tag until same-commit candidate and clean-Mac review pass.**
 
-Current NOTICE SHA-256: `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd`.
-Current evidence SHA-256: `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781`.
+Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
+Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
 See `PUBLISHING.md` for the branch review then tag-push procedure.
 
 
@@ -24,12 +26,12 @@ setup/integration tooling; verify the generated repositories actually satisfy
 this split before pushing. The Host app ZIP contains no
 example, Project Units, Project configuration, or game WASM. No example ZIP
 is built, uploaded or attached. A user supplies a Project folder with `gams.json` and
-working local paths to independently installed Units.
+configured prebuilt Unit sources and an available filesystem bootstrap Unit.
 
 ## Historical Host notice approval — 2026-09-29
 
 The owner approved the exact **revised** Host-only `NOTICE` and linked evidence
-below. The macOS Project chooser directly uses objc2-app-kit and
+at that time; that approval does not cover the current v2.0.4 table below. The macOS Project chooser directly uses objc2-app-kit and
 objc2-foundation, already covered by the native appendix. All third-party
 Cargo packages, versions, checksums and edges remain unchanged; only the
 GAMS root crate's dependency edges changed. That changed Cargo.lock's
@@ -38,14 +40,14 @@ NOTICE. The previous CI candidate was built at an earlier commit and cannot
 stand in for hosted review of the revised binary. Apache-2.0 remains approved
 for GAMS-authored code; `example.game1` has **no** publication approval.
 
-| Current v2.0.3 file / Actions variable | SHA-256 | Status |
+| Current v2.0.4 file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `31bf9dfb5321e81b8f1911b579d7541fe5fcb3acb304c42774346031b0fd46dd` | **exact-byte owner approval pending** |
-| `NOTICE-EVIDENCE.sha256` | `ccf527975996844ab638866d70ab992b8ce71949d4ff8b708eb0f7f66b616781` | **review pending; bound by NOTICE** |
+| `NOTICE` / `NOTICE_SHA256` | `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b` | **exact-byte owner approval pending** |
+| `NOTICE-EVIDENCE.sha256` | `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5` | **review pending; bound by NOTICE** |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
-passes before the next public push. Do not tag `v2.0.3` until this revised
+passes before the next public push. Do not tag `v2.0.4` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Automatic tag release notes
@@ -65,7 +67,7 @@ addresses are not published and names are not asserted to be GitHub accounts.
 
 New workflow/source changes do not alter existing immutable tags or existing
 drafts. Use a new approved version and tag for future workflow execution; do
-not move `v2.0.0`, `v2.0.1` or `v2.0.2` to pick up these improvements. Existing draft
+not move `v2.0.0`, `v2.0.1`, `v2.0.2` or `v2.0.3` to pick up these improvements. Existing draft
 notes may be edited by the owner without modifying the tag or app assets.
 
 On 2026-09-30 the owner approved **automatic public publication on tag push**.
@@ -125,7 +127,7 @@ all tag build, exact-notice, source-history and overwrite checks remain required
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.3` (Cargo/Tauri), which is different from
+Current source version is `2.0.4` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

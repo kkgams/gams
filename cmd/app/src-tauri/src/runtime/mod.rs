@@ -381,6 +381,18 @@ impl Runtime {
             .map_err(|error| error.to_string())
     }
 
+    /// Load ordinary component bytes without writing the source file. The parent
+    /// directory of `path` must exist and be covered by a filesystem preopen.
+    pub fn load_from_bytes(&self, bytes: Vec<u8>, path: String) -> Result<ComponentHandle, String> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| "runtime lock poisoned".to_string())?;
+        inner
+            .load_from_bytes(&bytes, &path)
+            .map_err(|error| format!("{error:#}"))
+    }
+
     pub fn add_component_files(&self, paths: Vec<PathBuf>) -> Result<Vec<ComponentHandle>, String> {
         let requests = paths
             .into_iter()
@@ -559,6 +571,47 @@ impl RuntimeInner {
             .collect::<Result<Vec<_>>>()?;
 
         self.add_resolved_plugins(paths, requests)
+    }
+
+    fn load_from_bytes(&mut self, bytes: &[u8], path: &str) -> Result<ComponentHandle> {
+        anyhow::ensure!(
+            bytes.len() <= 64 * 1024 * 1024,
+            "component exceeds 64 MiB limit"
+        );
+        let candidate = if Path::new(path).is_absolute() {
+            PathBuf::from(path)
+        } else {
+            safe_join(&self.root, path)?
+        };
+        let resolved_path = if candidate.exists() {
+            candidate.canonicalize()?
+        } else {
+            let parent = candidate
+                .parent()
+                .context("component path needs a parent directory")?;
+            let filename = candidate
+                .file_name()
+                .context("component path needs a filename")?;
+            parent.canonicalize()?.join(filename)
+        };
+        anyhow::ensure!(
+            path_is_preopened(&resolved_path, &self.preopens),
+            "component path is not under a configured filesystem preopen: {}",
+            resolved_path.display()
+        );
+        if let Some(existing) = self.component_by_path(&resolved_path) {
+            return Ok(existing);
+        }
+        // Downloaded bytes are untrusted WASM, never a serialized native cache.
+        let component = Component::from_binary(&self.engine, bytes)?;
+        let candidate = ComponentCandidate {
+            path: path.to_string(),
+            resolved_path,
+            imports: component_imports(&self.engine, &component),
+            exports: component_exports(&self.engine, &component),
+            component,
+        };
+        self.instantiate_candidate(&candidate)
     }
 
     fn add_resolved_plugins(
@@ -2598,6 +2651,46 @@ mod tests {
     }
 
     #[test]
+    fn byte_loaded_component_can_be_saved_and_reloaded_from_its_path() {
+        let root = tempfile::tempdir().unwrap();
+        let runtime =
+            Runtime::new_at(root.path().to_path_buf(), test_preopens(root.path())).unwrap();
+        let bytes = b"\0asm\x0d\0\x01\0";
+        let path = root.path().canonicalize().unwrap().join("bootstrap.wasm");
+        let handle = runtime
+            .load_from_bytes(bytes.to_vec(), path.display().to_string())
+            .unwrap();
+        assert_eq!(handle.path, path.display().to_string());
+        assert!(
+            !path.exists(),
+            "loading bytes must not persist source files"
+        );
+        std::fs::write(&path, bytes).unwrap();
+        let reloaded = runtime
+            .add_plugins(vec![handle.path.clone()], true)
+            .unwrap();
+        assert_eq!(reloaded[0].path, handle.path);
+    }
+
+    #[test]
+    fn byte_loading_rejects_invalid_wasm_and_paths_outside_preopens() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let runtime =
+            Runtime::new_at(root.path().to_path_buf(), test_preopens(root.path())).unwrap();
+        assert!(runtime
+            .load_from_bytes(vec![1, 2, 3], "bad.wasm".into())
+            .is_err());
+        assert!(runtime
+            .load_from_bytes(
+                b"\0asm\x0d\0\x01\0".to_vec(),
+                outside.path().join("outside.wasm").display().to_string()
+            )
+            .is_err());
+        assert!(!root.path().join("bad.wasm").exists());
+    }
+
+    #[test]
     fn interface_parser_accepts_semver_prerelease_and_build_metadata() {
         let parsed = parse_interface_id("wasi:sql/readwrite@0.2.0-draft")
             .unwrap()
@@ -2807,7 +2900,10 @@ mod tests {
             )
             .unwrap();
         runtime
-            .invoke("aseprite/aseprite::palette-colors", serde_json::json!([document]))
+            .invoke(
+                "aseprite/aseprite::palette-colors",
+                serde_json::json!([document]),
+            )
             .unwrap();
         runtime
             .invoke("aseprite/aseprite::slices", serde_json::json!([document]))
