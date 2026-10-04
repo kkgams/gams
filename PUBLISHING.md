@@ -1,6 +1,6 @@
-# Publishing the GAMS desktop Host — v2.0.4 notice approval and hosted review pending
+# Publishing the GAMS desktop Host — v2.0.4 NOTICE approved; hosted review pending
 
-## v2.0.4 preparation — exact NOTICE approval and candidate review pending
+## v2.0.4 preparation — NOTICE approved; candidate review pending
 
 v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
 prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
@@ -10,9 +10,10 @@ Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
 removing or changing prior notices. The five MPL source archives are unchanged.
 Root LICENSE, browser bundles, fonts and their license texts are unchanged.
 See `docs/http-license-review.md` for the dependency delta and generation commands.
-Existing v2.0.0–v2.0.3 tags are immutable. Historical approvals below do not
-approve these new exact bytes. **Do not push until owner notice approval; do not
-publish the tag until same-commit candidate and clean-Mac review pass.**
+Existing v2.0.0–v2.0.3 tags are immutable. On 2026-10-04 the owner approved
+the exact NOTICE and linked evidence below and authorized the release-branch
+push. **Do not publish the tag until same-commit candidate and clean-Mac review
+pass.**
 
 Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
 Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
@@ -43,8 +44,8 @@ for GAMS-authored code; `example.game1` has **no** publication approval.
 | Current v2.0.4 file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b` | **exact-byte owner approval pending** |
-| `NOTICE-EVIDENCE.sha256` | `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5` | **review pending; bound by NOTICE** |
+| `NOTICE` / `NOTICE_SHA256` | `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b` | owner-approved 2026-10-04 |
+| `NOTICE-EVIDENCE.sha256` | `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5` | owner-approved 2026-10-04; bound by NOTICE |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
 passes before the next public push. Do not tag `v2.0.4` until this revised

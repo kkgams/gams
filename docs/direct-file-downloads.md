@@ -93,6 +93,6 @@ nix develop --command make app-test
 ## Release gate
 
 Adding `reqwest` changes `Cargo.lock` and the native dependency graph. The
-v2.0.4 appendix and NOTICE evidence have been regenerated; exact-byte owner
-approval is pending. See `http-license-review.md`. This development slice is
+v2.0.4 appendix and NOTICE evidence have been regenerated; the owner approved
+the exact bytes on 2026-10-04. See `http-license-review.md`. This development slice is
 not release clearance; do not bypass candidate/notice/publication gates.

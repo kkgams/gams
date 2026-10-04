@@ -1,6 +1,6 @@
 # Split Host verification and historical extraction evidence
 
-## v2.0.4 preparation — exact NOTICE approval and candidate review pending
+## v2.0.4 preparation — NOTICE approved; candidate review pending
 
 v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
 prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
@@ -10,9 +10,10 @@ Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
 removing or changing prior notices. The five MPL source archives are unchanged.
 Root LICENSE, browser bundles, fonts and their license texts are unchanged.
 See `docs/http-license-review.md` for the dependency delta and generation commands.
-Existing v2.0.0–v2.0.3 tags are immutable. Historical approvals below do not
-approve these new exact bytes. **Do not push until owner notice approval; do not
-publish the tag until same-commit candidate and clean-Mac review pass.**
+Existing v2.0.0–v2.0.3 tags are immutable. On 2026-10-04 the owner approved
+the exact NOTICE and linked evidence below and authorized the release-branch
+push. **Do not publish the tag until same-commit candidate and clean-Mac review
+pass.**
 
 Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
 Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
@@ -38,7 +39,8 @@ Passed against the current 2.0.4 sources:
   checks passed.
 
 These are local checks, not a hosted candidate or clean-Mac/Gatekeeper review.
-The new NOTICE bytes still need owner approval. No v2.0.4 tag has been published.
+The owner approved the exact NOTICE bytes on 2026-10-04. Same-commit hosted
+candidate and clean-Mac review remain pending. No v2.0.4 tag has been published.
 
 ## Owner-reported clean-Mac result — 2026-09-30
 

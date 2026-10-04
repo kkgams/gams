@@ -1,7 +1,8 @@
 # v2.0.4 HTTP dependency notice review
 
-Status: notices regenerated and local consistency checks passed; exact-byte owner
-approval, hosted candidate review and clean-Mac release validation remain pending.
+Status: notices regenerated and local consistency checks passed; the owner
+approved the exact NOTICE and linked evidence on 2026-10-04. Hosted candidate
+review and clean-Mac release validation remain pending.
 No tag or public publication is authorized by this document.
 
 ## Scope
@@ -66,7 +67,8 @@ build/proc-macro/dev dependencies, not just linked runtime code.
 | `cmd/app/src-tauri/Cargo.lock` | `016c9a94f47ae158d71d1cf552c241eb870a7d086686bcfbb0aefb966cae4bbc` |
 
 The root NOTICE binds the exact 47-file evidence manifest, including the native
-appendix and lockfile. Historical notice approval does not cover these bytes.
+appendix and lockfile. The owner approved these exact bytes on 2026-10-04; earlier historical
+approvals alone did not cover them.
 
 ## Regeneration procedure
 
