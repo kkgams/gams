@@ -2,7 +2,8 @@
 
 Status: native configuration, local/shared storage, direct-file installation,
 binary HTTP transport, WASM byte loading and an initial ZIP extraction slice
-are implemented. Git sources and the loading UI remain pending. Source syntax
+and the Host startup progress screen are implemented. Git sources remain pending.
+See [`project-loading.md`](project-loading.md) for loading-screen behavior. Source syntax
 remains provisional. See [`direct-file-downloads.md`](direct-file-downloads.md)
 and [`zip-project-units.md`](zip-project-units.md) for current APIs, deliberate
 first-slice simplifications and tests. Archive-level deduplication, expanded-byte
@@ -237,8 +238,9 @@ Git protocols remain a later slice requiring an explicit transport strategy.
 
 The direct-file transport, byte bootstrap, JS cache flow and initial ZIP
 extraction have automated coverage; a real prebuilt FS/local-server smoke is
-available for direct files. Git sources, ZIP-based FS bootstrap and the loading
-UI have not been implemented. ZIP Desktop WebView startup remains unverified.
+available for direct files. The initial Host loading screen is implemented;
+Git sources and ZIP-based FS bootstrap remain pending. Full Desktop WebView
+startup progress remains unverified by automation.
 
 0. Done: native config exposure, local/shared directory selection and preopen,
    `runtime.config`/`runtime.modulesDir`, and removal of frontend config file I/O.

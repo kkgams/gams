@@ -220,3 +220,50 @@ test("invalid ZIP sources and archives fail without publishing an installation",
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test("Unit observers report download, extraction, publication and offline cache reuse", async () => {
+  const { createProjectUnits } = await import(moduleUrl)
+  const directory = await mkdtemp(join(tmpdir(), "gams-unit-progress-"))
+  const source = "http://127.0.0.1:8765/unit.zip#views/view.js"
+  const bytes = zipBytes()
+  const runtime = {
+    ...filesystemRuntime(directory),
+    async download(url, progress) {
+      progress({ downloaded: bytes.length, total: bytes.length })
+      return bytes
+    },
+    async addPlugins() {},
+  }
+  try {
+    const units = createProjectUnits(runtime)
+    const events = []
+    const unsubscribe = units.subscribeProgress(event => events.push(event))
+    const byteEvents = []
+    await units.resolve(source, event => byteEvents.push(event))
+    assert.deepEqual(byteEvents, [{ downloaded: bytes.length, total: bytes.length }])
+    assert.ok(events.every(event => event.source === source))
+    assert.equal(events[0].phase, "checking")
+    assert.ok(events.some(event => event.phase === "downloading" && event.total === null))
+    const extraction = events.filter(event => event.phase === "extracting")
+    assert.equal(extraction[0].completed, 0)
+    assert.equal(extraction[0].entry, "views/view.js")
+    assert.equal(extraction.at(-1).completed, extraction.at(-1).total)
+    assert.equal(events.at(-2).phase, "saving")
+    assert.deepEqual(events.at(-1), { source, phase: "ready", cached: false })
+    unsubscribe()
+    const count = events.length
+    await units.bootstrapFilesystem("local/fs.wasm")
+    assert.equal(events.length, count)
+
+    runtime.download = async () => { throw new Error("offline") }
+    const reopened = createProjectUnits(runtime)
+    const cached = []
+    reopened.subscribeProgress(event => cached.push(event))
+    await reopened.resolve(source)
+    assert.deepEqual(cached.map(event => event.phase), ["checking", "ready"])
+    assert.equal(cached.at(-1).cached, true)
+    assert.throws(() => reopened.subscribeProgress(null), /must be a function/)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})

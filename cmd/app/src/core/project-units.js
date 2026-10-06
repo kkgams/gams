@@ -27,6 +27,25 @@ function remoteSource(source) {
 
 export function createProjectUnits(runtime) {
   const pending = new Map()
+  const listeners = new Set()
+
+  function subscribeProgress(listener) {
+    if (typeof listener !== "function") throw new Error("Progress listener must be a function")
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+  }
+
+  function report(source, phase, details = {}) {
+    for (const listener of listeners) listener({ source, phase, ...details })
+  }
+
+  async function download(unit, source, onProgress = () => {}) {
+    report(source, "downloading", { downloaded: 0, total: null })
+    return runtime.download(unit.url, event => {
+      report(source, "downloading", event)
+      onProgress(event)
+    })
+  }
 
   async function describe(source) {
     const url = remoteSource(source)
@@ -50,7 +69,7 @@ export function createProjectUnits(runtime) {
     unwrap(await runtime.invoke("fs/fs::rename", temporary, path), "publish Unit")
   }
 
-  async function persistArchive(unit, bytes) {
+  async function persistArchive(unit, bytes, source) {
     const staging = `${runtime.modulesDir}/${unit.name}.${crypto.randomUUID()}.tmp`
     const directories = new Set()
     async function createDirectory(path) {
@@ -70,7 +89,8 @@ export function createProjectUnits(runtime) {
         await createDirectory(parent)
         unwrap(await runtime.invoke("fs/fs::write-file", `${staging}/${path}`, Array.from(data)), "save package entry")
       }
-    })
+    }, event => report(source, "extracting", event))
+    report(source, "saving")
     // Only a fully extracted directory gets the final name. Failed extraction
     // leaves an ignored staging directory, never a reusable installation.
     unwrap(await runtime.invoke("fs/fs::rename", staging, `${runtime.modulesDir}/${unit.name}`), "publish package")
@@ -84,18 +104,27 @@ export function createProjectUnits(runtime) {
 
   async function resolve(source, onProgress) {
     const unit = await describe(source)
-    if (!unit.remote) return unit.path
+    if (!unit.remote) {
+      report(source, "ready", { cached: false })
+      return unit.path
+    }
     if (!pending.has(unit.sourceKey)) {
       const installation = (async () => {
-        if (!await installed(unit)) {
-          const bytes = await runtime.download(unit.url, onProgress)
-          if (unit.entry) await persistArchive(unit, bytes)
-          else await persist(unit.path, bytes)
+        report(source, "checking")
+        const cached = await installed(unit)
+        if (!cached) {
+          const bytes = await download(unit, source, onProgress)
+          if (unit.entry) await persistArchive(unit, bytes, source)
+          else {
+            report(source, "saving")
+            await persist(unit.path, bytes)
+          }
         }
         if (unit.entry) {
           const stat = unwrap(await runtime.invoke("fs/fs::stat", unit.path), `ZIP entry unavailable: ${unit.entry}`)
           if (stat.type !== "regular-file") throw new Error(`ZIP entry is not a file: ${unit.entry}`)
         }
+        report(source, "ready", { cached })
         return unit.path
       })()
       pending.set(unit.sourceKey, installation)
@@ -108,21 +137,28 @@ export function createProjectUnits(runtime) {
     const unit = await describe(source)
     if (unit.entry) throw new Error("Filesystem bootstrap requires a local or direct-file source, not ZIP")
     if (!unit.remote) {
+      report(source, "loading")
       await runtime.addPlugins([unit.path])
+      report(source, "ready", { cached: false })
       return unit.path
     }
+    report(source, "checking")
     try {
       await runtime.addPlugins([unit.path])
+      report(source, "ready", { cached: true })
       return unit.path
     } catch (error) {
       // Existing API returns string errors. Only a missing source is a cache miss.
       if (!String(error).includes("absolute component path not found:")) throw error
     }
-    const bytes = await runtime.download(unit.url, onProgress)
+    const bytes = await download(unit, source, onProgress)
+    report(source, "loading")
     await runtime.loadFromBytes(bytes, unit.path)
+    report(source, "saving")
     await persist(unit.path, bytes)
+    report(source, "ready", { cached: false })
     return unit.path
   }
 
-  return { resolve, bootstrapFilesystem }
+  return { resolve, bootstrapFilesystem, subscribeProgress }
 }

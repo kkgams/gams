@@ -63,7 +63,9 @@ direct-file HTTP downloads, JS filesystem-backed installation, native WASM
 byte loading, and an initial ZIP extraction slice. See
 [`docs/direct-file-downloads.md`](docs/direct-file-downloads.md) and
 [`docs/zip-project-units.md`](docs/zip-project-units.md) for current scope and
-testing; Git sources and the loading screen remain pending. ZIP extraction uses
+testing. A Host-owned startup progress screen now reports download/extraction
+and initialization; see [`docs/project-loading.md`](docs/project-loading.md).
+Git sources remain pending. ZIP extraction uses
 staging and path containment; archive-level deduplication, CRC verification and
 expanded-byte limits are deliberately deferred. The new ZIP browser bundle needs
 redistribution review before publication. Verification of an

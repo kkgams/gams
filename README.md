@@ -85,7 +85,9 @@ Configuration reading does not depend on the filesystem plugin. Direct-file
 HTTPS (and loopback HTTP test) sources can be downloaded and installed via
 `require` and configured WASM/theme loading. The development ZIP slice also
 supports `https://example.com/unit.zip#path/to/entry`, extracting packages through
-the filesystem plugin. Git sources and the loading screen are not implemented.
+the filesystem plugin. A Host-owned startup screen reports per-Unit downloads,
+ZIP extraction, cache reuse and initialization, with visible errors and reload;
+see `docs/project-loading.md`. Git sources are not implemented.
 FS bootstrap now uses its pinned direct-file v0.1.1 release URL and does not
 accept ZIP sources. See `docs/direct-file-downloads.md` for APIs and the local-server smoke
 test, and `docs/zip-project-units.md` for ZIP scope, deferred safeguards and tests.

@@ -11,7 +11,7 @@ export function validateZipPath(path) {
 
 // The sink receives Uint8Array file bytes, or null for a directory. Validate the
 // full member list and selected file before invoking it; never execute members.
-export async function extractZip(bytes, selectedEntry, writeEntry) {
+export async function extractZip(bytes, selectedEntry, writeEntry, onProgress = () => {}) {
   validateZipPath(selectedEntry)
   const reader = new ZipReader(new Uint8ArrayReader(bytes), {
     useWebWorkers: false,
@@ -26,10 +26,13 @@ export async function extractZip(bytes, selectedEntry, writeEntry) {
     }
     if (!entries.some(entry => entry.filename === selectedEntry && !entry.directory))
       throw new Error(`ZIP entry not found: ${selectedEntry}`)
+    let completed = 0
     for (const entry of entries) {
       const path = entry.directory ? entry.filename.replace(/\/$/, "") : entry.filename
+      onProgress({ entry: path, completed, total: entries.length })
       const data = entry.directory ? null : await entry.getData(new Uint8ArrayWriter())
       await writeEntry(path, data)
+      onProgress({ entry: path, completed: ++completed, total: entries.length })
     }
   } finally {
     await reader.close()

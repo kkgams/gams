@@ -3,6 +3,7 @@ import { initSaveMenu } from "/core/menu.js"
 // import { openSqlVecConnection, sql } from "/core/sql.js"
 import { init } from "/___/services.js"
 import { projectUnits } from "/util/require.js"
+import { createStartupProgress } from "/core/startup-progress.js"
 
 // Default package folder; runtime.modulesDir supplies the native-selected path.
 const GAMS_MODULES = "gams_modules"
@@ -10,6 +11,8 @@ const GAMS_MODULES = "gams_modules"
 const FS_BOOTSTRAP_SOURCE = "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"
 
 app.innerHTML = ""
+const loading = createStartupProgress(document, () => location.reload())
+const unsubscribeProgress = projectUnits.subscribeProgress((event) => loading.update(event))
 
 async function main() {
     console.time("runtime.ready")
@@ -17,14 +20,17 @@ async function main() {
     console.timeEnd("runtime.ready")
 
     const config = runtime.config
+    loading.phase("Preparing filesystem", 1)
     await projectUnits.bootstrapFilesystem(FS_BOOTSTRAP_SOURCE)
 
+    loading.phase("Preparing and loading plugins", 2)
     console.time("addPlugins")
-    const pluginPaths = await Promise.all(config.plugins.map(source => projectUnits.resolve(source)))
+    const pluginPaths = await Promise.all(config.plugins.map((source) => projectUnits.resolve(source)))
     await runtime.addPlugins(pluginPaths, true)
     console.timeEnd("addPlugins")
 
     const saveMenu = await initSaveMenu()
+    loading.phase("Loading Project interface", 3)
     console.time("init UI")
     await init(config)
     console.timeEnd("init UI")
@@ -32,12 +38,26 @@ async function main() {
     return saveMenu
 }
 
-const saveMenu = await main()
+const saveMenu = await main().then(
+    (menu) => {
+        unsubscribeProgress()
+        loading.finish()
+        return menu
+    },
+    (error) => {
+        unsubscribeProgress()
+        loading.fail(error)
+        console.error("[project.open] Startup failed", error)
+        return null
+    },
+)
 
-//Runtime debut
-globalThis.runtime = runtime
+if (saveMenu) {
+    globalThis.runtime = runtime
+    startFpsOverlay()
+}
 
-;(() => {
+function startFpsOverlay() {
     const id = "__fps_overlay__"
     document.getElementById(id)?.remove()
 
@@ -74,4 +94,4 @@ globalThis.runtime = runtime
     }
 
     requestAnimationFrame(loop)
-})()
+}
