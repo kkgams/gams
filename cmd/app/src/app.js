@@ -1,7 +1,7 @@
 import { runtime } from "/core/runtime.js"
 import { initSaveMenu } from "/core/menu.js"
 // import { openSqlVecConnection, sql } from "/core/sql.js"
-import { init } from "/___/services.js"
+import { init, prepareTheme } from "/___/services.js"
 import { projectUnits } from "/util/require.js"
 import { createStartupProgress } from "/core/startup-progress.js"
 
@@ -23,19 +23,24 @@ async function main() {
     loading.phase("Preparing filesystem", 1)
     await projectUnits.bootstrapFilesystem(FS_BOOTSTRAP_SOURCE)
 
-    loading.phase("Preparing and loading plugins", 2)
-    console.time("addPlugins")
-    const pluginPaths = await Promise.all(config.plugins.map((source) => projectUnits.resolve(source)))
-    await runtime.addPlugins(pluginPaths, true)
-    console.timeEnd("addPlugins")
+    loading.phase("Preparing theme and plugins", 2)
+    const themeReady = prepareTheme(config)
+    await Promise.all([themeReady, loadPlugins(config)])
 
     const saveMenu = await initSaveMenu()
     loading.phase("Loading Project interface", 3)
     console.time("init UI")
-    await init(config)
+    await init(config, themeReady)
     console.timeEnd("init UI")
     await saveMenu.enable()
     return saveMenu
+}
+
+async function loadPlugins(config) {
+    console.time("addPlugins")
+    const pluginPaths = await Promise.all(config.plugins.map((source) => projectUnits.resolve(source)))
+    await runtime.addPlugins(pluginPaths, true)
+    console.timeEnd("addPlugins")
 }
 
 const saveMenu = await main().then(

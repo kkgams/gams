@@ -257,12 +257,22 @@ test("UI initialization awaits layout loading before Save can be enabled", async
   }
   globalThis.__servicesTestUnits = { async resolve() { return "theme.css" } }
   globalThis.window = { addEventListener() {} }
+  const themeListeners = new Map()
+  const themeAttributes = new Map([["rel", "stylesheet"]])
+  const themeLink = {
+    tagName: "LINK",
+    getAttribute(name) { return themeAttributes.get(name) ?? null },
+    setAttribute(name, value) { themeAttributes.set(name, value); if (name === "href") queueMicrotask(() => themeListeners.get("load")()) },
+    removeAttribute(name) { themeAttributes.delete(name) },
+    addEventListener(name, listener) { themeListeners.set(name, listener) },
+    removeEventListener(name) { themeListeners.delete(name) },
+  }
   globalThis.document = {
     createElement(tag) { return nodes[tag] },
     body: { appendChild() {} },
     querySelector(tag) { return nodes[tag] },
     querySelectorAll() { return [] },
-    getElementById() { return { setAttribute() {} } },
+    getElementById() { return themeLink },
   }
   globalThis.DocumentFragment = class { appendChild() {} }
   const source = (await readFile(new URL("../cmd/app/src/___/services.js", import.meta.url), "utf8"))
@@ -270,6 +280,7 @@ test("UI initialization awaits layout loading before Save can be enabled", async
     .replace('import { runtime } from "/core/runtime.js"', 'const runtime = globalThis.__servicesTestRuntime')
     .replace('from "/core/ui-service-sources.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/ui-service-sources.js", import.meta.url).href)}`)
     .replace('import { restoreViewSourceState } from "/util/view-source-state.js"', 'const restoreViewSourceState = () => {}')
+    .replace('from "/core/project-theme.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/project-theme.js", import.meta.url).href)}`)
   const { init } = await importSource(source)
   let complete = false
   const ids = ["ui-context", "ui-keys", "ui-layout", "ui-toast", "ui-popup", "ui-tooltip"]

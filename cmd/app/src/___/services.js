@@ -2,6 +2,7 @@ import { require, projectUnits } from "/util/require.js"
 import { runtime } from "/core/runtime.js"
 import { getUiServiceSources } from "/core/ui-service-sources.js"
 import { restoreViewSourceState } from "/util/view-source-state.js"
+import { loadProjectTheme } from "/core/project-theme.js"
 
 let currentThemeStylesheetObjectUrl = ""
 
@@ -56,7 +57,7 @@ function doInit(config) {
     })
 }
 
-export async function init(config) {
+export async function init(config, themeReady = prepareTheme(config)) {
     const fragment = new DocumentFragment()
     fragment.appendChild(document.createElement("ui-layout"))
     fragment.appendChild(document.createElement("popup-manager"))
@@ -64,7 +65,7 @@ export async function init(config) {
     fragment.appendChild(document.createElement("toast-manager"))
 
     document.body.appendChild(fragment)
-    await applyThemeStylesheet(config)
+    await themeReady
     await doInit(config)
 }
 
@@ -119,20 +120,11 @@ function createConfiguredViewRegistry(config) {
     )
 }
 
-async function applyThemeStylesheet(config) {
-    const themeSource = config?.ui?.theme?.url ?? config?.ui?.theme?.path
-    if (typeof themeSource !== "string" || themeSource.length === 0)
-        throw new Error("gams config ui.theme.url is required")
-    const themePath = await projectUnits.resolve(themeSource)
-    const readResult = unwrapResult(await runtime.invoke("fs/fs::read-file", themePath), "theme read")
-
-    const blob = new Blob([new Uint8Array(readResult)], { type: "text/css" })
-    const themeHref = URL.createObjectURL(blob)
+export async function prepareTheme(config) {
+    const { path: themePath, href: themeHref } = await loadProjectTheme(config, { projectUnits, runtime, document })
     const previousUrl = currentThemeStylesheetObjectUrl
     currentThemeStylesheetObjectUrl = themeHref
 
-    const link = document.getElementById("theme-stylesheet")
-    link.setAttribute("href", themeHref)
     window.__currentThemePath = themePath
     window.__currentThemeStylesheetHref = themeHref
 
@@ -142,10 +134,4 @@ async function applyThemeStylesheet(config) {
     })
 
     if (previousUrl) URL.revokeObjectURL(previousUrl)
-}
-
-function unwrapResult(result, label) {
-    if (result && Object.prototype.hasOwnProperty.call(result, "ok")) return result.ok
-    if (result && Object.prototype.hasOwnProperty.call(result, "err")) throw new Error(`${label}: ${result.err}`)
-    throw new Error(`${label}: expected WIT result object`)
 }
