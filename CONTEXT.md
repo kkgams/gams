@@ -36,6 +36,14 @@ build caches, and exports are not Host-owned source.
 - **local assembly**: explicit copying of independently built sibling artifacts
   into the example Project, performed by `example.game1` tooling, not the Host.
 
+## Project saving
+
+The Host owns native File → Save Project, the `project.save` command, ordered JS
+`projectSave` hooks, and publication of current `runtime.config` to the active
+`gams.json`. Keyboard bindings remain Project-owned through `gams.json` `ui.keys`.
+Plugins/Views own persistent state and config updates; the Host does not capture
+layout automatically. See [`docs/project-saving.md`](docs/project-saving.md).
+
 ## Boundaries and invariants
 
 `make app-check` needs no sibling repositories. Host release builds never run

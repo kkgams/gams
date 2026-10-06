@@ -1,4 +1,5 @@
 import { runtime } from "/core/runtime.js"
+import { initSaveMenu } from "/core/menu.js"
 // import { openSqlVecConnection, sql } from "/core/sql.js"
 import { init } from "/___/services.js"
 import { projectUnits } from "/util/require.js"
@@ -22,12 +23,15 @@ async function main() {
     await runtime.addPlugins(pluginPaths, true)
     console.timeEnd("addPlugins")
 
+    const saveMenu = await initSaveMenu()
     console.time("init UI")
     await init(config)
     console.timeEnd("init UI")
+    await saveMenu.enable()
+    return saveMenu
 }
 
-await main()
+const saveMenu = await main()
 
 //Runtime debut
 globalThis.runtime = runtime

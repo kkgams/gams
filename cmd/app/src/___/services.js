@@ -5,14 +5,14 @@ import { restoreViewSourceState } from "/util/view-source-state.js"
 let currentThemeStylesheetObjectUrl = ""
 
 function doInit(config) {
-    Promise.all([
+    return Promise.all([
         require("ui-plugins/context.js"),
         require("ui-plugins/keys.js"),
         require("ui-plugins/layout.js"),
         require("ui-plugins/toast.js"),
         require("ui-plugins/popup.js"),
         require("ui-plugins/tooltip.js"),
-    ]).then(([{ createUiContext }, { createUiKeys }]) => {
+    ]).then(async ([{ createUiContext }, { createUiKeys }]) => {
         runtime.register(createUiContext())
         runtime.register(createUiKeys(config))
 
@@ -40,7 +40,6 @@ function doInit(config) {
 
         const layout = document.querySelector("ui-layout")
         layout.setViewRegistry(viewRegistry)
-        layout.load(config.ui.services["ui-layout"].config.layout)
 
         const toast = document.querySelector("toast-manager")
         runtime.register({ id: "ui.toast", methods: toast.api })
@@ -58,19 +57,20 @@ function doInit(config) {
         window.addEventListener("unhandledrejection", (e) => {
             runtime.call("ui.toast.error", errorParse(e))
         })
+        await layout.load(config.ui.services["ui-layout"].config.layout)
     })
 }
 
 export async function init(config) {
-    void applyThemeStylesheet(config)
     const fragment = new DocumentFragment()
     fragment.appendChild(document.createElement("ui-layout"))
     fragment.appendChild(document.createElement("popup-manager"))
     fragment.appendChild(document.createElement("tooltip-manager"))
     fragment.appendChild(document.createElement("toast-manager"))
 
-    void doInit(config)
     document.body.appendChild(fragment)
+    await applyThemeStylesheet(config)
+    await doInit(config)
 }
 
 function errorParse(error) {

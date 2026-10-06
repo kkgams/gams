@@ -53,6 +53,7 @@ export function registerViewPlugin(view, methods = {}) {
         methods: {
             ping: async () => ({ ok: { id: pluginId } }),
             save: viewMethod(view, "save"),
+            projectSave: viewMethod(view, "projectSave"),
             saveAs: viewMethod(view, "saveAs"),
             new: viewMethod(view, "new"),
             run: viewMethod(view, "run"),

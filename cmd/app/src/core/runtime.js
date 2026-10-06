@@ -28,6 +28,7 @@ export class Runtime {
   #mainPlugins = new Map()
   #projectConfig = null
   #modulesDir = null
+  #projectSaveInFlight = null
 
   constructor() {
     this.#callViewListenerReady = this.#initialize()
@@ -170,8 +171,57 @@ export class Runtime {
     await invokeCommand("runtime_clear_compiled_component_cache", {})
   }
 
+  // Concurrent callers share one save. Hooks present at the start run in
+  // registration order; each may update config before it is serialized.
+  projectSave(onProgress = () => {}) {
+    if (typeof onProgress !== "function") throw new Error("projectSave progress callback must be a function")
+    if (this.#projectSaveInFlight) return this.#projectSaveInFlight
+    this.#projectSaveInFlight = this.#saveProject(onProgress).catch(error => {
+      console.error("[project.save] Save failed", error)
+      throw error
+    }).finally(() => {
+      this.#projectSaveInFlight = null
+    })
+    return this.#projectSaveInFlight
+  }
+
+  async #saveProject(onProgress) {
+    await this.ready
+    const participants = [...this.#mainPlugins.values()].filter(
+      plugin => plugin.methods && Object.hasOwn(plugin.methods, "projectSave"),
+    )
+    const total = participants.length + 2
+    let completed = 0
+    const report = async message => {
+      console.log(`[project.save] ${message}`)
+      await onProgress({ message, progress: completed / total })
+    }
+    await report(`Saving Project (${participants.length} hooks)`)
+    for (const plugin of participants) {
+      await report(`Saving ${plugin.id}`)
+      const result = await plugin.methods.projectSave()
+      if (result && typeof result === "object" && Object.hasOwn(result, "err"))
+        throw new Error(`${plugin.id}.projectSave: ${result.err}`)
+      completed++
+    }
+
+    await report("Writing gams.json")
+    const text = `${JSON.stringify(this.config, null, 2)}\n`
+    const temporary = `.gams.json.${crypto.randomUUID()}.tmp`
+    unwrap(await this.invoke("fs/fs::write-text", temporary, text), "write Project config")
+    completed++
+    await report("Publishing gams.json")
+    unwrap(await this.invoke("fs/fs::rename", temporary, "gams.json"), "publish Project config")
+    completed++
+    await report("Project saved")
+    return { ok: true }
+  }
+
   register(plugin) {
     if (!plugin?.id) throw new Error("main-thread plugin requires id")
+    if (plugin.methods && Object.hasOwn(plugin.methods, "projectSave") &&
+        typeof plugin.methods.projectSave !== "function")
+      throw new Error(`${plugin.id}.projectSave must be a function`)
     this.#mainPlugins.set(plugin.id, plugin)
   }
 
