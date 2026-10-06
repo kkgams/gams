@@ -33,6 +33,13 @@ ships a Project or station ZIP. Users supply an external Project root with
 Initial Host distribution target: current supported macOS on **Apple Silicon**
 with Xcode command-line tools. Intel release builds are deferred.
 
+With Nix and direnv installed and direnv hooked into your shell, run
+`direnv allow` once in this repository. Entering the directory then automatically
+loads the pinned Host development environment (Rust/Cargo, Tauri CLI, Node.js,
+Python, pkg-config, and Make). After activation, use `make run` or `make app-check`
+directly. Xcode command-line tools remain a system prerequisite. Without direnv,
+use the explicit Nix commands below.
+
 ```sh
 nix develop --command make run         # Build/run from source; choose a Project
 nix develop --command make run GAMS_APP_CWD=../example.game1

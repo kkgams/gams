@@ -4,5 +4,6 @@
 __pycache__/
 *.pyc
 /.dev-tools/
+/.direnv/
 .DS_Store
 **/.DS_Store

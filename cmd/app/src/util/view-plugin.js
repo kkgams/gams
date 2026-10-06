@@ -1,9 +1,5 @@
 import { runtime } from "/core/runtime.js"
-import {
-    observeViewSourceState,
-    persistViewSourceState,
-    restoreViewSourceState,
-} from "./view-source-state.js"
+import { observeViewSourceState, persistViewSourceState, restoreViewSourceState } from "./view-source-state.js"
 
 const sourceStateObservers = new WeakMap()
 
