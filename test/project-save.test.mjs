@@ -250,7 +250,11 @@ test("UI initialization awaits layout loading before Save can be enabled", async
     register(plugin) { registered.push(plugin.id) },
     async invoke() { return { ok: [] } },
   }
-  globalThis.__servicesTestRequire = async () => ({ createUiContext: () => ({ id: "ui.context" }), createUiKeys: () => ({ id: "ui.keys" }) })
+  const requiredSources = []
+  globalThis.__servicesTestRequire = async source => {
+    requiredSources.push(source)
+    return { createUiContext: () => ({ id: "ui.context" }), createUiKeys: () => ({ id: "ui.keys" }) }
+  }
   globalThis.__servicesTestUnits = { async resolve() { return "theme.css" } }
   globalThis.window = { addEventListener() {} }
   globalThis.document = {
@@ -264,12 +268,17 @@ test("UI initialization awaits layout loading before Save can be enabled", async
   const source = (await readFile(new URL("../cmd/app/src/___/services.js", import.meta.url), "utf8"))
     .replace('import { require, projectUnits } from "/util/require.js"', 'const require = globalThis.__servicesTestRequire; const projectUnits = globalThis.__servicesTestUnits')
     .replace('import { runtime } from "/core/runtime.js"', 'const runtime = globalThis.__servicesTestRuntime')
+    .replace('from "/core/ui-service-sources.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/ui-service-sources.js", import.meta.url).href)}`)
     .replace('import { restoreViewSourceState } from "/util/view-source-state.js"', 'const restoreViewSourceState = () => {}')
   const { init } = await importSource(source)
   let complete = false
-  const initialized = init({ ui: { views: {}, theme: { url: "theme.css" }, services: { "ui-layout": { config: { layout: "<view-empty/>" } } } } }).then(() => { complete = true })
+  const ids = ["ui-context", "ui-keys", "ui-layout", "ui-toast", "ui-popup", "ui-tooltip"]
+  const services = Object.fromEntries(ids.map(id => [id, { url: `https://example.com/${id}.zip#service.js` }]))
+  services["ui-layout"].config = { layout: "<view-empty/>" }
+  const initialized = init({ ui: { views: {}, theme: { url: "theme.css" }, services } }).then(() => { complete = true })
   await loading
   assert.equal(complete, false)
+  assert.deepEqual(requiredSources, ids.map(id => services[id].url))
   assert.ok(registered.includes("ui.context"))
   assert.ok(registered.includes("ui.popup"))
   finish()

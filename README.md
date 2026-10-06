@@ -51,8 +51,10 @@ nix develop --command make app-bundle-release APP_BUNDLES=app
 `make run` aliases `app-run` and starts `cargo tauri dev` with the frontend dev
 server and native source rebuilds. Without `GAMS_APP_CWD`, macOS opens the Project
 folder picker. Explicit relative Project paths are resolved before entering the
-Tauri source directory. Project Units must already be available for bootstrap;
-this target does not build or assemble sibling repositories.
+Tauri source directory. Missing remote Project Units are downloaded at startup, including the pinned
+filesystem bootstrap release; this target does not build or assemble sibling
+repositories. Projects must declare all six bootstrap UI Service URLs under
+`ui.services` (see `docs/direct-file-downloads.md`).
 
 For local example development, use `example.game1`'s setup and integration
 tools. Its assembly copies (not symlinks) artifacts from these independent Unit
@@ -69,19 +71,26 @@ repositories into the example Project, retaining the paths in `gams.json`:
 - `theme.the98` -> `themes/the98.css`
 
 The filesystem plugin is required by Host bootstrap even though it is not in
-the Project's `plugins` array. The example repository checks assembly before
-its integration/run steps. Host release builds do not assemble or bundle any
-of these Units. Build the visitor game using `example.game1`'s instructions.
+the Project's `plugins` array. The current development Host downloads the pinned
+FS v0.1.1 release on cache miss. `example.game1` now uses release URLs for GUI
+Units; local assembly remains separate tooling for native CLI integration.
+Host builds do not assemble or bundle these Units. Build the visitor game using
+`example.game1`'s instructions.
 
 ## Project bootstrap and Unit storage
 
 After `await runtime.ready`, frontend code can read native-loaded `gams.json`
 as `runtime.config` and the selected Unit storage path as `runtime.modulesDir`.
 Configuration reading does not depend on the filesystem plugin. Direct-file
-HTTPS (and loopback HTTP test) sources can now be downloaded and installed via
-`require` and configured WASM/theme loading. Archive/Git sources and the loading
-screen are not implemented. FS bootstrap still defaults to its existing local
-path. See `docs/direct-file-downloads.md` for APIs and the local-server smoke test.
+HTTPS (and loopback HTTP test) sources can be downloaded and installed via
+`require` and configured WASM/theme loading. The development ZIP slice also
+supports `https://example.com/unit.zip#path/to/entry`, extracting packages through
+the filesystem plugin. Git sources and the loading screen are not implemented.
+FS bootstrap now uses its pinned direct-file v0.1.1 release URL and does not
+accept ZIP sources. See `docs/direct-file-downloads.md` for APIs and the local-server smoke
+test, and `docs/zip-project-units.md` for ZIP scope, deferred safeguards and tests.
+The new ZIP browser bundle is outside the approved v2.0.4 NOTICE/evidence;
+redistribution review and renewed approval are required before publication.
 
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The

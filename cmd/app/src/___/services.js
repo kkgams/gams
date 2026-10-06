@@ -1,18 +1,13 @@
 import { require, projectUnits } from "/util/require.js"
 import { runtime } from "/core/runtime.js"
+import { getUiServiceSources } from "/core/ui-service-sources.js"
 import { restoreViewSourceState } from "/util/view-source-state.js"
 
 let currentThemeStylesheetObjectUrl = ""
 
 function doInit(config) {
-    return Promise.all([
-        require("ui-plugins/context.js"),
-        require("ui-plugins/keys.js"),
-        require("ui-plugins/layout.js"),
-        require("ui-plugins/toast.js"),
-        require("ui-plugins/popup.js"),
-        require("ui-plugins/tooltip.js"),
-    ]).then(async ([{ createUiContext }, { createUiKeys }]) => {
+    return Promise.all(getUiServiceSources(config).map(source => require(source)))
+    .then(async ([{ createUiContext }, { createUiKeys }]) => {
         runtime.register(createUiContext())
         runtime.register(createUiKeys(config))
 

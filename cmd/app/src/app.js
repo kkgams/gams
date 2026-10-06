@@ -6,7 +6,8 @@ import { projectUnits } from "/util/require.js"
 
 // Default package folder; runtime.modulesDir supplies the native-selected path.
 const GAMS_MODULES = "gams_modules"
-const FS_BOOTSTRAP_SOURCE = "plugins/fs.comp.wasm"
+// Temporary Host-owned bootstrap pin; all other Unit sources are Project-owned.
+const FS_BOOTSTRAP_SOURCE = "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"
 
 app.innerHTML = ""
 

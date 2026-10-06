@@ -1,9 +1,12 @@
 # Project Unit installation — initial design
 
 Status: native configuration, local/shared storage, direct-file installation,
-binary HTTP transport and WASM byte loading are implemented. Archive/Git sources
-and the loading UI remain pending. Source syntax remains provisional. See
-[`direct-file-downloads.md`](direct-file-downloads.md) for current APIs and tests.
+binary HTTP transport, WASM byte loading and an initial ZIP extraction slice
+are implemented. Git sources and the loading UI remain pending. Source syntax
+remains provisional. See [`direct-file-downloads.md`](direct-file-downloads.md)
+and [`zip-project-units.md`](zip-project-units.md) for current APIs, deliberate
+first-slice simplifications and tests. Archive-level deduplication, expanded-byte
+limits and CRC verification below remain design targets, not implemented guarantees.
 
 ## Scope
 
@@ -54,8 +57,10 @@ These URLs are illustrative, not existing releases.
 - Strip the fragment before fetching an HTTPS archive.
 - Require an explicit file selector for archives; do not guess an entry point.
 - Direct-file sources need no archive selector.
-- One archive may contain multiple Project Units. Fetch, verify, and install the
-  same resolved archive once, even when several configured Units select files.
+- One archive may contain multiple Project Units. Eventually fetch, verify, and
+  install the same resolved archive once, even when several configured Units
+  select files. The first ZIP slice keys storage by the full source including
+  the selector; archive-level deduplication is deferred.
 - Preserve archive structure and companion assets.
 - Reject missing entries, absolute entry paths, and traversal outside the
   installed package. Validate archive members before extraction.
@@ -158,7 +163,8 @@ current download bytes, and actionable errors/retry. Use indeterminate byte
 progress when the total is unknown. Make UI initialization genuinely awaitable.
 
 For v1, a hardcoded constant in `app.js` identifies the filesystem bootstrap
-source; its exact release URL remains to be selected. Do not infer its identity
+source; it now pins `https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
+Do not infer its identity
 from arbitrary configured filenames. The bootstrap sequence is:
 
 1. Fetch native-read `gams.json` through a Tauri command, wrapped as
@@ -210,11 +216,13 @@ Git protocols remain a later slice requiring an explicit transport strategy.
 
 ## Current integration constraints
 
-- `cmd/app/src/app.js` loads `plugins/fs.comp.wasm` before it can read `gams.json`.
-  Native config exposure breaks this cycle; the hardcoded bootstrap source stays
-  in JS temporarily, but supports first-run byte loading.
-- `cmd/app/src/___/services.js` hardcodes six bootstrap UI Service paths. They
-  must become explicit Project configuration rather than hidden dependencies.
+- Native config exposure breaks the FS/config cycle. `cmd/app/src/app.js` now
+  bootstraps FS from its temporary pinned v0.1.1 direct-file release URL, using
+  first-run byte loading and completed-file cache reuse.
+- `cmd/app/src/___/services.js` loads the six required shell service roles from
+  explicit Project `ui.services` URLs: `ui-context`, `ui-keys`, `ui-layout`,
+  `ui-toast`, `ui-popup`, `ui-tooltip`. Missing/malformed URLs are errors; older
+  Projects declaring only `ui-layout` must add the remaining five entries.
 - `cmd/app/src/util/require.js` reads JS through the filesystem plugin and imports
   Blob URLs. Installing files is not sufficient to support relative JS imports
   or companion asset URLs; loader behavior needs verification and design.
@@ -227,9 +235,10 @@ Git protocols remain a later slice requiring an explicit transport strategy.
 
 ## Implementation slices
 
-The direct-file transport, byte bootstrap and JS cache flow now have automated
-coverage; a real prebuilt FS/local-server smoke is available. ZIP/Git sources and
-the loading UI have not been implemented.
+The direct-file transport, byte bootstrap, JS cache flow and initial ZIP
+extraction have automated coverage; a real prebuilt FS/local-server smoke is
+available for direct files. Git sources, ZIP-based FS bootstrap and the loading
+UI have not been implemented. ZIP Desktop WebView startup remains unverified.
 
 0. Done: native config exposure, local/shared directory selection and preopen,
    `runtime.config`/`runtime.modulesDir`, and removal of frontend config file I/O.

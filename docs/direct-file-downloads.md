@@ -1,9 +1,9 @@
 # Direct-file Project Unit downloads
 
 This implementation slice supports direct HTTPS files and loopback HTTP files
-for testing. ZIP selectors and Git sources deliberately fail with an explicit
-unsupported-source error; archive extraction and the loading screen are later
-steps. No lockfile, build scripts, or automatic transitive dependency loading.
+for testing. ZIP selectors are now supported by the separate
+[first ZIP slice](zip-project-units.md); Git sources and the loading screen
+remain deferred. No lockfile, build scripts, or automatic transitive dependency loading.
 
 ## APIs and storage
 
@@ -36,8 +36,9 @@ Cached files are reused without contacting the server. Changed content at an
 unchanged URL is not detected automatically. This is a URL-keyed installation
 cache, not a reproducible/content-authenticated package lock.
 
-`app.js` keeps a hardcoded `FS_BOOTSTRAP_SOURCE` (currently the existing local
-`plugins/fs.comp.wasm`). The helper also accepts a direct-file URL: it first tries
+`app.js` keeps a temporary hardcoded `FS_BOOTSTRAP_SOURCE` (now the pinned release
+`https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`).
+The helper also accepts local paths: for a remote source it first tries
 its cached path, then downloads and byte-loads FS on a miss, and persists FS
 through its own filesystem API. No filesystem-less Project mode is implemented.
 Only missing-path errors cause bootstrap download; other component load failures
@@ -45,8 +46,10 @@ remain errors.
 
 Configured WASM plugin strings are resolved before loading. View/service JS
 loads through `require` support direct-file URLs. Theme loading resolves `url`
-(the old `path` still works during this incremental migration). The six legacy
-hardcoded UI bootstrap service paths have not yet been migrated.
+(the old `path` still works during this incremental migration). The six shell UI Services now require explicit `url` entries under
+`ui.services`: `ui-context`, `ui-keys`, `ui-layout`, `ui-toast`, `ui-popup`,
+`ui-tooltip`. They load through `require`, including ZIP sources. There is no
+silent fallback to the former local `ui-plugins` paths.
 
 ## Test a prebuilt filesystem Unit through a real static server
 
