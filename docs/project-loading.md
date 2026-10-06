@@ -83,3 +83,24 @@ checked in a standalone Chrome fixture: themeless → external The98 adoption,
 preserved ratios, indeterminate bars, hidden completed bars, in-dialog footer,
 readable full errors, reload and removal. That is not a full Tauri WebView startup
 smoke test.
+
+## Browser style regression check
+
+The themeless card needs an inset frame: the enclosing scrollable article clips
+an outer shadow. Base `output` is block-level so status spacing does not depend
+on a theme. Both were missing from the initial fallback implementation.
+
+From the workspace root, run:
+
+```sh
+python3 -m http.server 8767 --bind 127.0.0.1
+```
+
+Open `/gams/test/fixtures/startup-style.html` on that localhost server. The fixture
+uses the production renderer and actual base CSS, checks visible frame structure,
+block-level status layout and footer placement, and exposes
+`window.startupStyleResult`. Add
+`?theme=/theme.the98/src/themes/the98.css` to check theme adoption and preserved
+ratios against the external theme, without copying it into the Host. Disable
+browser cache while iterating on CSS. Stop the test server with Ctrl+C.
+This is a browser-rendered regression check, not part of the Node/Rust test run.

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Startup style regression check</title>
+    <link rel="stylesheet" href="../../cmd/app/src/css/reset.css">
+    <link rel="stylesheet" href="../../cmd/app/src/css/base.css">
+    <link rel="stylesheet" href="../../cmd/app/src/fonts/fonts.css">
+    <link id="theme-stylesheet" data-theme-stylesheet rel="stylesheet">
+</head>
+<body>
+<script type="module">
+import { createStartupProgress } from "../../cmd/app/src/core/startup-progress.js"
+const screen = createStartupProgress(document, () => location.reload())
+screen.phase("Preparing theme and plugins", 2)
+screen.update({ source: "plugin.wasm", phase: "downloading", downloaded: 1024, total: 4096 })
+screen.update({ source: "https://example.com/view.zip#views/view.js", phase: "extracting", entry: "views/view.js", completed: 2, total: 5 })
+screen.update({ source: "cached.wasm", phase: "ready", cached: true })
+const host = document.querySelector("#gams-startup")
+const ratios = () => [...host.querySelectorAll("progress")].map(bar => bar.hasAttribute("value") ? bar.value : null)
+const before = ratios()
+const failures = []
+function check(condition, message) { if (!condition) failures.push(message) }
+function checkFrame(label) {
+    const frame = getComputedStyle(host.querySelector("blockquote"))
+    check(frame.boxShadow.includes("inset") || parseFloat(frame.borderTopWidth) > 0,
+        `${label}: card needs an inset frame or border; its outer shadow is clipped by the scroll container`)
+    check(getComputedStyle(host.querySelector("#phase")).display === "block",
+        `${label}: status output must be block-level so vertical margins take effect`)
+}
+check(document.querySelector('link[href$="base.css"]').sheet !== null, "base.css must load")
+checkFrame("themeless")
+const theme = new URLSearchParams(location.search).get("theme")
+if (theme) {
+    const link = document.querySelector("#theme-stylesheet")
+    await new Promise((resolve, reject) => {
+        link.onload = resolve
+        link.onerror = reject
+        link.href = theme
+    })
+    checkFrame("themed")
+    check(JSON.stringify(ratios()) === JSON.stringify(before), "theme adoption must preserve progress ratios")
+}
+check(host.querySelector("footer").parentElement.tagName === "BLOCKQUOTE", "footer must stay inside the dialog")
+window.startupStyleResult = { passed: failures.length === 0, failures, theme }
+if (failures.length) throw new Error(failures.join("\n"))
+screen.phase("Startup style checks passed", 2)
+</script>
+</body>
+</html>
