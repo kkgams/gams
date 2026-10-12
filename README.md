@@ -1,23 +1,26 @@
 # GAMS Host
 
-## v2.0.4 preparation — NOTICE approved; candidate review pending
+## v2.0.5 preparation — NOTICE approved; release review pending
 
-v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
-prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
-ZIP/Git installation and a loading screen are not part of this release.
-The native appendix has been regenerated against the updated locked Apple
-Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
-removing or changing prior notices. The five MPL source archives are unchanged.
-Root LICENSE, browser bundles, fonts and their license texts are unchanged.
-See `docs/http-license-review.md` for the dependency delta and generation commands.
-Existing v2.0.0–v2.0.3 tags are immutable. On 2026-10-04 the owner approved
-the exact NOTICE and linked evidence below and authorized the release-branch
-push. **Do not publish the tag until same-commit candidate and clean-Mac review
-pass.**
+v2.0.4 is published. v2.0.5 adds Project Save hooks/progress, ZIP Project Unit
+installation, startup progress with early Project-theme adoption, and a refreshed
+app icon. Git installation remains unimplemented. ZIP extraction is a limited
+slice, not a hardened installer for hostile archives.
 
-Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
-Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
-See `PUBLISHING.md` for the branch review then tag-push procedure.
+The candidate NOTICE now covers zip.js and its embedded zlib fallback; 51 inputs
+are bound by the refreshed evidence manifest. Native dependencies remain at
+395 crates and 88 full texts; only the Host version and lock digest changed.
+Fonts, prior browser bundles, upstream license texts and MPL archives are unchanged.
+
+On 2026-10-12 the owner approved the exact NOTICE and linked evidence below.
+This is notice approval, not publication authorization. Same-commit hosted
+candidate/rehearsal, external-Project desktop smoke and clean-Mac/Gatekeeper
+review are still required before tagging.
+
+Candidate NOTICE SHA-256: `7d0ea634ae6cebb1e9a95aacead7304461f4e1b60a48f2a71786c4a776f10b8d`.
+Candidate evidence SHA-256: `b19ed41a33a215e6594065b04b53c6c0b40bf1971cccb6665ab256a6f353b86c`.
+See `docs/release-2.0.5-review.md` for the bounded refresh and `PUBLISHING.md`
+for approval and publication gates.
 
 
 
@@ -91,8 +94,8 @@ see `docs/project-loading.md`. Git sources are not implemented.
 FS bootstrap now uses its pinned direct-file v0.1.1 release URL and does not
 accept ZIP sources. See `docs/direct-file-downloads.md` for APIs and the local-server smoke
 test, and `docs/zip-project-units.md` for ZIP scope, deferred safeguards and tests.
-The new ZIP browser bundle is outside the approved v2.0.4 NOTICE/evidence;
-redistribution review and renewed approval are required before publication.
+The ZIP browser bundle is covered by the v2.0.5 candidate NOTICE/evidence and
+readable license packaging; exact NOTICE/evidence was owner-approved 2026-10-12.
 
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The
@@ -145,10 +148,11 @@ No example source or compiled game WASM is attached. The app ZIP includes
 readable font and browser-bundle license texts, pinned provenance,
 the native-license appendix and original source archives for five MPL-covered
 crates beside the `.app` (Tauri embeds the frontend assets in the executable).
-`NOTICE-EVIDENCE.sha256` binds 47 Host-only third-party inputs to the root
-`NOTICE`. Historical Project-picker notice approval does not cover the new
-HTTP dependency bytes. The owner approved the exact v2.0.4 bytes on 2026-10-04;
-replace the prior notice digest in GitHub Actions **before pushing**. Publication gates are recorded in `PUBLISHING.md`.
+`NOTICE-EVIDENCE.sha256` binds 51 Host-only third-party inputs to the candidate
+`NOTICE`, including zip.js and its fallback notices. Historical v2.0.4 approval
+does not cover these bytes; the owner separately approved them on 2026-10-12.
+Update GitHub Actions digests before an authorized candidate push. Gates:
+`PUBLISHING.md`.
 
 `release.yml` rehearses on `release` without publishing. After all gates pass,
 a matching owner-pushed version tag automatically creates a **public** Apple
@@ -171,10 +175,10 @@ both the download's origin and the checksum before extracting or running it:
 
 ```sh
 cd ~/Downloads
-awk '$2 == "GAMS-2.0.4-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
-mkdir -p gams-2.0.4
-ditto -x -k GAMS-2.0.4-macos-aarch64.zip gams-2.0.4
-ditto gams-2.0.4/GAMS.app /Applications/GAMS.app
+awk '$2 == "GAMS-2.0.5-macos-aarch64.zip" {print}' SHA256SUMS-macos-aarch64 | shasum -a 256 --check
+mkdir -p gams-2.0.5
+ditto -x -k GAMS-2.0.5-macos-aarch64.zip gams-2.0.5
+ditto gams-2.0.5/GAMS.app /Applications/GAMS.app
 codesign --verify --deep --strict /Applications/GAMS.app
 ```
 
@@ -189,10 +193,10 @@ signature or notarization. For the current Host, launch from Terminal with
 `GAMS_APP_CWD` pointing at your own Project as shown above; you must install
 its Project Units separately.
 
-Apache-2.0 for GAMS-authored Host code and the exact **revised** Host-only
-`NOTICE` are owner-approved. Update the repository's `NOTICE_SHA256` variable
-before pushing and inspect the new hosted candidate; see `LICENSING.md`,
-`THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`.
+Apache-2.0 for GAMS-authored Host code remains owner-approved. The v2.0.5
+NOTICE/evidence was separately owner-approved on 2026-10-12. Update
+`NOTICE_SHA256` before an authorized push and inspect the hosted candidate;
+see `LICENSING.md`, `THIRD-PARTY-REVIEW.md`, and `PUBLISHING.md`.
 The separate `example.game1` repository is **not** approved
 for publication by that Host decision. The owner still needs to configure the
 Host's exact approval digests, push the clean-history branch, inspect hosted

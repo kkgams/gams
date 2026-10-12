@@ -15,7 +15,7 @@ repository.
 The exact third-party input and notice bytes for this review are listed in
 NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
 linked files to change independently; release checks validate the manifest.
-Third-party evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`
+Third-party evidence SHA-256: `b19ed41a33a215e6594065b04b53c6c0b40bf1971cccb6665ab256a6f353b86c`
 
 Host browser fonts:
 - Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;
@@ -46,6 +46,16 @@ Host browser libraries:
   upstream Ronin MIT permission text is retained for provenance at
   cmd/app/src/util/aseprite.LICENSE; do not treat the whole GAMS parser as a
   vendored Ronin work.
+
+- zip.js 2.23.0 (Gildas Lormeau): the unmodified npm index-native.min.js
+  browser bundle is retained as cmd/app/src/util/vendor/zipjs/zip-native.js.
+  Its BSD-3-Clause license and the embedded zlib-streams-ts fallback's
+  BSD-3-Clause/zlib notices are retained in that directory as LICENSE and
+  zlib-streams-ts.LICENSE. The fallback is an altered TypeScript/JavaScript
+  port of zlib (Jean-loup Gailly and Mark Adler), not GAMS-authored compression
+  code or original C zlib. PROVENANCE.md records package/bundle hashes and
+  the exact retained license source; the fallback build revision is not
+  established. The app ZIP carries these texts under BUNDLE-LICENSES/zipjs/.
 
 Native desktop Host:
 - The target-filtered Cargo.lock crate index and every selected complete

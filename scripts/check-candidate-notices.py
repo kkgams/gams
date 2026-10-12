@@ -25,6 +25,9 @@ def main() -> None:
         'BUNDLE-LICENSES/ajv/PROVENANCE.md': root / 'cmd/app/src/util/BUNDLE-REVIEW.md',
         'BUNDLE-LICENSES/markdown-it/PROVENANCE.md': root / 'cmd/app/src/widgets/BUNDLE-REVIEW.md',
         'BUNDLE-LICENSES/aseprite-reference.LICENSE': root / 'cmd/app/src/util/aseprite.LICENSE',
+        'BUNDLE-LICENSES/zipjs/LICENSE': root / 'cmd/app/src/util/vendor/zipjs/LICENSE',
+        'BUNDLE-LICENSES/zipjs/zlib-streams-ts.LICENSE': root / 'cmd/app/src/util/vendor/zipjs/zlib-streams-ts.LICENSE',
+        'BUNDLE-LICENSES/zipjs/PROVENANCE.md': root / 'cmd/app/src/util/vendor/zipjs/PROVENANCE.md',
         'BUNDLE-LICENSES/markdown-it/markdown-it.LICENSE': root / 'cmd/app/src/widgets/markdown-it.LICENSE',
     }
     for crate_source in (root / 'NATIVE-SOURCE').glob('*.crate'):

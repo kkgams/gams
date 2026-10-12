@@ -1,23 +1,26 @@
-# Publishing the GAMS desktop Host — v2.0.4 NOTICE approved; hosted review pending
+# Publishing the GAMS desktop Host — v2.0.5 NOTICE approved; release review pending
 
-## v2.0.4 preparation — NOTICE approved; candidate review pending
+## v2.0.5 preparation — NOTICE approved; release review pending
 
-v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
-prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
-ZIP/Git installation and a loading screen are not part of this release.
-The native appendix has been regenerated against the updated locked Apple
-Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
-removing or changing prior notices. The five MPL source archives are unchanged.
-Root LICENSE, browser bundles, fonts and their license texts are unchanged.
-See `docs/http-license-review.md` for the dependency delta and generation commands.
-Existing v2.0.0–v2.0.3 tags are immutable. On 2026-10-04 the owner approved
-the exact NOTICE and linked evidence below and authorized the release-branch
-push. **Do not publish the tag until same-commit candidate and clean-Mac review
-pass.**
+v2.0.4 is published. v2.0.5 adds Project Save hooks/progress, ZIP Project Unit
+installation, startup progress with early Project-theme adoption, and a refreshed
+app icon. Git installation remains unimplemented. ZIP extraction is a limited
+slice, not a hardened installer for hostile archives.
 
-Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
-Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
-See `PUBLISHING.md` for the branch review then tag-push procedure.
+The candidate NOTICE now covers zip.js and its embedded zlib fallback; 51 inputs
+are bound by the refreshed evidence manifest. Native dependencies remain at
+395 crates and 88 full texts; only the Host version and lock digest changed.
+Fonts, prior browser bundles, upstream license texts and MPL archives are unchanged.
+
+On 2026-10-12 the owner approved the exact NOTICE and linked evidence below.
+This is notice approval, not publication authorization. Same-commit hosted
+candidate/rehearsal, external-Project desktop smoke and clean-Mac/Gatekeeper
+review are still required before tagging.
+
+Candidate NOTICE SHA-256: `7d0ea634ae6cebb1e9a95aacead7304461f4e1b60a48f2a71786c4a776f10b8d`.
+Candidate evidence SHA-256: `b19ed41a33a215e6594065b04b53c6c0b40bf1971cccb6665ab256a6f353b86c`.
+See `docs/release-2.0.5-review.md` for the bounded refresh and `PUBLISHING.md`
+for approval and publication gates.
 
 
 
@@ -32,7 +35,7 @@ configured prebuilt Unit sources and an available filesystem bootstrap Unit.
 ## Historical Host notice approval — 2026-09-29
 
 The owner approved the exact **revised** Host-only `NOTICE` and linked evidence
-at that time; that approval does not cover the current v2.0.4 table below. The macOS Project chooser directly uses objc2-app-kit and
+at that time; historical approvals do not cover the v2.0.5 candidate table below. The macOS Project chooser directly uses objc2-app-kit and
 objc2-foundation, already covered by the native appendix. All third-party
 Cargo packages, versions, checksums and edges remain unchanged; only the
 GAMS root crate's dependency edges changed. That changed Cargo.lock's
@@ -41,14 +44,14 @@ NOTICE. The previous CI candidate was built at an earlier commit and cannot
 stand in for hosted review of the revised binary. Apache-2.0 remains approved
 for GAMS-authored code; `example.game1` has **no** publication approval.
 
-| Current v2.0.4 file / Actions variable | SHA-256 | Status |
+| Candidate v2.0.5 file / Actions variable | SHA-256 | Status |
 | --- | --- | --- |
 | `LICENSE` / `LICENSE_SHA256` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | previously approved, unchanged |
-| `NOTICE` / `NOTICE_SHA256` | `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b` | owner-approved 2026-10-04 |
-| `NOTICE-EVIDENCE.sha256` | `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5` | owner-approved 2026-10-04; bound by NOTICE |
+| `NOTICE` / `NOTICE_SHA256` | `7d0ea634ae6cebb1e9a95aacead7304461f4e1b60a48f2a71786c4a776f10b8d` | owner-approved 2026-10-12 |
+| `NOTICE-EVIDENCE.sha256` | `b19ed41a33a215e6594065b04b53c6c0b40bf1971cccb6665ab256a6f353b86c` | owner-approved 2026-10-12; bound by NOTICE |
 
 The clean Host Git history remains required. Confirm `check-source-boundary.py`
-passes before the next public push. Do not tag `v2.0.4` until this revised
+passes before the next public push. Do not tag `v2.0.5` until this revised
 source, hosted candidate and release rehearsal pass at the same commit.
 
 ## Automatic tag release notes
@@ -68,7 +71,7 @@ addresses are not published and names are not asserted to be GitHub accounts.
 
 New workflow/source changes do not alter existing immutable tags or existing
 drafts. Use a new approved version and tag for future workflow execution; do
-not move `v2.0.0`, `v2.0.1`, `v2.0.2` or `v2.0.3` to pick up these improvements. Existing draft
+not move `v2.0.0`, `v2.0.1`, `v2.0.2` or `v2.0.3` or `v2.0.4` to pick up these improvements. Existing draft
 notes may be edited by the owner without modifying the tag or app assets.
 
 On 2026-09-30 the owner approved **automatic public publication on tag push**.
@@ -77,6 +80,16 @@ manual approval after the build. Complete candidate, external Project and
 clean-Mac/Gatekeeper review **before tagging**. GitHub selects Latest using its
 default release rules. Branch pushes/manual branch rehearsals publish nothing;
 all tag build, exact-notice, source-history and overwrite checks remain required.
+
+## v2.0.5 owner-directed publication exception — 2026-10-12
+
+After exact NOTICE/evidence approval and local build/ZIP verification, the owner
+explicitly requested “commit / push / release”, treating this patch preparation
+as sufficient without further manual review. For v2.0.5 only, proceed after the
+same-commit hosted candidate and rehearsal pass; do not claim a new external-
+Project desktop or clean-Mac/Gatekeeper test. This does not weaken notice,
+source-history, CI, immutable-tag or artifact-byte checks, and does not waive
+manual review for future releases.
 
 ## Owner publication steps
 
@@ -128,7 +141,7 @@ all tag build, exact-notice, source-history and overwrite checks remain required
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.4` (Cargo/Tauri), which is different from
+Current source version is `2.0.5` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

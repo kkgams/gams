@@ -1,4 +1,4 @@
-7601b5563f763d9f51806c8c0c4f5fcb6496ba4ee7bb07ce1f654410d1cf5c37  NATIVE-NOTICES.md
+3cd6bf957395264773cf60fb7449bbac1f91ec5aed88128e0c217320dabbda59  NATIVE-NOTICES.md
 4b69f3c4b0516e3d29b682ac329fa9d7e88ee4cf1698d9cdf51817fde0b5c4f6  NATIVE-SOURCE/README.md
 dae61cf9c0abb83bd659dab65b7e4e38d8236824c85f0f804f173567bda257d2  NATIVE-SOURCE/cssparser-0.36.0.crate
 13b588ba4ac1a99f7f2964d24b3d896ddc6bf847ee3855dbd4366f058cfcd331  NATIVE-SOURCE/cssparser-macros-0.6.1.crate
@@ -34,6 +34,10 @@ bf13d2149c7784aeabc5575262251fde5a26bec741a9fd05558a4afe72326ae8  cmd/app/src/ut
 b010b0dfdfdb23d7396e03b82cd4621fc9bb8f95d6b0aea70b9c24e12074c786  cmd/app/src/util/licenses/fast-uri-3.1.8.LICENSE
 7bf9b2de73a6b356761c948d0e9eeb4be6c1270bd04c79cd489c1e400ffdfc1a  cmd/app/src/util/licenses/json-schema-traverse.LICENSE
 6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f  cmd/app/src/util/licenses/require-from-string.LICENSE
+1b7ebc8d7889ed25491484ab2b102370742ca6c0b26650a0c62cc2269b579b84  cmd/app/src/util/vendor/zipjs/LICENSE
+b4f14263845179851df43e0b72013b65760f20c04abefb41171eb3656b5a77e9  cmd/app/src/util/vendor/zipjs/PROVENANCE.md
+dacda146a7d47a907ad31b85e6975672168416ddd02cc8200db8442f0616221e  cmd/app/src/util/vendor/zipjs/zip-native.js
+d7f45ed344dbb4e33229d39a0231be3077b4d75345d8a56af50fe43c098e12a5  cmd/app/src/util/vendor/zipjs/zlib-streams-ts.LICENSE
 280a2549a32ae9ecea363daffa496abca673bf825d5af6f1ed4a7188acd82d8a  cmd/app/src/widgets/BUNDLE-REVIEW.md
 cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164  cmd/app/src/widgets/licenses/entities.LICENSE
 21a82bbee91262a076c2e34533d51d73475d55e889f1c42cf884c86b2a0d5773  cmd/app/src/widgets/licenses/joyent-node.LICENSE
@@ -43,5 +47,5 @@ cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164  cmd/app/src/wi
 483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a  cmd/app/src/widgets/licenses/uc.micro.LICENSE
 792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473  cmd/app/src/widgets/markdown-it.LICENSE
 2eb56368f6bdd49231bab3ef495fce8e8205ce4ffbd8fb1be4fc3bbe681140ea  cmd/app/src/widgets/markdown-it.js
-016c9a94f47ae158d71d1cf552c241eb870a7d086686bcfbb0aefb966cae4bbc  cmd/app/src-tauri/Cargo.lock
+02e1b423b2c2911d662e9ed4ed526090e6352d5b09b14cb21f7c54d0f3ed0670  cmd/app/src-tauri/Cargo.lock
 4d1d9fa8dcea1fc7042b57d29ac137cfa8c952b3543557d019aa860f91e2330a  native-about.toml

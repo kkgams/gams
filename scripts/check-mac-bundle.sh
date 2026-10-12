@@ -18,7 +18,8 @@ while IFS= read -r rpath; do
   esac
 done < <(/usr/bin/otool -l "$binary" | awk '/cmd LC_RPATH/{getline; getline; print $2}')
 /usr/bin/codesign --verify --strict --deep --verbose=1 "$app"
-/usr/bin/codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Signature=adhoc$' || {
+# Consume all verbose output: grep -q can SIGPIPE codesign under pipefail.
+/usr/bin/codesign -dv --verbose=4 "$app" 2>&1 | grep '^Signature=adhoc$' >/dev/null || {
   echo 'Expected ad-hoc signature, not missing or Developer ID signing' >&2; exit 1;
 }
 for entitlement in com.apple.security.cs.allow-jit com.apple.security.cs.allow-unsigned-executable-memory; do

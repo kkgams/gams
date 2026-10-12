@@ -67,8 +67,9 @@ testing. A Host-owned startup progress screen now reports download/extraction
 and initialization; see [`docs/project-loading.md`](docs/project-loading.md).
 Git sources remain pending. ZIP extraction uses
 staging and path containment; archive-level deduplication, CRC verification and
-expanded-byte limits are deliberately deferred. The new ZIP browser bundle needs
-redistribution review before publication. Verification of an
+expanded-byte limits are deliberately deferred. The ZIP browser bundle is now included in the v2.0.5 candidate NOTICE/evidence
+and readable license packaging; exact-byte owner approval was recorded 2026-10-12.
+See `docs/release-2.0.5-review.md`. Verification of an
 external Project belongs to the example repository. Host publication still
 requires clean source/history, fresh Host-only NOTICE approval, and the release
 checks in `LICENSING.md` and `VERIFICATION.md`.

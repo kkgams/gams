@@ -104,9 +104,76 @@ class HostReleaseTests(unittest.TestCase):
             digest = hashlib.sha256((root / 'NOTICE-EVIDENCE.sha256').read_bytes()).hexdigest()
             (root / 'NOTICE').write_text(f'Third-party evidence SHA-256: `{digest}`\n')
             self.assertEqual(check().returncode, 0)
-            linked = root / checker.FILES[0]
-            linked.write_text('replaced after approval\n')
-            self.assertNotEqual(check().returncode, 0)
+            for name in (checker.FILES[0],
+                         'cmd/app/src/util/vendor/zipjs/zip-native.js',
+                         'cmd/app/src/util/vendor/zipjs/LICENSE',
+                         'cmd/app/src/util/vendor/zipjs/zlib-streams-ts.LICENSE',
+                         'cmd/app/src/util/vendor/zipjs/PROVENANCE.md'):
+                self.assertIn(name, checker.FILES)
+                linked = root / name
+                original = linked.read_bytes()
+                linked.write_text('replaced after approval\n')
+                self.assertNotEqual(check().returncode, 0, name)
+                linked.write_bytes(original)
+                linked.unlink()
+                self.assertNotEqual(check().returncode, 0, name)
+                linked.write_bytes(original)
+
+    def test_adhoc_signature_pipeline_consumes_verbose_output(self):
+        import shlex
+        script = (ROOT / 'scripts/check-mac-bundle.sh').read_text()
+        pipeline = next(line.split(' || {', 1)[0] for line in script.splitlines()
+                        if line.startswith('/usr/bin/codesign -dv '))
+        producer = "import sys; sys.stdout.write('Signature=adhoc\\n' + 'verbose detail\\n' * 100000)"
+        command = pipeline.replace('/usr/bin/codesign -dv --verbose=4 "$app"',
+                                   'python3 -c ' + shlex.quote(producer))
+        result = subprocess.run(['bash', '-o', 'pipefail', '-c', command],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_candidate_requires_exact_zipjs_notices(self):
+        pairs = {name: ROOT / name for name in
+                 ('LICENSE', 'NOTICE', 'NOTICE-EVIDENCE.sha256', 'NATIVE-NOTICES.md')}
+        pairs['FONT-PROVENANCE.md'] = ROOT / 'cmd/app/src/fonts/PROVENANCE.md'
+        pairs['BUNDLE-LICENSES/aseprite-reference.LICENSE'] = ROOT / 'cmd/app/src/util/aseprite.LICENSE'
+        pairs['BUNDLE-LICENSES/markdown-it/markdown-it.LICENSE'] = ROOT / 'cmd/app/src/widgets/markdown-it.LICENSE'
+        for destination, directory, pattern in (
+            ('NATIVE-SOURCE', 'NATIVE-SOURCE', '*'),
+            ('FONT-LICENSES', 'cmd/app/src/fonts/licenses', '*.txt'),
+            ('BUNDLE-LICENSES/ajv', 'cmd/app/src/util/licenses', '*.LICENSE'),
+            ('BUNDLE-LICENSES/markdown-it', 'cmd/app/src/widgets/licenses', '*.LICENSE'),
+        ):
+            for source in (ROOT / directory).glob(pattern):
+                pairs[f'{destination}/{source.name}'] = source
+        for destination, source in (
+            ('ajv', 'cmd/app/src/util/BUNDLE-REVIEW.md'),
+            ('markdown-it', 'cmd/app/src/widgets/BUNDLE-REVIEW.md'),
+        ):
+            pairs[f'BUNDLE-LICENSES/{destination}/PROVENANCE.md'] = ROOT / source
+        zip_members = []
+        for name in ('LICENSE', 'zlib-streams-ts.LICENSE', 'PROVENANCE.md'):
+            member = f'BUNDLE-LICENSES/zipjs/{name}'
+            pairs[member] = ROOT / 'cmd/app/src/util/vendor/zipjs' / name
+            zip_members.append(member)
+        staging = (ROOT / 'scripts/stage-mac-candidate.sh').read_text()
+        self.assertIn('"$output/stage/BUNDLE-LICENSES/zipjs/"', staging)
+        for name in ('LICENSE', 'zlib-streams-ts.LICENSE', 'PROVENANCE.md'):
+            self.assertIn(f'cmd/app/src/util/vendor/zipjs/{name}', staging)
+        with tempfile.TemporaryDirectory() as temporary:
+            archive_path = Path(temporary) / 'candidate.zip'
+            def check(omit=None, alter=None):
+                with ZipFile(archive_path, 'w') as archive:
+                    for member, source in pairs.items():
+                        if member != omit:
+                            archive.writestr(member, b'changed notice' if member == alter
+                                             else source.read_bytes())
+                return subprocess.run(['python3', str(ROOT / 'scripts/check-candidate-notices.py'),
+                                       str(archive_path)], cwd=ROOT, capture_output=True, text=True)
+            result = check()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for member in zip_members:
+                self.assertNotEqual(check(omit=member).returncode, 0, member)
+                self.assertNotEqual(check(alter=member).returncode, 0, member)
 
     def test_tag_branch_identity_fetch_preserves_full_history(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()

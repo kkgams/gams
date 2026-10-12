@@ -40,6 +40,8 @@ cp cmd/app/src/widgets/markdown-it.LICENSE cmd/app/src/widgets/licenses/*.LICENS
 cp cmd/app/src/util/aseprite.LICENSE "$output/stage/BUNDLE-LICENSES/aseprite-reference.LICENSE"
 cp cmd/app/src/util/BUNDLE-REVIEW.md "$output/stage/BUNDLE-LICENSES/ajv/PROVENANCE.md"
 cp cmd/app/src/widgets/BUNDLE-REVIEW.md "$output/stage/BUNDLE-LICENSES/markdown-it/PROVENANCE.md"
+mkdir "$output/stage/BUNDLE-LICENSES/zipjs"
+cp cmd/app/src/util/vendor/zipjs/LICENSE cmd/app/src/util/vendor/zipjs/zlib-streams-ts.LICENSE cmd/app/src/util/vendor/zipjs/PROVENANCE.md "$output/stage/BUNDLE-LICENSES/zipjs/"
 cp NATIVE-NOTICES.md "$output/stage/"
 cp -R NATIVE-SOURCE "$output/stage/"
 cat >"$output/stage/README.txt" <<'EOF'

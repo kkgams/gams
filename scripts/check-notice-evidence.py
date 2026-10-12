@@ -22,6 +22,10 @@ FILES = [
     'cmd/app/src/widgets/BUNDLE-REVIEW.md',
     'cmd/app/src-tauri/Cargo.lock', 'native-about.toml', 'NATIVE-NOTICES.md',
     'NATIVE-SOURCE/README.md',
+    'cmd/app/src/util/vendor/zipjs/zip-native.js',
+    'cmd/app/src/util/vendor/zipjs/LICENSE',
+    'cmd/app/src/util/vendor/zipjs/zlib-streams-ts.LICENSE',
+    'cmd/app/src/util/vendor/zipjs/PROVENANCE.md',
 ]
 
 

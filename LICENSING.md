@@ -1,23 +1,26 @@
 # Host licensing and release gate
 
-## v2.0.4 preparation — NOTICE approved; candidate review pending
+## v2.0.5 preparation — NOTICE approved; release review pending
 
-v2.0.4 adds native runtime configuration, local/shared `gams_modules` storage,
-prebuilt direct-file HTTP downloads, WASM byte loading, and `make run`.
-ZIP/Git installation and a loading screen are not part of this release.
-The native appendix has been regenerated against the updated locked Apple
-Silicon graph: 395 crates and 88 full texts, adding 9 crates and 3 texts without
-removing or changing prior notices. The five MPL source archives are unchanged.
-Root LICENSE, browser bundles, fonts and their license texts are unchanged.
-See `docs/http-license-review.md` for the dependency delta and generation commands.
-Existing v2.0.0–v2.0.3 tags are immutable. On 2026-10-04 the owner approved
-the exact NOTICE and linked evidence below and authorized the release-branch
-push. **Do not publish the tag until same-commit candidate and clean-Mac review
-pass.**
+v2.0.4 is published. v2.0.5 adds Project Save hooks/progress, ZIP Project Unit
+installation, startup progress with early Project-theme adoption, and a refreshed
+app icon. Git installation remains unimplemented. ZIP extraction is a limited
+slice, not a hardened installer for hostile archives.
 
-Current NOTICE SHA-256: `afe2ab4aa21e5a640f1fc63ba81018b2db3bf37daa78b14e2f814b5a738bc16b`.
-Current evidence SHA-256: `64934e3b0f5c8d2a65366dcf3c9bb608e6716d529662a8d1b84d25cc16f06db5`.
-See `PUBLISHING.md` for the branch review then tag-push procedure.
+The candidate NOTICE now covers zip.js and its embedded zlib fallback; 51 inputs
+are bound by the refreshed evidence manifest. Native dependencies remain at
+395 crates and 88 full texts; only the Host version and lock digest changed.
+Fonts, prior browser bundles, upstream license texts and MPL archives are unchanged.
+
+On 2026-10-12 the owner approved the exact NOTICE and linked evidence below.
+This is notice approval, not publication authorization. Same-commit hosted
+candidate/rehearsal, external-Project desktop smoke and clean-Mac/Gatekeeper
+review are still required before tagging.
+
+Candidate NOTICE SHA-256: `7d0ea634ae6cebb1e9a95aacead7304461f4e1b60a48f2a71786c4a776f10b8d`.
+Candidate evidence SHA-256: `b19ed41a33a215e6594065b04b53c6c0b40bf1971cccb6665ab256a6f353b86c`.
+See `docs/release-2.0.5-review.md` for the bounded refresh and `PUBLISHING.md`
+for approval and publication gates.
 
 
 
@@ -43,11 +46,10 @@ Another repository's approval does not transfer.
 
 The macOS job may compile/test privately, but candidate upload requires
 repository-scoped Actions variables `LICENSE_SHA256` and `NOTICE_SHA256` matching
-**this repository's approved** root files. The existing public
-`NOTICE_SHA256` variable still covers the **old** notice; the owner must
-update it to the newly approved digest **before pushing** the revised source.
-No
-example/station ZIP is produced by the Host release; Windows/Linux jobs contain
+**this repository's approved** root files. The prior approval covers v2.0.4,
+not this v2.0.5 candidate. The owner separately approved the exact v2.0.5
+NOTICE/evidence on 2026-10-12. Update `NOTICE_SHA256` **before an authorized
+push** of revised source; future input changes require renewed approval. No example/station ZIP is produced by the Host release; Windows/Linux jobs contain
 README-only roadmaps, not supported executables.
 
 The owner selected an initial ad-hoc signed, non-Developer-ID, unnotarized Apple
