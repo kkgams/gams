@@ -36,8 +36,15 @@ Cached files are reused without contacting the server. Changed content at an
 unchanged URL is not detected automatically. This is a URL-keyed installation
 cache, not a reproducible/content-authenticated package lock.
 
-`app.js` keeps a temporary hardcoded `FS_BOOTSTRAP_SOURCE` (now the pinned release
-`https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`).
+`app.js` selects the sole `plugins` source whose exact basename is
+`plugin.fs.wasm` (URL pathname, or local path). If absent, `FS_BOOTSTRAP_SOURCE`
+falls back to `https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
+Multiple matches are an error, including repeated entries. Query strings do not
+change URL basename matching. A ZIP selector naming `plugin.fs.wasm` is rejected
+because FS is needed for extraction. Invalid configuration and selected-source
+load/download failures never trigger fallback. The selected configured source
+resolves to the same path during subsequent plugin loading, not a second FS
+provider. This filename convention is intentional; export-based discovery is deferred.
 The helper also accepts local paths: for a remote source it first tries
 its cached path, then downloads and byte-loads FS on a miss, and persists FS
 through its own filesystem API. No filesystem-less Project mode is implemented.

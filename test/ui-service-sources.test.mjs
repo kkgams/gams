@@ -34,8 +34,9 @@ test("Host UI bootstrap consumes configured sources instead of hardcoded Unit pa
   assert.doesNotMatch(source, /require\("ui-plugins\//)
 })
 
-test("filesystem bootstrap uses an explicit pinned release rather than Project-local assembly", async () => {
+test("filesystem bootstrap selects Project FS with an explicit pinned fallback", async () => {
   const source = await readFile(new URL("../cmd/app/src/app.js", import.meta.url), "utf8")
   assert.match(source, /const FS_BOOTSTRAP_SOURCE = "https:\/\/github.com\/kkgams\/plugin.fs\/releases\/download\/v0.1.1\/plugin.fs.wasm"/)
   assert.doesNotMatch(source, /const FS_BOOTSTRAP_SOURCE = "plugins\//)
+  assert.match(source, /bootstrapFilesystem\(selectFilesystemSource\(config.plugins, FS_BOOTSTRAP_SOURCE\)\)/)
 })

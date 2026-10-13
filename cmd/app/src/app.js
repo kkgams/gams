@@ -4,10 +4,11 @@ import { initSaveMenu } from "/core/menu.js"
 import { init, prepareTheme } from "/___/services.js"
 import { projectUnits } from "/util/require.js"
 import { createStartupProgress } from "/core/startup-progress.js"
+import { selectFilesystemSource } from "/core/project-units.js"
 
 // Default package folder; runtime.modulesDir supplies the native-selected path.
 const GAMS_MODULES = "gams_modules"
-// Temporary Host-owned bootstrap pin; all other Unit sources are Project-owned.
+// Fallback only when Project plugins do not name plugin.fs.wasm.
 const FS_BOOTSTRAP_SOURCE = "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"
 
 app.innerHTML = ""
@@ -21,7 +22,7 @@ async function main() {
 
     const config = runtime.config
     loading.phase("Preparing filesystem", 1)
-    await projectUnits.bootstrapFilesystem(FS_BOOTSTRAP_SOURCE)
+    await projectUnits.bootstrapFilesystem(selectFilesystemSource(config.plugins, FS_BOOTSTRAP_SOURCE))
 
     loading.phase("Preparing theme and plugins", 2)
     const themeReady = prepareTheme(config)

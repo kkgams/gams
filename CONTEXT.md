@@ -48,9 +48,10 @@ layout automatically. See [`docs/project-saving.md`](docs/project-saving.md).
 
 `make app-check` needs no sibling repositories. Host release builds never run
 example setup, vendor Unit source, or include station Project artifacts or a
-station ZIP. The filesystem plugin is required by bootstrap and downloaded from
-a temporary Host-owned `plugin.fs` v0.1.1 release pin on cache miss; the Host does
-not bundle it. All six shell UI Service URLs must be declared by the Project
+station ZIP. The filesystem plugin is required by bootstrap. The Host selects the sole
+`plugins` source with exact basename `plugin.fs.wasm`, or uses its v0.1.1
+release fallback when absent. Multiple matches and selected-source failures
+are errors; ZIP bootstrap is unsupported. The Host does not bundle it. All six shell UI Service URLs must be declared by the Project
 under `ui.services`; missing required config or artifacts fail fast.
 
 The current `gams.json` format and bootstrap order are pre-release contracts;

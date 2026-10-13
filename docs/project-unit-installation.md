@@ -14,8 +14,8 @@ limits and CRC verification below remain design targets, not implemented guarant
 The Host installs and loads prebuilt Project Units declared directly in
 `gams.json`. No separate dependency declaration, automatic dependency loading,
 source compilation, or downloaded installation/build scripts. Project Units are
-explicitly configured by the Project, except for a temporary hardcoded filesystem
-bootstrap source constant in `app.js`.
+explicitly configured by the Project, with a pinned filesystem bootstrap fallback
+when `plugins` contains no source named `plugin.fs.wasm`.
 
 This is a breaking Project Config migration. Compatibility with the old loading
 contract is not required. The Host continues to own no example Project or
@@ -163,10 +163,12 @@ The screen requires no Project Unit or theme; show phase, completed source count
 current download bytes, and actionable errors/retry. Use indeterminate byte
 progress when the total is unknown. Make UI initialization genuinely awaitable.
 
-For v1, a hardcoded constant in `app.js` identifies the filesystem bootstrap
-source; it now pins `https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
-Do not infer its identity
-from arbitrary configured filenames. The bootstrap sequence is:
+The Host selects the sole `plugins` source whose exact basename is
+`plugin.fs.wasm`, an owner-approved filename convention rather than component
+export discovery. Local paths and direct-file URLs are supported; ZIP bootstrap
+is rejected. Multiple matches fail. When absent, use the Host fallback
+`https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
+A configured-source failure must not trigger fallback. The bootstrap sequence is:
 
 1. Fetch native-read `gams.json` through a Tauri command, wrapped as
    `runtime.config` after `runtime.ready`. Leave `globalThis.__TAURI__` unchanged.
@@ -218,7 +220,8 @@ Git protocols remain a later slice requiring an explicit transport strategy.
 ## Current integration constraints
 
 - Native config exposure breaks the FS/config cycle. `cmd/app/src/app.js` now
-  bootstraps FS from its temporary pinned v0.1.1 direct-file release URL, using
+  bootstraps FS from the configured `plugin.fs.wasm` source, or the pinned
+  v0.1.1 fallback when absent, using
   first-run byte loading and completed-file cache reuse.
 - `cmd/app/src/___/services.js` loads the six required shell service roles from
   explicit Project `ui.services` URLs: `ui-context`, `ui-keys`, `ui-layout`,

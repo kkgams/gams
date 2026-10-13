@@ -17,7 +17,7 @@ function node() {
         remove() { this.removed = true },
     }
 }
-async function runApp(t) {
+async function runApp(t, filesystemSource) {
     const bootstrap = deferred(), bootstrapStarted = deferred()
     const theme = deferred(), themeStarted = deferred()
     const plugin = deferred(), pluginStarted = deferred(), pluginsLoaded = deferred()
@@ -25,15 +25,15 @@ async function runApp(t) {
     const document = { body: node(), documentElement: node(), createElement: node, getElementById() { return null } }
     let unsubscribed = 0, initCalls = 0, themeCalls = 0, fsReady = false
     const runtime = {
-        ready: Promise.resolve(), config: { plugins: ["plugin.wasm"] },
+        ready: Promise.resolve(), config: { plugins: filesystemSource ? [filesystemSource] : ["plugin.wasm"] },
         async addPlugins(paths, replace) { assert.deepEqual(paths, ["installed.wasm"]); assert.equal(replace, true); pluginsLoaded.resolve() },
     }
     const deps = {
         runtime,
         projectUnits: {
             subscribeProgress() { return () => { unsubscribed++ } },
-            async bootstrapFilesystem() { bootstrapStarted.resolve(); await bootstrap.promise; fsReady = true },
-            async resolve() { assert.equal(fsReady, true); pluginStarted.resolve(); await plugin.promise; return "installed.wasm" },
+            async bootstrapFilesystem(source) { assert.equal(source, filesystemSource || "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"); bootstrapStarted.resolve(); await bootstrap.promise; fsReady = true },
+            async resolve(source) { assert.equal(source, filesystemSource || "plugin.wasm"); assert.equal(fsReady, true); pluginStarted.resolve(); await plugin.promise; return "installed.wasm" },
         },
         prepareTheme() { assert.equal(fsReady, true); themeCalls++; themeStarted.resolve(); return theme.promise },
         async init(config, themeReady) { assert.equal(config, runtime.config); assert.equal(themeReady, theme.promise); initCalls++; uiStarted.resolve(); await ui.promise },
@@ -54,6 +54,7 @@ async function runApp(t) {
         ['import { init, prepareTheme } from "/___/services.js"', 'const { init, prepareTheme } = globalThis.__startupAppTest'],
         ['import { projectUnits } from "/util/require.js"', 'const { projectUnits } = globalThis.__startupAppTest'],
         ['from "/core/startup-progress.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/startup-progress.js", import.meta.url).href)}`],
+        ['from "/core/project-units.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/project-units.js", import.meta.url).href)}`],
     ]) source = source.replace(line, replacement)
     const task = import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${Math.random()}`).toString("base64")}`)
     await bootstrapStarted.promise
@@ -65,7 +66,7 @@ async function runApp(t) {
 }
 
 test("theme and plugins start together after FS, UI waits for both, and screen waits for layout/menu", async t => {
-    const f = await runApp(t)
+    const f = await runApp(t, "https://example.com/v2/plugin.fs.wasm")
     assert.equal(f.host.querySelector("#phase").textContent, "Preparing theme and plugins")
     f.plugin.resolve()
     await f.pluginsLoaded.promise

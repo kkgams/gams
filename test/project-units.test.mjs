@@ -34,6 +34,20 @@ function filesystemRuntime(directory) {
   }
 }
 
+test("filesystem selection uses the exact plugin.fs.wasm basename or the pinned fallback", async () => {
+  const { selectFilesystemSource } = await import(moduleUrl)
+  const fallback = "https://example.com/pinned/plugin.fs.wasm"
+  for (const source of ["plugins/plugin.fs.wasm", "/custom/plugin.fs.wasm", "https://example.com/v2/plugin.fs.wasm?download=1"])
+    assert.equal(selectFilesystemSource(["other.wasm", source], fallback), source)
+  for (const source of ["my-plugin.fs.wasm", "plugin.fs.wasm.bak", "https://example.com/plugin.fs.wasm/other.wasm"])
+    assert.equal(selectFilesystemSource([source], fallback), fallback)
+  assert.equal(selectFilesystemSource([], fallback), fallback)
+  assert.throws(() => selectFilesystemSource(["a/plugin.fs.wasm", "b/plugin.fs.wasm"], fallback), /Multiple filesystem/)
+  assert.throws(() => selectFilesystemSource(["https://example.com/fs.zip#plugins/plugin.fs.wasm"], fallback), /not ZIP/)
+  for (const plugins of [undefined, null, {}, [null], [12], [" "]])
+    assert.throws(() => selectFilesystemSource(plugins, fallback), /plugins|source/)
+})
+
 test("filesystem bootstrap loads bytes on first launch and uses its saved path next time", async () => {
   const { createProjectUnits } = await import(moduleUrl)
   const directory = await mkdtemp(join(tmpdir(), "gams-bootstrap-"))
@@ -75,6 +89,23 @@ test("filesystem bootstrap loads bytes on first launch and uses its saved path n
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+})
+
+test("requested filesystem load and download errors propagate without fallback", async () => {
+  const { createProjectUnits, selectFilesystemSource } = await import(moduleUrl)
+  const source = "https://example.com/v2/plugin.fs.wasm"
+  const selected = selectFilesystemSource([source], "https://example.com/pinned/plugin.fs.wasm")
+  let downloads = 0
+  const runtime = {
+    modulesDir: "/modules",
+    async addPlugins() { throw new Error("invalid component") },
+    async download(url) { assert.equal(url, source); downloads++; throw new Error("offline") },
+  }
+  await assert.rejects(createProjectUnits(runtime).bootstrapFilesystem(selected), /invalid component/)
+  assert.equal(downloads, 0)
+  runtime.addPlugins = async () => { throw new Error("absolute component path not found: missing") }
+  await assert.rejects(createProjectUnits(runtime).bootstrapFilesystem(selected), /offline/)
+  assert.equal(downloads, 1)
 })
 
 test("failed downloads can be retried without publishing a partial Unit", async () => {

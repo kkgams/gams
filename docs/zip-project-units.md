@@ -10,8 +10,9 @@ The URL pathname must end in `.zip` (case-insensitive). An explicit archive-root
 relative file selector is required; URI escaping is decoded once. The fragment
 is stripped before `runtime.download()` runs. HTTPS and existing loopback HTTP
 transport policy remain unchanged. Local ZIP paths, Git sources and ZIP-based
-filesystem bootstrap are not supported; the Host now starts FS from its pinned
-v0.1.1 direct-file release before package extraction needs it. All six shell UI
+filesystem bootstrap are not supported; the Host starts FS from the configured
+`plugin.fs.wasm` source, or its pinned v0.1.1 fallback when absent, before
+package extraction needs it. All six shell UI
 Service roles must have explicit Project-configured URLs (see
 [direct-file downloads](direct-file-downloads.md)).
 

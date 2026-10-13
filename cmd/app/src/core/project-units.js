@@ -25,6 +25,23 @@ function remoteSource(source) {
   return url
 }
 
+// Project convention: FS is the source whose entry basename is plugin.fs.wasm.
+export function selectFilesystemSource(plugins, fallback) {
+  if (!Array.isArray(plugins)) throw new Error("Project plugins must be an array")
+  const matches = plugins.filter(source => {
+    if (typeof source !== "string" || !source.trim()) throw new Error("Unit source must be a non-empty string")
+    const url = remoteSource(source)
+    const path = url ? (url.hash ? decodeURIComponent(url.hash.slice(1)) : decodeURIComponent(url.pathname)) : source
+    return path.split("/").at(-1) === "plugin.fs.wasm"
+  })
+  if (matches.length > 1) throw new Error("Multiple filesystem sources named plugin.fs.wasm in Project plugins")
+  if (matches.length === 0) return fallback
+  const source = matches[0]
+  const url = remoteSource(source)
+  if (url && /\.zip$/i.test(url.pathname)) throw new Error("Filesystem bootstrap requires a local or direct-file source, not ZIP")
+  return source
+}
+
 export function createProjectUnits(runtime) {
   const pending = new Map()
   const listeners = new Set()

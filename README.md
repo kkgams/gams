@@ -74,8 +74,9 @@ repositories into the example Project, retaining the paths in `gams.json`:
 - `theme.the98` -> `themes/the98.css`
 
 The filesystem plugin is required by Host bootstrap even though it is not in
-the Project's `plugins` array. The current development Host downloads the pinned
-FS v0.1.1 release on cache miss. `example.game1` now uses release URLs for GUI
+the Project's `plugins` array. The development Host selects the sole Project `plugins` source named exactly
+`plugin.fs.wasm`, falling back to the pinned FS v0.1.1 release only when absent.
+Multiple matches and configured-source failures are errors. `example.game1` now uses release URLs for GUI
 Units; local assembly remains separate tooling for native CLI integration.
 Host builds do not assemble or bundle these Units. Build the visitor game using
 `example.game1`'s instructions.
@@ -91,8 +92,8 @@ supports `https://example.com/unit.zip#path/to/entry`, extracting packages throu
 the filesystem plugin. A Host-owned startup screen reports per-Unit downloads,
 ZIP extraction, cache reuse and initialization, with visible errors and reload;
 see `docs/project-loading.md`. Git sources are not implemented.
-FS bootstrap now uses its pinned direct-file v0.1.1 release URL and does not
-accept ZIP sources. See `docs/direct-file-downloads.md` for APIs and the local-server smoke
+FS bootstrap uses the configured `plugin.fs.wasm` local/direct-file source,
+or the pinned v0.1.1 fallback if absent; it does not accept ZIP sources. See `docs/direct-file-downloads.md` for APIs and the local-server smoke
 test, and `docs/zip-project-units.md` for ZIP scope, deferred safeguards and tests.
 The ZIP browser bundle is covered by the v2.0.5 candidate NOTICE/evidence and
 readable license packaging; exact NOTICE/evidence was owner-approved 2026-10-12.
