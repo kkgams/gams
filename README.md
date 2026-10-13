@@ -1,5 +1,26 @@
 # GAMS Host
 
+## v2.0.6 preparation — exact NOTICE approval pending
+
+The next patch selects the Project's sole `plugin.fs.wasm` source for filesystem
+bootstrap, falling back to the Host pin only when absent. It rejects ambiguous
+sources and propagates selected-source failures without fallback.
+
+Cargo/Tauri version is 2.0.6. The Cargo lock changes only the GAMS root version;
+all third-party dependencies, license texts, fonts and browser bundles remain
+unchanged. The native appendix lock header and NOTICE evidence binding were
+refreshed within that boundary. Prior v2.0.5 approval does not cover these bytes.
+
+Candidate NOTICE SHA-256:
+`d07358be3f843224abc852fd8d468c6d83e70dc0ac171943a8320d474c923196`.
+Candidate evidence SHA-256:
+`0072f2f125875bfb7246b33d986d930b552fc827d3328d76980ddd27de6dc698`.
+
+See [v2.0.6 review](docs/release-2.0.6-review.md) for checks and remaining gates.
+The v2.0.5-only manual-review exception does not apply to this release.
+The following v2.0.5 sections are retained as historical preparation evidence.
+
+
 ## v2.0.5 preparation — NOTICE approved; release review pending
 
 v2.0.4 is published. v2.0.5 adds Project Save hooks/progress, ZIP Project Unit
