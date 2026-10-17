@@ -273,6 +273,20 @@
         -webkit-font-smoothing: antialiased;
     }
 
+    @font-face {
+        font-family: "Game Icons";
+        font-style: normal;
+        font-weight: 400;
+        src: url("/fonts/game-icons.woff2") format("woff2");
+    }
+
+    i.game-icons {
+        font-family: "Game Icons";
+        font-variation-settings: normal;
+        font-feature-settings: "liga" 1;
+        font-variant-ligatures: common-ligatures;
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
      BUTTONS
 
@@ -924,6 +938,32 @@
         table-layout: auto;
     }
 
+    /* Selectable records are cells, not nested buttons. Static grid cells omit
+       aria-selected and remain outside the interaction/focus contract. */
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected] {
+        text-align: center;
+        vertical-align: middle;
+        user-select: none;
+        cursor: pointer;
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected]:focus-visible {
+        outline: 2px solid var(--border-focus);
+        outline-offset: -3px;
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-disabled="true"] {
+        cursor: default;
+        opacity: 0.5;
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected] > widget-animation-preview {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+
     th,
     td {
         text-align: left;
@@ -979,6 +1019,17 @@
         white-space: normal;
         overflow: visible;
         text-overflow: clip;
+    }
+
+    /* Appearance fallback also supports older themes. Updated themes override
+       these selectors; existing row-selection styling is intentionally separate. */
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="true"] {
+        background: var(--accent);
+        color: var(--ink);
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="false"]:not([aria-disabled="true"]):hover {
+        background: var(--surface-hover);
     }
 
     [slot="header-controls"] > span[role="separator"] {

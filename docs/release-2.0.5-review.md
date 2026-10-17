@@ -1,3 +1,8 @@
+---
+title: "v2.0.5 release preparation and bounded NOTICE refresh"
+status: reference
+---
+
 # v2.0.5 release preparation and bounded NOTICE refresh
 
 Status: **exact NOTICE/evidence owner-approved on 2026-10-12**. Local build
@@ -15,13 +20,13 @@ Changes since published v2.0.4:
 
 - Native File → Save Project, ordered JS persistence hooks, config publication,
   shared in-flight saves, and progress/error feedback. Keyboard bindings remain
-  Project-owned. See [Project saving](project-saving.md).
+  Project-owned. See [Project saving](#/project-saving).
 - ZIP Project Unit sources with explicit entry selectors, staged extraction and
   offline reuse, plus Project-configured shell UI Service sources. Filesystem
   bootstrap uses its independent pinned v0.1.1 direct-file release.
 - Startup download/extraction/cache progress, visible failures/reload, early
   external Project theme adoption, themeless fallback and refreshed Host icon.
-  See [Project loading](project-loading.md).
+  See [Project loading](#/project-loading).
 - A release-check regression fix: `grep -q` could close the verbose codesign pipe
   early, causing SIGPIPE under `pipefail` and falsely rejecting an ad-hoc bundle.
   The checker now consumes all output without changing signature requirements;
@@ -30,7 +35,7 @@ Changes since published v2.0.4:
 ZIP extraction remains a limited slice, not a hostile-archive security boundary.
 CRC verification, expanded-byte/count limits, archive-level deduplication and
 package-relative JS imports are deferred. Git sources remain unimplemented.
-See [ZIP scope and limitations](zip-project-units.md).
+See [ZIP scope and limitations](#/zip-project-units).
 
 The Host still contains no external Project, Project Units, example/game source
 or compiled game. Apple Silicon app-only, ad-hoc signed/unnotarized distribution
@@ -171,4 +176,4 @@ of candidate, external-Project and clean-Mac review before pushing the new tag.
 Authentication/API failures stop it. Human review cannot be established by CI
 and must be recorded honestly. The helper has not run in either write mode.
 
-See [PUBLISHING.md](../PUBLISHING.md) for the full release procedure.
+See [PUBLISHING.md](https://github.com/kkgams/gams/blob/HEAD/PUBLISHING.md) for the full release procedure.

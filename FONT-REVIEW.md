@@ -1,5 +1,17 @@
 # Bundled Host fonts — sourced and licensed
 
+## Game Icons addition — NOTICE/evidence review pending
+
+The generated `game-icons.woff2`, per-icon manifest, provenance and three license/
+contributor texts are new, not covered by any approval below. See
+[`docs/game-icons-build.md`](docs/game-icons-build.md) and
+[`cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md`](cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md).
+The strict evidence/ZIP checkers now account for these files. The v2.0.7
+preparation refreshes `NOTICE` and `NOTICE-EVIDENCE.sha256` within the explicit
+boundary recorded in [the release review](docs/release-2-0-7-review.md).
+Consistency checks pass; exact owner approval and hosted/manual release review
+remain pending. Passing consistency checks do not approve distribution.
+
 ## v2.0.5 preparation — NOTICE approved; release review pending
 
 v2.0.4 is published. v2.0.5 adds Project Save hooks/progress, ZIP Project Unit

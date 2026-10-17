@@ -8,14 +8,16 @@ import re
 
 ROOT = Path.cwd()
 GROUPS = {
-    'cmd/app/src/fonts/*.woff2': 10,
-    'cmd/app/src/fonts/licenses/*.txt': 8,
+    'cmd/app/src/fonts/*.woff2': 11,
+    'cmd/app/src/fonts/licenses/*.txt': 11,
     'cmd/app/src/util/licenses/*.LICENSE': 6,
     'cmd/app/src/widgets/licenses/*.LICENSE': 6,
     'NATIVE-SOURCE/*.crate': 5,
 }
 FILES = [
     'cmd/app/src/fonts/PROVENANCE.md',
+    'cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md',
+    'cmd/app/src/fonts/game-icons.json',
     'cmd/app/src/util/ajv.js', 'cmd/app/src/util/BUNDLE-REVIEW.md',
     'cmd/app/src/util/aseprite.js', 'cmd/app/src/util/aseprite.LICENSE',
     'cmd/app/src/widgets/markdown-it.js', 'cmd/app/src/widgets/markdown-it.LICENSE',

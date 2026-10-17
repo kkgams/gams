@@ -1,3 +1,8 @@
+---
+title: "v2.0.4 HTTP dependency notice review"
+status: reference
+---
+
 # v2.0.4 HTTP dependency notice review
 
 Status: notices regenerated and local consistency checks passed; the owner

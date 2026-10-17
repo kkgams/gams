@@ -15,7 +15,7 @@ repository.
 The exact third-party input and notice bytes for this review are listed in
 NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
 linked files to change independently; release checks validate the manifest.
-Third-party evidence SHA-256: `0072f2f125875bfb7246b33d986d930b552fc827d3328d76980ddd27de6dc698`
+Third-party evidence SHA-256: `bbc746f822cfa06a4f3072bb6b1c9925a0fb3297c994f6f9b8fd545745292c04`
 
 Host browser fonts:
 - Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;
@@ -26,6 +26,23 @@ Host browser fonts:
 - Material Symbols Rounded: copyright Google LLC, Apache-2.0; full upstream
   text: cmd/app/src/fonts/licenses/material-symbols.Apache-2.0.txt. Exact
   pinned official binary and checksum: cmd/app/src/fonts/PROVENANCE.md.
+
+- Game Icons: icons made by the authors credited per icon in
+  cmd/app/src/fonts/game-icons.json and in
+  cmd/app/src/fonts/licenses/game-icons.contributors.txt. Artwork is licensed
+  under Creative Commons Attribution 3.0 Unported, except CC0-1.0 artwork by
+  Viscious Speed, Zeromancer and Various artists. The two Various artists
+  exceptions and the original Swedish Road Administration salmon credit are
+  documented in cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md. Full terms:
+  cmd/app/src/fonts/licenses/game-icons.CC-BY-3.0.txt and
+  cmd/app/src/fonts/licenses/game-icons.CC0-1.0.txt. The generated WOFF2 is a
+  modified derivative: GAMS removes background squares, converts artwork to
+  monochrome glyphs and adds name ligatures/private-use mappings. Provenance
+  pins game-icons/icons revision 82d948812bfe3f269ef8f731dcdb07b08160edc4,
+  generator dependencies and the font checksum. The app ZIP retains all three
+  readable license/contributor texts, GAME-ICONS-PROVENANCE.md and per-icon
+  game-icons.json under FONT-LICENSES/. GAMS's Apache-2.0 license does not
+  relicense this artwork or generated font.
 
 Host browser libraries:
 - Ajv (Evgeny Poberezkin) and its bundled fast-uri, fast-deep-equal,

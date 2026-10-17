@@ -1,9 +1,14 @@
+---
+title: "Direct-file Project Unit downloads"
+status: reference
+---
+
 # Direct-file Project Unit downloads
 
 This implementation slice supports direct HTTPS files and loopback HTTP files
 for testing. ZIP selectors are now supported by the separate
-[first ZIP slice](zip-project-units.md), with a
-[Host startup progress screen](project-loading.md). Git sources remain deferred. No lockfile, build scripts, or automatic transitive dependency loading.
+[first ZIP slice](#/zip-project-units), with a
+[Host startup progress screen](#/project-loading). Git sources remain deferred. No lockfile, build scripts, or automatic transitive dependency loading.
 
 ## APIs and storage
 

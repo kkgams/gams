@@ -1,5 +1,23 @@
 # GAMS Host
 
+## v2.0.7 candidate — release approval pending
+
+Version 2.0.7 adds Game Icons name ligatures, selectable-cell grids, and the
+Host-owned View guide/documentation wiki. The macOS Host embeds the new font;
+its ZIP includes complete artwork licensing, provenance and per-icon credits.
+Local preparation does not grant release approval. See
+[v2.0.7 review](docs/release-2-0-7-review.md) for exact candidate digests,
+validation and the required approval/hosted-review steps before pushing a tag.
+
+## Game Icons font — development addition, release review pending
+
+The Host now includes a generated name-ligature icon font alongside Material
+Symbols. See the [full icon catalogue](docs/game-icons.md) and
+[build/usage notes](docs/game-icons-build.md). Run
+`make cmd/app/src/fonts/game-icons.woff2` only when the checked-in font is missing;
+`make game-icons-check` verifies all ligatures. This addition is outside the
+release approvals recorded below; renewed NOTICE/evidence review is required.
+
 ## v2.0.6 preparation — exact NOTICE approval pending
 
 The next patch selects the Project's sole `plugin.fs.wasm` source for filesystem
@@ -51,6 +69,17 @@ pushed to its public remote. The separate `example.game1` repository owns the
 example Project and visitor game. The Host neither vendors Project Units nor
 ships a Project or station ZIP. Users supply an external Project root with
 `gams.json` paths to independently installed Units.
+
+## Documentation preview
+
+Run `make serve-docs` from the development shell and open
+<http://localhost:8080>. Use `PORT=3000` for another port. This uses the same
+pinned wiki engine as `imprint-zero`, delegating to its upstream Makefile
+cached under `build.nosync`. It serves the wiki-native `docs/` files directly,
+without a preview script or content mirror. `make validate-docs` runs upstream
+validation. See the [documentation home](docs/index.md) for details and overrides.
+The canonical, protected [GAMS View Development Guide](docs/gams-view-development-guide.md)
+is owned here alongside the shared Host UI APIs; workspace agent rules point to it.
 
 ## Development
 
@@ -137,7 +166,9 @@ The Host continues to expose these existing URL roots as owned files:
 
 Those served directories are the canonical, Host-owned editable sources. There
 is no duplicate `packages/` tree. They are internal shared Host UI API, not
-separately extracted helper repositories.
+separately extracted helper repositories. Selectable cell grids use the shared
+`/util/selectable-grid.js` helper and semantic CSS; see
+[selectable grids](docs/selectable-grids.md) for interaction and compatibility.
 
 The current `gams.json` shape and bootstrap ordering are pre-release contracts.
 This extraction intentionally does **not** perform a broad runtime-config

@@ -22,6 +22,8 @@ def main() -> None:
         'NATIVE-NOTICES.md': root / 'NATIVE-NOTICES.md',
         'NATIVE-SOURCE/README.md': root / 'NATIVE-SOURCE/README.md',
         'FONT-PROVENANCE.md': root / 'cmd/app/src/fonts/PROVENANCE.md',
+        'FONT-LICENSES/GAME-ICONS-PROVENANCE.md': root / 'cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md',
+        'FONT-LICENSES/game-icons.json': root / 'cmd/app/src/fonts/game-icons.json',
         'BUNDLE-LICENSES/ajv/PROVENANCE.md': root / 'cmd/app/src/util/BUNDLE-REVIEW.md',
         'BUNDLE-LICENSES/markdown-it/PROVENANCE.md': root / 'cmd/app/src/widgets/BUNDLE-REVIEW.md',
         'BUNDLE-LICENSES/aseprite-reference.LICENSE': root / 'cmd/app/src/util/aseprite.LICENSE',

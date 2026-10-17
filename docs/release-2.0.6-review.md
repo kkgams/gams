@@ -1,3 +1,8 @@
+---
+title: "v2.0.6 release preparation"
+status: reference
+---
+
 # v2.0.6 release preparation
 
 Status: local preparation and build verified; exact NOTICE/evidence approval,
@@ -13,8 +18,8 @@ existing v0.1.1 fallback only when absent. Multiple matches and requested-source
 failures are errors. Local/direct-file sources work; ZIP bootstrap is unsupported.
 Native reload deduplicates the selected cached path, avoiding a second provider.
 
-See [installation contract](project-unit-installation.md) and
-[direct-file bootstrap](direct-file-downloads.md).
+See [installation contract](#/project-unit-installation) and
+[direct-file bootstrap](#/direct-file-downloads).
 
 ## Bounded evidence refresh
 
@@ -76,5 +81,5 @@ no v2.0.6 tag or published release at preparation time.
 5. Only then create/push a new matching version tag; tag push automatically
    publishes. Do not move existing tags or treat API errors as absence.
 
-See [publication rules](../PUBLISHING.md). No tag has been created during
+See [publication rules](https://github.com/kkgams/gams/blob/HEAD/PUBLISHING.md). No tag has been created during
 preparation because the required approvals/hosted review are still pending.

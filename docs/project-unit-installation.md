@@ -1,11 +1,16 @@
+---
+title: "Project Unit installation — initial design"
+status: reference
+---
+
 # Project Unit installation — initial design
 
 Status: native configuration, local/shared storage, direct-file installation,
 binary HTTP transport, WASM byte loading and an initial ZIP extraction slice
 and the Host startup progress screen are implemented. Git sources remain pending.
-See [`project-loading.md`](project-loading.md) for loading-screen behavior. Source syntax
-remains provisional. See [`direct-file-downloads.md`](direct-file-downloads.md)
-and [`zip-project-units.md`](zip-project-units.md) for current APIs, deliberate
+See [`project-loading.md`](#/project-loading) for loading-screen behavior. Source syntax
+remains provisional. See [`direct-file-downloads.md`](#/direct-file-downloads)
+and [`zip-project-units.md`](#/zip-project-units) for current APIs, deliberate
 first-slice simplifications and tests. Archive-level deduplication, expanded-byte
 limits and CRC verification below remain design targets, not implemented guarantees.
 

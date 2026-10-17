@@ -1,5 +1,22 @@
 # Split Host verification and historical extraction evidence
 
+## v2.0.7 preparation — exact NOTICE approval pending
+
+The next patch adds the generated Game Icons ligature font, selectable-cell grid
+support, and Host-owned View documentation with a local wiki preview. Cargo/Tauri
+version is 2.0.7. The ten existing fonts, browser bundles, native dependencies and
+MPL source archives are unchanged; the new font, attribution and bounded evidence
+delta are documented in [v2.0.7 review](docs/release-2-0-7-review.md).
+
+Candidate NOTICE SHA-256: `80d419c3319abf2edc490b3bd397128b415fd56862c17d1fab4e12b09c544b37`.
+Candidate evidence SHA-256: `bbc746f822cfa06a4f3072bb6b1c9925a0fb3297c994f6f9b8fd545745292c04` (57 inputs).
+
+These are prepared candidate bytes, not owner-approved digests. Before pushing,
+obtain exact approval and update the repository Actions `NOTICE_SHA256` variable.
+Hosted same-commit candidate/rehearsal and external-Project/clean-Mac review remain
+required before creating/pushing a release tag. Historical records below do not
+approve this version. No remote mutation/publication is part of this preparation.
+
 ## v2.0.6 preparation — exact NOTICE approval pending
 
 The next patch selects the Project's sole `plugin.fs.wasm` source for filesystem

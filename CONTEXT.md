@@ -13,6 +13,9 @@ local assembly, integration, and game build tools.
 - `cmd/app/src/{util,widgets,css,fonts}/` — canonical Host-owned shared browser
   libraries and assets. No second editable `packages/` copy exists.
 - Host build and validation files — Host-only checks and bundle production.
+- `docs/gams-view-development-guide.md` — canonical, protected Core View UI
+  vocabulary, published through the Host documentation wiki. Workspace agents
+  and independently released Core Views reference this Host-owned guide.
 
 The Host must have **zero** example/station source, including in public Git
 history. Generated files, external Project assets, assembled sibling artifacts,

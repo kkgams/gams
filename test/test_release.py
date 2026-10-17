@@ -135,6 +135,8 @@ class HostReleaseTests(unittest.TestCase):
         pairs = {name: ROOT / name for name in
                  ('LICENSE', 'NOTICE', 'NOTICE-EVIDENCE.sha256', 'NATIVE-NOTICES.md')}
         pairs['FONT-PROVENANCE.md'] = ROOT / 'cmd/app/src/fonts/PROVENANCE.md'
+        pairs['FONT-LICENSES/GAME-ICONS-PROVENANCE.md'] = ROOT / 'cmd/app/src/fonts/GAME-ICONS-PROVENANCE.md'
+        pairs['FONT-LICENSES/game-icons.json'] = ROOT / 'cmd/app/src/fonts/game-icons.json'
         pairs['BUNDLE-LICENSES/aseprite-reference.LICENSE'] = ROOT / 'cmd/app/src/util/aseprite.LICENSE'
         pairs['BUNDLE-LICENSES/markdown-it/markdown-it.LICENSE'] = ROOT / 'cmd/app/src/widgets/markdown-it.LICENSE'
         for destination, directory, pattern in (
@@ -150,7 +152,11 @@ class HostReleaseTests(unittest.TestCase):
             ('markdown-it', 'cmd/app/src/widgets/BUNDLE-REVIEW.md'),
         ):
             pairs[f'BUNDLE-LICENSES/{destination}/PROVENANCE.md'] = ROOT / source
-        zip_members = []
+        zip_members = [
+            'FONT-LICENSES/GAME-ICONS-PROVENANCE.md', 'FONT-LICENSES/game-icons.json',
+            'FONT-LICENSES/game-icons.contributors.txt',
+            'FONT-LICENSES/game-icons.CC-BY-3.0.txt', 'FONT-LICENSES/game-icons.CC0-1.0.txt',
+        ]
         for name in ('LICENSE', 'zlib-streams-ts.LICENSE', 'PROVENANCE.md'):
             member = f'BUNDLE-LICENSES/zipjs/{name}'
             pairs[member] = ROOT / 'cmd/app/src/util/vendor/zipjs' / name

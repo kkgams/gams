@@ -1,4 +1,15 @@
-# Host third-party review — v2.0.5 NOTICE approved
+# Host third-party review
+
+## v2.0.7 Game Icons candidate — exact approval pending
+
+The new derivative font adds CC BY 3.0 artwork with documented CC0 exceptions,
+per-icon author credits, full legal texts and a pinned conversion recipe. The
+source/license/package evidence is recorded in
+[the bounded v2.0.7 review](docs/release-2-0-7-review.md). The candidate manifest
+now binds 57 inputs. Existing native/font/browser/MPL inputs are preserved except
+for the explicit provenance and version-header deltas recorded there. Consistency
+checks do not constitute a new legal audit or exact owner approval. Historical
+approvals below do not cover these new bytes.
 
 ## v2.0.5 preparation — NOTICE approved; release review pending
 

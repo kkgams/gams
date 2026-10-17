@@ -1,0 +1,8 @@
+{
+  "name": "gams-game-icons-build",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "svgtofont": "6.5.3"
+  }
+}

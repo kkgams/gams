@@ -1,4 +1,5 @@
 /build.nosync/
+/docs/assets/game-icons.woff2
 /dist/
 /gams_modules/
 __pycache__/

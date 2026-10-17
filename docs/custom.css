@@ -1,0 +1,25 @@
+/* The wiki serves custom.css at its root in both preview and assembled sites. */
+@font-face {
+    font-family: "GAMS Game Icons";
+    src: url("content/assets/game-icons.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+}
+
+.prose .game-icons {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    font-family: "GAMS Game Icons";
+    font-size: 32px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    font-feature-settings: "liga" 1;
+    font-variant-ligatures: common-ligatures;
+    vertical-align: middle;
+}

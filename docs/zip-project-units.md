@@ -1,3 +1,8 @@
+---
+title: "ZIP Project Unit installation — first slice"
+status: reference
+---
+
 # ZIP Project Unit installation — first slice
 
 Configured plugin, View, UI Service and theme sources can select a file in a ZIP:
@@ -14,7 +19,7 @@ filesystem bootstrap are not supported; the Host starts FS from the configured
 `plugin.fs.wasm` source, or its pinned v0.1.1 fallback when absent, before
 package extraction needs it. All six shell UI
 Service roles must have explicit Project-configured URLs (see
-[direct-file downloads](direct-file-downloads.md)).
+[direct-file downloads](#/direct-file-downloads)).
 
 ## Responsibilities
 

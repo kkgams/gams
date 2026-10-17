@@ -1,3 +1,8 @@
+---
+title: "Host Project Save"
+status: reference
+---
+
 # Host Project Save
 
 The native **File → Save Project** menu invokes the Host command `project.save`,

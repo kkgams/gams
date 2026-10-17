@@ -1,0 +1,4 @@
+# FontTools safely splits large GSUB tables; HarfBuzz verifies every ligature.
+fonttools==4.67.0
+brotli==1.2.0
+uharfbuzz==0.56.3

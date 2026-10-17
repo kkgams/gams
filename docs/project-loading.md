@@ -1,3 +1,8 @@
+---
+title: "Project startup progress"
+status: reference
+---
+
 # Project startup progress
 
 The Host displays an **Opening Project** screen before awaiting `runtime.ready`.
