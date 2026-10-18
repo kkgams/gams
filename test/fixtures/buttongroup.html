@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Button group visual regression</title>
+    <link rel="stylesheet" href="../../cmd/app/src/css/reset.css">
+    <link rel="stylesheet" href="../../cmd/app/src/css/base.css">
+    <script>
+        // Optional external theme, e.g. ?theme=/theme.the98/src/themes/the98.css
+        const theme = new URLSearchParams(location.search).get("theme")
+        if (theme) {
+            const link = document.createElement("link")
+            link.rel = "stylesheet"
+            link.href = theme
+            document.head.append(link)
+        }
+    </script>
+    <style>
+        /* Map the Host font for this standalone server, which has no /fonts route. */
+        @font-face {
+            font-family: "Material Symbols Rounded";
+            font-style: normal;
+            font-weight: 100 700;
+            src: url("../../cmd/app/src/fonts/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].woff2") format("woff2");
+        }
+        /* Test-page layout only; control styling comes from real Host/theme CSS. */
+        body { overflow: auto; padding: 20px; }
+        main { display: flex; flex-direction: column; gap: 10px; max-width: 1100px; overflow: visible; }
+        section { display: grid; grid-template-columns: 240px max-content; align-items: center; }
+        h1 { font: bold 20px sans-serif; }
+        #results { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Button group visual regression</h1>
+        <p>Use Tab / Shift+Tab, open dropdowns, and press buttons. Focus rings and arrows must remain visible.</p>
+        <section><span>C1 — Buttons only</span><span role="buttongroup"><button type="button">Open</button><button type="button"><i aria-hidden="true">save</i>Save</button><button type="button">Reload</button></span></section>
+        <section><span>C2 — Select → icon button</span><span role="buttongroup"><select aria-label="C2 source"><option>Source</option><option>Other source</option></select><button type="button" aria-label="Open source"><i aria-hidden="true">folder_open</i></button></span></section>
+        <section><span>C3 — Button → select</span><span role="buttongroup"><button type="button">Open</button><select aria-label="C3 source"><option>Source</option><option>Other source</option></select></span></section>
+        <section><span>C4 — Icons around select</span><span role="buttongroup"><button type="button" aria-label="Previous source"><i aria-hidden="true">chevron_left</i></button><select aria-label="C4 source"><option>Source</option><option>Other source</option></select><button type="button" aria-label="Next source"><i aria-hidden="true">chevron_right</i></button></span></section>
+        <section><span>C5 — Select → button → select</span><span role="buttongroup"><select aria-label="C5 source"><option>Source</option><option>Other source</option></select><button type="button">Copy</button><select aria-label="C5 target"><option>Target</option><option>Other target</option></select></span></section>
+        <section><span>C6 — Adjacent selects / size=1</span><span role="buttongroup"><select aria-label="C6 source"><option>Source</option><option>Other source</option></select><select size="1" aria-label="C6 target"><option>Target</option><option>Other target</option></select><button type="button"><i aria-hidden="true">check</i>Apply</button><button type="button">Reset</button></span></section>
+        <section><span>C7 — Disabled controls</span><span role="buttongroup"><button type="button" disabled>Previous</button><select disabled aria-label="C7 source"><option>Unavailable</option></select><button type="button">Next</button></span></section>
+        <section><span>C8 — Tall button</span><span role="buttongroup"><select aria-label="C8 source"><option>Source</option><option>Other source</option></select><button type="button">Open<br>selected source</button></span></section>
+        <section><span>C9 — Standalone comparison</span><span><select id="standalone" aria-label="Standalone source"><option>Source</option></select> <button type="button">Open</button></span></section>
+        <section><span>C10 — Excluded listboxes</span><span><select id="listbox" size="3" aria-label="Listbox"><option>One</option><option>Two</option><option>Three</option></select> <select id="multiple" multiple aria-label="Multiple selection"><option>One</option><option>Two</option><option>Three</option></select></span></section>
+        <output id="results">Waiting for checks…</output>
+    </main>
+    <script type="module">
+        import { checkButtonGroups } from "../buttongroup.browser.js"
+        await document.fonts.ready
+        try {
+            window.buttonGroupResults = checkButtonGroups()
+            document.querySelector("#results").textContent = `PASS: ${window.buttonGroupResults.passed} checks (${theme || "Host base"})`
+        } catch (error) {
+            document.querySelector("#results").textContent = `FAIL: ${error.message}`
+            throw error
+        }
+    </script>
+</body>
+</html>

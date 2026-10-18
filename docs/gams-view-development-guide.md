@@ -89,8 +89,10 @@ Optional elements should appear at most once per view.
 
 ## Button groups
 
-- `[role="buttongroup"]` - grouped related buttons, especially compact toolbars and one-off action groups.
+- `[role="buttongroup"]` - grouped related buttons and single-line selects, especially compact toolbars and one-off action groups. Direct-child controls share the row height; standalone controls are unchanged.
 - `[role="buttongroup"] > button` - button inside a grouped toolbar.
+- `[role="buttongroup"] > select:not([multiple]):not([size])` and `[role="buttongroup"] > select:not([multiple])[size="1"]` - single-line select inside a grouped toolbar, before, between, or after buttons or other selects. Give each select an accessible name. Multi-select and listbox-style selects are not supported inside button groups.
+- Adjacent buttons retain joined borders; selects retain their own borders and dropdown arrows.
 
 ## Tooltip / context menu / autocomplete surfaces
 
