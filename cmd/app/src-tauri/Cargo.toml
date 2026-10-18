@@ -1,6 +1,6 @@
 [package]
 name = "gams"
-version = "2.0.7"
+version = "2.0.8"
 description = "Game Assets Management System"
 authors = ["Kazys Kalabibishkis"]
 edition = "2021"

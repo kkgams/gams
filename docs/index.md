@@ -25,6 +25,7 @@ lists all pages; use the filter to find a topic.
 
 ## Review records
 
+- [[release-2-0-8-review|v2.0.8 local preparation]]
 - [[release-2-0-7-review|v2.0.7 candidate review]]
 - [[http-license-review|HTTP licensing review]]
 - [[release-2-0-5-review|v2.0.5 release review]]

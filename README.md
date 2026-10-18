@@ -1,5 +1,14 @@
 # GAMS Host
 
+## v2.0.8 local candidate — publication gates pending
+
+Mixed button/select groups now share control height and outer-corner styling.
+The protected View guide documents single-line select support, and a standalone
+visual fixture covers control orders and icon buttons. The98 0.2.4 is released
+independently. See [v2.0.8 preparation](docs/release-2-0-8-review.md) for the
+bounded version/evidence refresh, validation and remaining publication gates.
+No tag, push or publication is part of local preparation.
+
 ## v2.0.7 candidate — release approval pending
 
 Version 2.0.7 adds Game Icons name ligatures, selectable-cell grids, and the

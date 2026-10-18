@@ -1,5 +1,26 @@
 # Publishing the GAMS desktop Host
 
+## v2.0.8 local preparation — publication gates pending
+
+The owner approved local preparation of mixed button/select groups and the
+bounded version/evidence refresh. Cargo/Tauri version is 2.0.8. The prior
+2.0.7 tag is unchanged; no new tag or remote mutation is part of this work.
+Unrelated working-tree edits are excluded from the commit and build candidate.
+
+Candidate NOTICE SHA-256:
+`0812caaeb3a34c202aaeb1d7751ebbc499c670b6f8e6efe71ca0d64b842e6977`.
+Candidate evidence SHA-256:
+`e7efb3cfa398eb3fe1fea38b793dba4788c73419a0a5ba70506b17417cc393d1`
+(57 inputs; only Cargo.lock and the native lock-digest header change).
+LICENSE and all third-party license bodies/assets remain byte-identical.
+
+See [v2.0.8 preparation](docs/release-2-0-8-review.md) for the exact boundary,
+local validation and candidate paths. This maintenance authorization is not exact
+NOTICE approval, a new legal audit or publication authorization. Obtain applicable
+exact-byte approval and update remote digest variables before pushing; complete
+same-commit hosted candidate/rehearsal and external-Project/clean-Mac review
+before tagging. Prior patch-specific exceptions do not apply.
+
 ## v2.0.7 preparation — exact NOTICE approval pending
 
 The next patch adds the generated Game Icons ligature font, selectable-cell grid
@@ -179,7 +200,7 @@ manual review for future releases.
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.7` (Cargo/Tauri), which is different from
+Current source version is `2.0.8` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.
