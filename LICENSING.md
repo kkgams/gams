@@ -1,5 +1,31 @@
 # Host licensing and release gate
 
+## Current approval and evidence policy
+
+The owner approved the `template.view` commit-and-tag model for the Host.
+The version commit approves its LICENSE, NOTICE and linked evidence; pushing the
+matching version tag authorizes automatic publication. No approval-digest
+variables, separate exact-byte sign-off or release-branch requirement remains.
+This changes release authorization, not third-party terms or evidence checks.
+
+LICENSE/NOTICE must be nonempty regular files. The native lock/header, complete
+license texts, five MPL source archives and exact 57-input evidence binding still
+fail closed if missing, inconsistent or changed without updating the committed
+record. ZIP notices must match the tagged source byte-for-byte. Apache-2.0 covers
+GAMS-authored code, not third-party fonts, artwork, browser bundles or Rust crates.
+All attribution and original license texts remain in the distributed archive.
+See [publishing](PUBLISHING.md) for the active procedure.
+
+Ad-hoc signing, JIT entitlements and system-only library checks remain required.
+This is not Developer ID signing or notarization. Desktop/clean-Mac validation
+limitations remain explicit; the new policy does not invent test results.
+
+## Historical license reviews and procedures — retained, superseded
+
+The records below preserve earlier notice approvals and validation. Their digest
+variables, separate review and branch gates are superseded by the policy above;
+their legal terms, provenance and historical evidence are not rewritten.
+
 ## v2.0.7 preparation — exact NOTICE approval pending
 
 The next patch adds the generated Game Icons ligature font, selectable-cell grid

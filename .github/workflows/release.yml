@@ -1,9 +1,7 @@
 name: Publish Apple Silicon Host release
 on:
   push:
-    branches: ['release'] # register and rehearse before any version tag
     tags: ['v*']
-  workflow_dispatch:
 concurrency:
   group: host-release-${{ github.ref }}
   cancel-in-progress: false
@@ -22,27 +20,14 @@ jobs:
         run: test "$(uname -m)" = arm64
       - name: Refuse Project or game source in Host history
         run: python3 scripts/check-source-boundary.py
-      - name: Require reviewed repository, version and licensing before build
-        env:
-          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
-          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+      - name: Require matching version tag and committed licensing before build
         run: |
           bash scripts/check-release-metadata.sh
           python3 scripts/check-native-notices.py
           python3 scripts/check-mpl-source.py
           python3 scripts/check-notice-evidence.py
-      - name: Require tag at current release branch head
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          git fetch --no-tags origin refs/heads/release
-          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
-      - name: Branch rehearsal checks release gates without a redundant build
-        if: github.ref == 'refs/heads/release'
-        run: python3 -m unittest discover -s test -p 'test_*.py'
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-        if: startsWith(github.ref, 'refs/tags/v')
-      - name: Restore independently built Host dependencies on tags
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Restore Host dependencies without a cached app binary
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
@@ -52,12 +37,7 @@ jobs:
           # Never publish a tag-scoped cache or reuse a branch binary.
           save-if: 'false'
       - name: Independently check, test and bundle Host
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
-          # The staging script rechecks exact owner-approved digests; step
-          # environments do not carry over from the earlier metadata check.
-          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
-          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
           # Local launch on Apple Silicon needs ad-hoc signing, not a paid
           # Developer ID certificate or Apple notarization.
           APPLE_SIGNING_IDENTITY: '-'
@@ -65,9 +45,8 @@ jobs:
           nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
           nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
           nix develop --command bash scripts/stage-mac-candidate.sh
-      # Branch pushes and manual dispatch verify gates only; never build or distribute.
+      # Only matching version tags run this workflow and publish a Host.
       - name: Upload tagged Host candidate
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: gams-macos-aarch64-${{ github.ref_name }}
@@ -85,17 +64,12 @@ jobs:
           fetch-depth: 0 # repeat ancestry audit before public release creation
       - name: Refuse Project or game source in Host history
         run: python3 scripts/check-source-boundary.py
-      - name: Recheck exact owner-reviewed texts and immutable branch identity
-        env:
-          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
-          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+      - name: Recheck matching tag and committed evidence
         run: |
           bash scripts/check-release-metadata.sh
           python3 scripts/check-native-notices.py
           python3 scripts/check-mpl-source.py
           python3 scripts/check-notice-evidence.py
-          git fetch --no-tags origin refs/heads/release
-          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
       - name: Refuse to overwrite any existing GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

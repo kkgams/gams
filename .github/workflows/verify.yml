@@ -2,7 +2,7 @@ name: Verify desktop Host
 on:
   pull_request:
   push:
-    branches: [release]
+    branches: ['**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,12 +17,8 @@ jobs:
           fetch-depth: 0 # audit complete Host Git ancestry for example/game source
       - name: Require native Apple Silicon runner
         run: test "$(uname -m)" = arm64
-      - name: Reject partially configured or mismatched distribution digests
-        if: vars.LICENSE_SHA256 != '' || vars.NOTICE_SHA256 != ''
-        env:
-          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
-          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
-        run: bash scripts/check-licensing-digests.sh
+      - name: Require committed licensing texts
+        run: bash scripts/check-licensing.sh
       - name: Refuse Project or game source in Host worktree or history
         run: python3 scripts/check-source-boundary.py
       - name: Verify all linked third-party inputs and full texts
@@ -39,8 +35,8 @@ jobs:
           shared-key: gams-macos-aarch64
           cmd-format: nix develop --command {0}
           cache-bin: 'false'
-          # Untrusted PRs and tags may restore, but only reviewed release can write.
-          save-if: ${{ github.ref == 'refs/heads/release' }}
+          # Only the default branch writes a dependency cache; no app binary is reused.
+          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
       - name: Offline release gate tests
         run: nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
       - name: Check, test, and build Host without a Project or sibling repositories
@@ -50,13 +46,10 @@ jobs:
           APPLE_SIGNING_IDENTITY: '-'
         run: nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
       - name: Package reviewed Host candidate
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release' && vars.LICENSE_SHA256 != '' && vars.NOTICE_SHA256 != ''
-        env:
-          APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}
-          APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}
+        if: github.event_name == 'push'
         run: nix develop --command bash scripts/stage-mac-candidate.sh
       - name: Upload Apple Silicon Host candidate
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release' && vars.LICENSE_SHA256 != '' && vars.NOTICE_SHA256 != ''
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: gams-macos-aarch64-candidate-${{ github.sha }}
@@ -70,7 +63,7 @@ jobs:
       - name: Generate README-only Linux roadmap — no executable
         run: python3 scripts/next-platform.py linux dist/next/GAMS-linux-NEXT.zip
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+        if: github.event_name == 'push'
         with:
           name: gams-linux-NEXT-${{ github.sha }}
           path: dist/next/GAMS-linux-NEXT.zip
@@ -82,7 +75,7 @@ jobs:
       - name: Generate README-only Windows roadmap — no executable
         run: python scripts/next-platform.py windows dist/next/GAMS-windows-NEXT.zip
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+        if: github.event_name == 'push'
         with:
           name: gams-windows-NEXT-${{ github.sha }}
           path: dist/next/GAMS-windows-NEXT.zip

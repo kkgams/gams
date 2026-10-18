@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ "$(uname -s)" == Darwin ]] || { echo 'macOS runner required' >&2; exit 1; }
 python3 scripts/check-source-boundary.py
-bash scripts/check-licensing-digests.sh
+bash scripts/check-licensing.sh
 python3 scripts/check-native-notices.py
 python3 scripts/check-mpl-source.py
 python3 scripts/check-notice-evidence.py

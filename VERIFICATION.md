@@ -1,5 +1,25 @@
 # Split Host verification and historical extraction evidence
 
+## Current commit-and-tag verification
+
+A matching version tag publishes the exact committed checkout without external
+approval digests or a dedicated release branch. CI still verifies source history,
+Cargo/Tauri/tag identity, committed license files, native notice consistency,
+MPL archives, evidence binding, tests, signing/JIT/library checks and exact ZIP
+notice bytes. No app binary from a branch candidate is reused by tag publication.
+See [PUBLISHING.md](PUBLISHING.md) for the current procedure.
+
+The 2.0.8 local native build and source validation are recorded in
+[its preparation record](docs/release-2-0-8-review.md). The release-policy migration
+adds offline metadata/workflow/push-helper regression tests. Hosted workflow,
+external-Project desktop and clean-Mac outcomes are not established by local tests.
+
+## Historical validation and approval records — retained, superseded policy
+
+The records below retain their original scope and actual results. Previous
+pending-approval, digest-variable, release-branch and manual-rehearsal requirements
+are no longer publishing gates; historical coverage gaps are not changed to passes.
+
 ## v2.0.8 local preparation — publication gates pending
 
 The owner approved local preparation of mixed button/select groups and the

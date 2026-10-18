@@ -181,96 +181,87 @@ class HostReleaseTests(unittest.TestCase):
                 self.assertNotEqual(check(omit=member).returncode, 0, member)
                 self.assertNotEqual(check(alter=member).returncode, 0, member)
 
-    def test_tag_branch_identity_fetch_preserves_full_history(self):
+    def test_tag_release_preserves_history_audit_without_branch_head_gate(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
-        import shlex
-        fetches = [line.strip() for line in workflow.splitlines()
-                   if line.strip().startswith('git fetch ')]
-        self.assertEqual(len(fetches), 2)
-        with tempfile.TemporaryDirectory() as temporary:
-            origin = Path(temporary) / 'origin'
-            origin.mkdir()
-            def git(cwd, *args):
-                return subprocess.run(['git', *args], cwd=cwd, check=True,
-                                      capture_output=True, text=True).stdout.strip()
-            git(origin, 'init', '-q', '-b', 'release')
-            git(origin, 'config', 'user.name', 'Test')
-            git(origin, 'config', 'user.email', 'test@example.invalid')
-            for i in range(2):
-                (origin / 'README.md').write_text(f'Host {i}\n')
-                git(origin, 'add', 'README.md')
-                git(origin, 'commit', '-qm', f'Host {i}')
-            for i, command in enumerate(fetches):
-                checkout = Path(temporary) / f'checkout{i}'
-                git(origin, 'clone', '--quiet', '--no-local', str(origin), str(checkout))
-                subprocess.run(shlex.split(command), cwd=checkout, check=True,
-                               capture_output=True)
-                self.assertEqual(git(checkout, 'rev-parse', '--is-shallow-repository'),
-                                 'false', command)
-                result = subprocess.run(['python3', str(ROOT / 'scripts/check-source-boundary.py')],
-                                        cwd=checkout, capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn('git fetch ', workflow)
+        self.assertNotIn('refs/heads/', workflow)
+        self.assertNotIn('branches:', workflow)
+        self.assertEqual(workflow.count('fetch-depth: 0'), 2)
+        self.assertEqual(workflow.count('python3 scripts/check-source-boundary.py'), 2)
+        self.assertEqual(workflow.count('bash scripts/check-release-metadata.sh'), 2)
 
-    def test_release_branch_rehearsal_only_checks_gates(self):
+    def test_tag_workflow_rebuilds_and_checks_without_approval_variables(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
-        self.assertIn("- name: Branch rehearsal checks release gates without a redundant build\n"
-                      "        if: github.ref == 'refs/heads/release'\n"
-                      "        run: python3 -m unittest discover -s test -p 'test_*.py'", workflow)
-        for step in ('Independently check, test and bundle Host',
-                     'Restore independently built Host dependencies on tags'):
-            gated = workflow.split(f'      - name: {step}\n', 1)[1]
-            self.assertTrue(gated.startswith("        if: startsWith(github.ref, 'refs/tags/v')\n"))
+        self.assertIn("tags: ['v*']", workflow)
+        self.assertNotIn('workflow_dispatch:', workflow)
+        self.assertNotIn('APPROVED_', workflow)
+        self.assertNotIn('vars.', workflow)
+        self.assertIn('make app-check app-test app-bundle-release APP_BUNDLES=app', workflow)
         self.assertIn("save-if: 'false'", workflow)
+        for script in ('check-native-notices.py', 'check-mpl-source.py', 'check-notice-evidence.py'):
+            self.assertEqual(workflow.count(f'python3 scripts/{script}'), 2)
 
-    def test_release_staging_receives_step_scoped_approval_digests(self):
-        workflow = (ROOT / '.github/workflows/release.yml').read_text()
-        staging_step = workflow.split('      - name: Independently check, test and bundle Host\n', 1)[1].split(
-            '      - name: Upload tagged Host candidate\n', 1)[0]
-        self.assertIn('nix develop --command bash scripts/stage-mac-candidate.sh', staging_step)
-        self.assertIn('APPROVED_LICENSE_SHA256: ${{ vars.LICENSE_SHA256 }}', staging_step)
-        self.assertIn('APPROVED_NOTICE_SHA256: ${{ vars.NOTICE_SHA256 }}', staging_step)
+    def test_branch_candidates_do_not_depend_on_a_release_branch_or_digest_variables(self):
+        workflow = (ROOT / '.github/workflows/verify.yml').read_text()
+        self.assertIn("branches: ['**']", workflow)
+        self.assertNotIn('APPROVED_', workflow)
+        self.assertNotIn('vars.', workflow)
+        self.assertNotIn('refs/heads/release', workflow)
+        self.assertIn('run: bash scripts/check-licensing.sh', workflow)
+        self.assertIn('nix develop --command bash scripts/stage-mac-candidate.sh', workflow)
 
-    def test_digest_and_version_gates_fail_closed(self):
+    def test_matching_tag_uses_committed_licenses_without_external_approval(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "scripts").mkdir()
-            for name in ("check-licensing-digests.sh", "check-release-metadata.sh"):
+            for name in ("check-licensing.sh", "check-release-metadata.sh"):
                 shutil.copy2(ROOT / "scripts" / name, root / "scripts" / name)
             shutil.copy2(ROOT / "LICENSE", root / "LICENSE")
             (root / "NOTICE").write_text("TEST ONLY — not a redistribution notice\n")
             (root / "cmd/app/src-tauri").mkdir(parents=True)
-            (root / "cmd/app/src-tauri/tauri.conf.json").write_text(
-                json.dumps({"identifier": "com.github.kkgams.gams", "version": "2.0.0"}))
-            (root / "cmd/app/src-tauri/Cargo.toml").write_text('[package]\nversion = "2.0.0"\n')
-            env = os.environ.copy()
-            env.update({
-                "GITHUB_REPOSITORY": "kkgams/gams",
-                "GITHUB_EVENT_NAME": "workflow_dispatch",
-                "GITHUB_REF_TYPE": "branch",
-                "GITHUB_REF": "refs/heads/release",
-                "APPROVED_LICENSE_SHA256": hashlib.sha256((root / "LICENSE").read_bytes()).hexdigest(),
-                "APPROVED_NOTICE_SHA256": hashlib.sha256((root / "NOTICE").read_bytes()).hexdigest(),
-            })
+            config = root / "cmd/app/src-tauri/tauri.conf.json"
+            config.write_text(json.dumps({"identifier": "com.github.kkgams.gams", "version": "2.0.8"}))
+            (root / "cmd/app/src-tauri/Cargo.toml").write_text('[package]\nversion = "2.0.8"\n')
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=root, stderr=subprocess.PIPE, text=True).strip()
+            git('init', '-q', '-b', 'feature/tag-only')
+            git('config', 'user.name', 'Test')
+            git('config', 'user.email', 'test@example.invalid')
+            git('add', '.')
+            git('commit', '-qm', 'Version commit')
+            git('tag', 'v2.0.8')
+            env = {key: value for key, value in os.environ.items() if not key.startswith("APPROVED_")}
+            env.update(GITHUB_REPOSITORY="kkgams/gams", GITHUB_EVENT_NAME="push",
+                       GITHUB_REF_TYPE="tag", GITHUB_REF="refs/tags/v2.0.8", GITHUB_SHA=git('rev-parse', 'HEAD'))
             def check():
                 return subprocess.run(["bash", "scripts/check-release-metadata.sh"], cwd=root,
                                       env=env, capture_output=True, text=True)
+            result = check()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            env["GITHUB_SHA"] = "0" * 40
+            self.assertNotEqual(check().returncode, 0)
+            env["GITHUB_SHA"] = git('rev-parse', 'HEAD')
+            git('commit', '--allow-empty', '-qm', 'New branch tip, tag unchanged')
+            env["GITHUB_SHA"] = git('rev-parse', 'HEAD')
+            self.assertNotEqual(check().returncode, 0, 'tag must match the checkout even without a branch-head gate')
+            git('checkout', '--detach', '-q', 'v2.0.8')
+            env["GITHUB_SHA"] = git('rev-parse', 'HEAD')
             self.assertEqual(check().returncode, 0)
-            env["GITHUB_EVENT_NAME"] = "push"
-            self.assertEqual(check().returncode, 0, 'release branch push must rehearse without a tag')
-            env["GITHUB_REF"] = "refs/heads/other"
-            self.assertNotEqual(check().returncode, 0)
-            env["GITHUB_REF"] = "refs/heads/release"
-            env["GITHUB_EVENT_NAME"] = "workflow_dispatch"
-            env["APPROVED_NOTICE_SHA256"] = ""
-            self.assertNotEqual(check().returncode, 0)
-            env["APPROVED_NOTICE_SHA256"] = hashlib.sha256((root / "NOTICE").read_bytes()).hexdigest()
-            env["GITHUB_REF"] = "refs/tags/v0.0.0"
-            env["GITHUB_EVENT_NAME"] = "push"
-            self.assertNotEqual(check().returncode, 0)
-            version = json.loads((root / "cmd/app/src-tauri/tauri.conf.json").read_text())["version"]
-            env["GITHUB_REF"] = f"refs/tags/v{version}"
-            self.assertEqual(check().returncode, 0)
+            for tag in ("v2.0.7", "v02.0.8", "v2.0.8-rc.1"):
+                env["GITHUB_REF"] = f"refs/tags/{tag}"
+                self.assertNotEqual(check().returncode, 0, tag)
+            env["GITHUB_REF"] = "refs/tags/v2.0.8"
             env["GITHUB_REPOSITORY"] = "someone-else/gams"
+            self.assertNotEqual(check().returncode, 0)
+            env["GITHUB_REPOSITORY"] = "kkgams/gams"
+            (root / "NOTICE").write_text("")
+            self.assertNotEqual(check().returncode, 0)
+            (root / "NOTICE").unlink()
+            (root / "NOTICE").symlink_to(root / "LICENSE")
+            self.assertNotEqual(check().returncode, 0)
+            (root / "NOTICE").unlink()
+            (root / "NOTICE").write_text("Test notice\n")
+            config.write_text(json.dumps({"identifier": "com.github.kkgams.gams", "version": "2.0.9"}))
             self.assertNotEqual(check().returncode, 0)
 
     def test_release_preflight_treats_auth_failure_as_failure(self):

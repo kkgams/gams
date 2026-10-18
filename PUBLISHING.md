@@ -1,5 +1,73 @@
 # Publishing the GAMS desktop Host
 
+## Current release model: version commit and matching tag
+
+GAMS now follows `template.view`'s approval model. The version commit is the
+commitment to release; pushing its matching `vMAJOR.MINOR.PATCH` tag authorizes
+automatic GitHub Release publication. No dedicated branch, release-branch HEAD
+comparison, approval-digest variable, separate NOTICE sign-off or branch rehearsal
+is required. This owner-approved policy supersedes the historical procedures below.
+Old repository digest variables, if present, are ignored.
+
+The Host retains its platform-specific validation. A tag workflow builds and tests
+that exact checkout on Apple Silicon, audits complete Host Git history, verifies
+Cargo/Tauri/tag identity, license files, native notices, five MPL archives and
+all 57 evidence inputs, then packages and independently checks the signed app ZIP.
+The publisher rechecks the tag, evidence, checksums and 43 packaged notice/source
+files. Existing Releases (including drafts) and API/authentication failures block
+publication. No tag or release may be moved or overwritten.
+
+Branch pushes on any branch and pull requests run verification. Branch pushes may
+upload candidate artifacts; only version tags publish a GitHub Release. The tag
+workflow never reuses a branch app binary. It retains dependency caching, ad-hoc
+signing, system-only dylib checks, Wasmtime JIT entitlements and generated complete
+commit/author notes. Intel, Linux and Windows binaries remain unsupported; roadmap
+ZIPs are not Release assets. No separately released Project Unit is bundled.
+
+## Publish the prepared 2.0.8
+
+Use Git, GitHub CLI (authenticated with repository push access to inspect drafts)
+and Python 3.11+ from a **clean committed checkout on any named
+branch**, with canonical `origin` pointing to `kkgams/gams`. Run local validation
+before committing the version. `scripts/push-release.sh` reads the committed
+version and defaults to read-only preflight:
+
+```sh
+bash scripts/push-release.sh            # inspect commit, branch, version and absence checks
+bash scripts/push-release.sh --publish  # create local annotated tag, atomically push branch + tag
+```
+
+The helper fails on dirty/detached checkout, wrong origin, mismatched metadata,
+wrong local tag, existing remote tag/Release, authentication/API errors or an
+unsupported atomic push. It never force-pushes, updates variables, creates a
+GitHub Release directly or waits for CI. It pushes exactly the current committed
+HEAD and its matching tag; Actions performs publication. If a local matching tag
+already points to HEAD it is reused, not moved. A failed push may leave the new
+local tag; inspect the failure before retrying.
+
+The original workspace contains unrelated uncommitted edits. Do not commit them
+just to satisfy the helper; use a clean checkout/worktree of the release commit
+or resolve those edits separately. No uncommitted file belongs to the prepared
+2.0.8 source. Never force a branch update to bypass a rejected push.
+
+Local 2.0.8 candidate records: [release preparation](docs/release-2-0-8-review.md).
+Earlier ZIPs under `dist/release-2.0.8/` were prepared before this workflow/docs
+migration. The approval-free staging check is under `dist/tag-release-2.0.8/`;
+tag CI stages a fresh candidate from the final commit. Workflow,
+script and documentation changes do not alter native third-party inputs.
+
+An ad-hoc signature does not establish publisher identity or notarization.
+External-Project desktop, hosted CI and clean-Mac/Gatekeeper behavior remain
+unverified unless explicitly recorded. These coverage limitations are not a
+second approval gate under the new model and must not be claimed as passed.
+
+## Historical policy and preparation records — superseded
+
+The retained records below describe prior approval/branch procedures and historical
+validation. Their pending-approval statements, variable instructions, branch-head
+requirements and manual-review gates are **not current publishing instructions**.
+Their evidence hashes, audits and actual test results remain historical facts.
+
 ## v2.0.8 local preparation — publication gates pending
 
 The owner approved local preparation of mixed button/select groups and the

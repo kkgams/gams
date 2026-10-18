@@ -5,6 +5,30 @@ status: reference
 
 # v2.0.8 local release preparation
 
+## Current release policy
+
+After the local preparation below, the owner approved migration to the
+`template.view` commit-and-tag model. The final version commit approves its
+license/evidence record; pushing the matching tag authorizes publication.
+External digest variables, release-branch HEAD restrictions and separate
+NOTICE/manual-review gates are removed. Evidence consistency, tests, source-history
+audit, signing/JIT/library checks, exact packaged notices and no-overwrite checks
+remain enforced. Hosted/desktop/clean-Mac coverage is not claimed by this change.
+See the repository's current PUBLISHING.md and `scripts/push-release.sh`.
+
+Policy migration validation: 37 offline Python tests and 53 JS tests pass on an
+isolated source snapshot; `actionlint` and shell syntax checks pass. The push-helper
+tests use isolated Git repositories and fake remote/API calls, including absence,
+wrong tags, concurrent checkout changes, draft visibility, auth errors and atomic
+push failure. No real tag/push/Release or hosted workflow result is claimed.
+Fresh local staging works with approval variables unset and rechecks all exact
+notice bytes. Log: `build.nosync/tag-release-policy-checks-final.log`.
+
+## Historical local preparation record
+
+The following preparation scope and test results remain accurate for that stage;
+its pending separate approvals and branch gates are superseded by the policy above.
+
 The owner approved focused local commits, version/evidence maintenance and
 release preparation. This is not exact NOTICE approval, a new legal audit or
 permission to tag, push, change remote variables or publish. Historical tags
@@ -82,7 +106,7 @@ Staging log: `build.nosync/release-2.0.8-stage.log`.
 The initial build log predates the final byte-preserving native-header check;
 use the final build/staging logs for current evidence digests.
 
-## Remaining publication gates
+## Historical publication gates (superseded)
 
 Exact candidate NOTICE/evidence approval and remote digest-variable updates,
 same-commit hosted candidate/rehearsal, external-Project desktop consumption and

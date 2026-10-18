@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# Recheck exact Host identity and owner-reviewed repository licensing.
+# A matching tag approves the exact version commit; no branch/digest approval gate.
 set -euo pipefail
 [[ "${GITHUB_REPOSITORY:?}" == 'kkgams/gams' ]] || { echo 'Unexpected repository' >&2; exit 1; }
 version="$(python3 - <<'PY'
-import json, pathlib, re
+import json, pathlib, re, tomllib
 config = json.loads(pathlib.Path('cmd/app/src-tauri/tauri.conf.json').read_text())
-cargo = pathlib.Path('cmd/app/src-tauri/Cargo.toml').read_text()
-package = re.search(r'(?ms)^\[package\]\n(.*?)(?=^\[|\Z)', cargo)
-assert package, 'missing Cargo package'
-version = re.search(r'(?m)^version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*$', package[1])
-assert version and config['version'] == version[1], 'Tauri/Cargo version mismatch'
+cargo = tomllib.loads(pathlib.Path('cmd/app/src-tauri/Cargo.toml').read_text())
+version = cargo['package']['version']
+assert re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version), 'invalid Host version'
+assert config['version'] == version, 'Tauri/Cargo version mismatch'
 assert config['identifier'] == 'com.github.kkgams.gams', 'unexpected application identity'
-print(config['version'])
+print(version)
 PY
 )"
-[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid Host distribution version' >&2; exit 1; }
-if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-  [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == "refs/tags/v$version" ]] || { echo 'Unexpected Host tag' >&2; exit 1; }
-else
-  [[ ( "$GITHUB_EVENT_NAME" == workflow_dispatch || "$GITHUB_EVENT_NAME" == push ) && "$GITHUB_REF" == refs/heads/release && "$GITHUB_REF_TYPE" == branch ]] || { echo 'Branch rehearsal requires release branch' >&2; exit 1; }
-fi
-bash scripts/check-licensing-digests.sh
+[[ "${GITHUB_EVENT_NAME:?}" == push && "${GITHUB_REF:?}" == "refs/tags/v$version" ]] || {
+  echo 'Release requires a matching pushed version tag' >&2
+  exit 1
+}
+[[ "$(git rev-parse HEAD)" == "${GITHUB_SHA:?}" && "$(git rev-parse "refs/tags/v$version^{commit}")" == "$GITHUB_SHA" ]] || {
+  echo 'Tag, checkout HEAD and workflow SHA must identify the same commit' >&2
+  exit 1
+}
+bash scripts/check-licensing.sh
