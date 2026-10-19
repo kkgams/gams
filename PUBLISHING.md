@@ -24,7 +24,7 @@ signing, system-only dylib checks, Wasmtime JIT entitlements and generated compl
 commit/author notes. Intel, Linux and Windows binaries remain unsupported; roadmap
 ZIPs are not Release assets. No separately released Project Unit is bundled.
 
-## Publish the prepared 2.0.8
+## Publish the prepared 2.0.9
 
 Use Git, GitHub CLI (authenticated with repository push access to inspect drafts)
 and Python 3.11+ from a **clean committed checkout on any named
@@ -45,12 +45,11 @@ HEAD and its matching tag; Actions performs publication. If a local matching tag
 already points to HEAD it is reused, not moved. A failed push may leave the new
 local tag; inspect the failure before retrying.
 
-The original workspace contains unrelated uncommitted edits. Do not commit them
-just to satisfy the helper; use a clean checkout/worktree of the release commit
-or resolve those edits separately. No uncommitted file belongs to the prepared
-2.0.8 source. Never force a branch update to bypass a rejected push.
+The prepared 2.0.9 commit includes the Game Icons WebKit fix and regression
+fixtures. See [v2.0.9 preparation](docs/release-2-0-9-review.md) for local checks
+and evidence scope. Never force a branch update to bypass a rejected push.
 
-Local 2.0.8 candidate records: [release preparation](docs/release-2-0-8-review.md).
+Historical local 2.0.8 candidate records: [release preparation](docs/release-2-0-8-review.md).
 Earlier ZIPs under `dist/release-2.0.8/` were prepared before this workflow/docs
 migration. The approval-free staging check is under `dist/tag-release-2.0.8/`;
 tag CI stages a fresh candidate from the final commit. Workflow,
@@ -268,7 +267,7 @@ manual review for future releases.
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.8` (Cargo/Tauri), which is different from
+Current source version is `2.0.9` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

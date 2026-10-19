@@ -281,6 +281,8 @@
     }
 
     i.game-icons {
+        /* WebKit otherwise shapes hyphen-separated name fragments independently. */
+        word-break: keep-all;
         font-family: "Game Icons";
         font-variation-settings: normal;
         font-feature-settings: "liga" 1;

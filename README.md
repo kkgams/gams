@@ -1,5 +1,13 @@
 # GAMS Host
 
+## v2.0.9 prepared — Game Icons WebKit fix
+
+Hyphenated Game Icons names now shape as a single ligature in WebKit.
+The release includes a browser regression and native WKWebView runner.
+See [v2.0.9 preparation](docs/release-2-0-9-review.md) for validation and the
+bounded version/evidence refresh. Publish the committed version and matching
+local tag with `bash scripts/push-release.sh --publish`.
+
 ## v2.0.8 prepared — commit-and-tag publication
 
 Mixed button/select groups now share control height and outer-corner styling.
