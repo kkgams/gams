@@ -17,7 +17,12 @@ under **Tables → Selectable cell grids**.
   treatment and selected/hover appearance fallback for older themes.
 - `/util/selectable-grid.js`: shared browser interaction helper. No runtime,
   storage, Project-specific state, image decoding or tooltip rendering.
-- Independently released themes may override selected/focus appearance.
+- Independently released themes may override neutral selected/focus appearance.
+- Explicit `.accent`, `.success`, `.warning`, `.danger` and `.info` classes on
+  selectable cells consume the Host intent tokens in the final `intent` layer:
+  soft background/foreground when unselected, filled when selected, and filled
+  hover tokens for enabled unselected cells. Theme focus and disabled cues stay
+  intact. Static cells (without `aria-selected`) are outside this fill contract.
 - A View creates record cells, accessible names and service-owned tooltip calls,
   and handles activation. No View-specific selection CSS is needed.
 
@@ -81,6 +86,15 @@ node --test test/selectable-grid.test.mjs
 ```
 
 The pure navigation tests cover irregular/disabled rows, boundaries and Home/End.
+For computed-style regression checks, serve the workspace root and open
+`gams/test/fixtures/selectable-grid-intents.html`, then repeat with
+`?theme=/theme.the98/src/themes/the98.css`. The fixture reports its assertions in
+`window.gridIntentResults` and on the page. It checks all five intents in ordinary
+and separate layouts, selected/disabled combinations, token foreground/background
+pairs, neutral restoration, static surface exclusion and focus outlines. Hover
+selectors are temporarily exercised through a test attribute and restored; also
+check real pointer hover manually. No sibling theme is required for the base run.
+
 Browser integration must also verify Tab stops, focus restoration, mouse/keyboard
 activation, disabled guards, tooltip ownership and computed theme styles. The
 Host's complete JS suite is `node --test test/*.test.mjs`; native checks remain

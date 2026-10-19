@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Selectable grid intent regression</title>
+    <link rel="stylesheet" href="../../cmd/app/src/css/reset.css">
+    <link rel="stylesheet" href="../../cmd/app/src/css/base.css">
+    <script>
+        const theme = new URLSearchParams(location.search).get("theme")
+        if (theme) {
+            const link = document.createElement("link")
+            link.rel = "stylesheet"
+            link.href = theme
+            document.head.append(link)
+        }
+    </script>
+</head>
+<body>
+    <h1>Selectable grid intent regression</h1>
+    <p>Tab to focus a cell; hover enabled and disabled cells to compare intent cues.</p>
+    <main></main>
+    <output id="results">Waiting for checks…</output>
+    <script type="module">
+        import { checkSelectableGridIntents } from "../selectable-grid-intents.browser.js"
+        await document.fonts.ready
+        try {
+            window.gridIntentResults = checkSelectableGridIntents()
+            document.querySelector("#results").textContent = `PASS: ${window.gridIntentResults.passed} checks (${theme || "Host base"})`
+        } catch (error) {
+            document.querySelector("#results").textContent = `FAIL: ${error.message}`
+            throw error
+        }
+    </script>
+</body>
+</html>

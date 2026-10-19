@@ -97,6 +97,23 @@
         --intent: var(--info);
     }
 
+    /* Explicit cell intents outrank theme fills (including separate-layout
+       surfaces), without changing neutral/static cells, focus or disabled cues. */
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected]:is(.accent, .success, .warning, .danger, .info) {
+        background: var(--intent-soft-bg);
+        color: var(--intent-soft-fg);
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="true"]:is(.accent, .success, .warning, .danger, .info) {
+        background: var(--intent-bg);
+        color: var(--intent-fg);
+    }
+
+    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="false"]:is(.accent, .success, .warning, .danger, .info):not([aria-disabled="true"]):hover {
+        background: var(--intent-hover-bg);
+        color: var(--intent-fg);
+    }
+
     .elevated {
         background: var(--surface-elevated);
         box-shadow: var(--shadow-elevated);
