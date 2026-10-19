@@ -1,13 +1,12 @@
-import { runtime } from "/core/runtime.js"
-import { initSaveMenu } from "/core/menu.js"
-// import { openSqlVecConnection, sql } from "/core/sql.js"
 import { init, prepareTheme } from "/___/services.js"
-import { projectUnits } from "/util/require.js"
-import { createStartupProgress } from "/core/startup-progress.js"
+import { initSaveMenu } from "/core/menu.js"
 import { selectFilesystemSource } from "/core/project-units.js"
+import { runtime } from "/core/runtime.js"
+import { createStartupProgress } from "/core/startup-progress.js"
+import { projectUnits, require } from "/util/require.js"
 
-// Default package folder; runtime.modulesDir supplies the native-selected path.
-const GAMS_MODULES = "gams_modules"
+window.require = require
+
 // Fallback only when Project plugins do not name plugin.fs.wasm.
 const FS_BOOTSTRAP_SOURCE = "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"
 

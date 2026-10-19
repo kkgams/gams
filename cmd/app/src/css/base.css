@@ -304,6 +304,9 @@
         font-variation-settings: normal;
         font-feature-settings: "liga" 1;
         font-variant-ligatures: common-ligatures;
+        /* WebKit otherwise splits hyphenated names into zero-width text runs,
+           even with white-space: nowrap, before applying the icon ligature. */
+        word-break: keep-all;
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════

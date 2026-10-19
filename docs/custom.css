@@ -19,6 +19,8 @@
     letter-spacing: normal;
     text-transform: none;
     white-space: nowrap;
+    /* Keep hyphenated icon names in one shaping run in WebKit. */
+    word-break: keep-all;
     font-feature-settings: "liga" 1;
     font-variant-ligatures: common-ligatures;
     vertical-align: middle;

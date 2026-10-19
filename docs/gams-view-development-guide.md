@@ -180,7 +180,7 @@ APIs to select another font.
 - `table[data-layout="separate"]` - separated-cell table layout for board-like or card-grid views where cells contain block content rather than compact row values.
 - `table.compact-actions` - table whose icon-only action buttons in body cells use compact theme sizing. Use this as an explicit exception when dense row actions should be smaller than normal buttons.
 - `caption` - optional table title/label when the table needs an intrinsic semantic heading.
-- `thead` - required table header section.
+- `thead` - optional table header section.
 - `tbody` - required table body section.
 - `tfoot` - optional table footer section.
 - `tr` - table row.
@@ -195,8 +195,9 @@ nesting a button in every selectable cell. Row selection remains a separate
 pattern; cell selection highlights only the cell, not its row.
 
 - `table[role="grid"][aria-label]` (or `[aria-labelledby]`) - accessible name for
-  a keyboard-navigable, single-selection grid. Keep native `thead`, `tbody`, `tr`
-  and `th` structure. `data-layout="separate"` may be combined with this role.
+  a keyboard-navigable, single-selection grid. Keep native `tbody` and `tr`
+  structure. When column headers are present, use `thead` and `th`.
+  `data-layout="separate"` may be combined with this role.
 - `td[role="gridcell"][aria-selected="false"]` - selectable record cell.
 - `td[role="gridcell"][aria-selected="true"]` - selected record cell; at most
   one per grid. Selection is independent of keyboard focus.

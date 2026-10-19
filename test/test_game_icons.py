@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
@@ -41,6 +42,16 @@ class PreparationTests(unittest.TestCase):
             self.assertEqual(icons['lorc-fire']['license'], 'CC-BY-3.0')
             self.assertEqual([item['codepoint'] for item in manifest['icons']], list(range(0xE000, 0xE004)))
             self.assertEqual(json.loads((root / 'out/game-icons.json').read_text()), manifest)
+
+    def test_hyphenated_ligatures_keep_a_single_webkit_shaping_run(self):
+        # Browser/WKWebView integration verifies rendering; this guards both
+        # canonical CSS entry points against dropping the required shaping rule.
+        for file, selector in [('cmd/app/src/css/base.css', 'i.game-icons'),
+                               ('docs/custom.css', '.prose .game-icons')]:
+            css = (ROOT / file).read_text()
+            rule = re.search(re.escape(selector) + r'\s*\{([^}]+)\}', css)
+            self.assertIsNotNone(rule, file)
+            self.assertIn('word-break: keep-all;', rule.group(1), file)
 
     def test_checked_in_catalogue_covers_manifest(self):
         manifest = json.loads((ROOT / 'cmd/app/src/fonts/game-icons.json').read_text())

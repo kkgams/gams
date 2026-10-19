@@ -24,6 +24,15 @@ source update. Core Views may use this markup under the
 [GAMS View Development Guide's icon rules](#/gams-view-development-guide?section=icons).
 Existing Views and widget APIs are not automatically migrated to this font.
 
+The shared icon CSS uses `word-break: keep-all` as well as `white-space: nowrap`.
+This is required by WebKit: hyphenated names can otherwise be split into separate
+zero-width text runs before ligature substitution, while names such as `shirt`
+and `boots` still work. Keep the rule in both Host and wiki icon styles; do not
+work around it with View-local CSS or pinned private-use characters. HarfBuzz or
+canvas-only checks do not detect this DOM-layout failure. Rendering regressions
+must include real WebKit DOM layout, nonzero glyph widths and visible glyph ink.
+The fix changes CSS only, not the font bytes or codepoint assignments.
+
 ## Build
 
 From `gams/`, with the documented development shell active:
