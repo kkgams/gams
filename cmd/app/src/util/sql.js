@@ -150,18 +150,52 @@ class SqlConnection {
     }
 }
 
-function defaultSqlConnectionName() {
+function sqlDatabases() {
     const value = runtime.projectConfig.sql
-    assertString(value, "gams config sql")
-    return value
+    if (typeof value === "string") {
+        assertString(value, "gams config sql")
+        return { main: value, attachments: [] }
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("gams config sql must be a non-empty string or a database map with main")
+    }
+    if (!Object.hasOwn(value, "main")) throw new Error("gams config sql.main is required")
+    assertString(value.main, "gams config sql.main")
+
+    const names = new Set(["main", "temp"])
+    const attachments = []
+    for (const [name, path] of Object.entries(value)) {
+        assertString(path, `gams config sql.${name}`)
+        if (name === "main") continue
+        assertString(name, "SQL schema name")
+        if (name.includes("\u0000")) throw new Error("SQL schema name must not contain NUL")
+        const normalized = name.replace(/[A-Z]/g, character => character.toLowerCase())
+        if (names.has(normalized)) throw new Error(`Reserved or duplicate SQL schema name: ${name}`)
+        names.add(normalized)
+        attachments.push([name, path])
+    }
+    return { main: value.main, attachments }
 }
 
-const connection = await unwrapSqlResult(
-    await runtime.invoke("sql/types::[static]connection.open", defaultSqlConnectionName()),
-    "open SQL connection",
-)
+async function openProjectSql() {
+    const { main, attachments } = sqlDatabases()
+    const connection = new SqlConnection(await unwrapSqlResult(
+        await runtime.invoke("sql/types::[static]connection.open", main),
+        "open SQL connection",
+    ))
+    try {
+        for (const [name, path] of attachments) {
+            const schema = `"${name.replaceAll('"', '""')}"`
+            await connection.exec(`ATTACH DATABASE ? AS ${schema}`, [path])
+        }
+        return connection
+    } catch (error) {
+        await connection.close()
+        throw error
+    }
+}
 
-export const sql = new SqlConnection(connection)
+export const sql = await openProjectSql()
 
 export async function openSqlVecConnection(name) {
     assertString(name, "SQL connection name")
