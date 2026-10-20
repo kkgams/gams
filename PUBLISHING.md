@@ -24,7 +24,7 @@ signing, system-only dylib checks, Wasmtime JIT entitlements and generated compl
 commit/author notes. Intel, Linux and Windows binaries remain unsupported; roadmap
 ZIPs are not Release assets. No separately released Project Unit is bundled.
 
-## Publish the prepared 2.0.11
+## Publish the prepared 2.0.12
 
 Use Git, GitHub CLI (authenticated with repository push access to inspect drafts)
 and Python 3.11+ from a **clean committed checkout on any named
@@ -45,11 +45,10 @@ HEAD and its matching tag; Actions performs publication. If a local matching tag
 already points to HEAD it is reused, not moved. A failed push may leave the new
 local tag; inspect the failure before retrying.
 
-The prepared 2.0.11 commit includes development console forwarding and SQL
-resource fixes. See [v2.0.11 preparation](docs/release-2-0-11-review.md) for local
-checks and evidence scope. Four existing bootstrap test failures remain and will
-block release CI; the push helper's preflight does not run tests. Resolve those
-failures before publication. Never force a branch update to bypass a rejected push.
+The prepared 2.0.12 commit fixes the stale bootstrap tests that blocked the
+previous candidate. See [v2.0.12 preparation](docs/release-2-0-12-review.md) for
+local checks and evidence scope. The push helper's preflight does not run tests.
+Never force a branch update to bypass a rejected push.
 
 Historical local 2.0.8 candidate records: [release preparation](docs/release-2-0-8-review.md).
 Earlier ZIPs under `dist/release-2.0.8/` were prepared before this workflow/docs
@@ -269,7 +268,7 @@ manual review for future releases.
    app actually works. No Developer ID-signed/notarized DMG or Intel app is
    claimed.
 
-Current source version is `2.0.11` (Cargo/Tauri), which is different from
+Current source version is `2.0.12` (Cargo/Tauri), which is different from
 Project Unit distribution and WIT versions. The tag workflow refuses a tag
 whose version differs. An existing GitHub Release or API/authentication error
 must not be interpreted as permission to overwrite an immutable release.

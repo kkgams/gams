@@ -30,6 +30,7 @@ async function runApp(t, filesystemSource) {
     }
     const deps = {
         runtime,
+        require() { throw new Error("startup must not load a View module directly") },
         projectUnits: {
             subscribeProgress() { return () => { unsubscribed++ } },
             async bootstrapFilesystem(source) { assert.equal(source, filesystemSource || "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"); bootstrapStarted.resolve(); await bootstrap.promise; fsReady = true },
@@ -39,7 +40,7 @@ async function runApp(t, filesystemSource) {
         async init(config, themeReady) { assert.equal(config, runtime.config); assert.equal(themeReady, theme.promise); initCalls++; uiStarted.resolve(); await ui.promise },
         async initSaveMenu() { return { async enable() { enabling.resolve(); await enable.promise } } },
     }
-    const globals = { document, location: { reload() {} }, app: {}, requestAnimationFrame() {}, __startupAppTest: deps }
+    const globals = { window: {}, document, location: { reload() {} }, app: {}, requestAnimationFrame() {}, __startupAppTest: deps }
     const previous = new Map(Object.keys(globals).concat("runtime").map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
     Object.assign(globalThis, globals)
     delete globalThis.runtime
@@ -52,12 +53,16 @@ async function runApp(t, filesystemSource) {
         ['import { runtime } from "/core/runtime.js"', 'const { runtime } = globalThis.__startupAppTest'],
         ['import { initSaveMenu } from "/core/menu.js"', 'const { initSaveMenu } = globalThis.__startupAppTest'],
         ['import { init, prepareTheme } from "/___/services.js"', 'const { init, prepareTheme } = globalThis.__startupAppTest'],
-        ['import { projectUnits } from "/util/require.js"', 'const { projectUnits } = globalThis.__startupAppTest'],
+        ['import { projectUnits, require } from "/util/require.js"', 'const { projectUnits, require } = globalThis.__startupAppTest'],
         ['from "/core/startup-progress.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/startup-progress.js", import.meta.url).href)}`],
         ['from "/core/project-units.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/project-units.js", import.meta.url).href)}`],
-    ]) source = source.replace(line, replacement)
+    ]) {
+        assert.ok(source.includes(line), `startup harness import not found: ${line}`)
+        source = source.replace(line, replacement)
+    }
     const task = import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${Math.random()}`).toString("base64")}`)
-    await bootstrapStarted.promise
+    await Promise.race([bootstrapStarted.promise, task.then(() => { throw new Error("startup ended before filesystem bootstrap") })])
+    assert.equal(window.require, deps.require)
     const host = document.body.children[0]
     assert.equal(themeCalls, 0)
     bootstrap.resolve()

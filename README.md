@@ -1,12 +1,18 @@
 # GAMS Host
 
+## v2.0.12 — bootstrap test fixes
+
+The obsolete modules-directory assertion and startup import mock are updated.
+All 65 JS tests pass, clearing the previous candidate's test blocker.
+See [v2.0.12 preparation](docs/release-2-0-12-review.md) for validation and scope.
+
 ## v2.0.11 prepared — console forwarding and SQL resource fixes
 
 Development WebView console output and uncaught errors now reach the terminal.
 SQL errors retain their native resource origin, and resource-release IPC avoids
 blocking the native UI thread. See [v2.0.11 preparation](docs/release-2-0-11-review.md).
-Four existing bootstrap test failures still block release CI. A local tag is
-prepared; nothing has been pushed or published.
+At preparation, four existing bootstrap test failures blocked release CI;
+v2.0.12 fixes those tests. See the historical preparation record for scope.
 
 ## v2.0.9 prepared — Game Icons WebKit fix
 

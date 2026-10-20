@@ -77,6 +77,6 @@ test("runtime downloads bytes with progress and loads a typed-array slice", asyn
 test("app bootstrap uses runtime config instead of reading gams.json via fs", async () => {
   const app = await readFile(new URL("../cmd/app/src/app.js", import.meta.url), "utf8")
   assert.match(app, /const config = runtime\.config/)
-  assert.match(app, /const GAMS_MODULES = "gams_modules"/)
+  assert.doesNotMatch(app, /gams_modules/)
   assert.doesNotMatch(app, /fs\/fs::read-text|JSON\.parse|setProjectConfig/)
 })
