@@ -23,10 +23,20 @@ async function unwrapSqlResult(result, label) {
     if (!Object.hasOwn(result, "err")) throw new Error(`${label}: expected result object`)
 
     const err = result.err
-    assertSqlResource(err, `${label} error`)
-    const trace = await runtime.invoke("sql/types::[method]error.trace", err)
-    await runtime.releaseResource(err)
-    throw new Error(`${label}: ${trace}`)
+    // Native resource refs retain the interface that returned them. readwrite
+    // imports types.error, so query/exec errors legitimately carry this origin.
+    // Keep the original handle: relabeling would break the native registry check.
+    if (!err || typeof err !== "object" ||
+        !["wasi:sql/types", "wasi:sql/readwrite"].includes(err.$resource)) {
+        throw new Error(`${label}: expected SQL error resource`)
+    }
+    assertString(err.id, `${label} error.id`)
+    try {
+        const trace = await runtime.invoke("sql/types::[method]error.trace", err)
+        throw new Error(`${label}: ${trace}`)
+    } finally {
+        await runtime.releaseResource(err)
+    }
 }
 
 function cellValue(value) {

@@ -39,6 +39,18 @@ build caches, and exports are not Host-owned source.
 - **local assembly**: explicit copying of independently built sibling artifacts
   into the example Project, performed by `example.game1` tooling, not the Host.
 
+## SQL error resources
+
+Native JSON resource references are opaque handles tagged with the interface
+that returned them, not necessarily the interface defining the resource. SQL
+query/exec errors therefore carry `wasi:sql/readwrite`, while open/prepare errors
+carry `wasi:sql/types`. The Host SQL helper traces either SQL error origin using
+the unchanged handle and releases it even if tracing fails; foreign namespaces
+remain invalid. Do not relabel handles or replace SQLite errors with fallback data.
+Resource-release IPC must use `spawn_blocking`, like component invocation: it
+shares the Wasmtime mutex and must not wait for in-flight SQL on the native UI
+thread. The JavaScript `releaseResource` API remains awaited and unchanged.
+
 ## Project saving
 
 The Host owns native File → Save Project, the `project.save` command, ordered JS

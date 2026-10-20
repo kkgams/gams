@@ -1,5 +1,13 @@
 # GAMS Host
 
+## v2.0.11 prepared — console forwarding and SQL resource fixes
+
+Development WebView console output and uncaught errors now reach the terminal.
+SQL errors retain their native resource origin, and resource-release IPC avoids
+blocking the native UI thread. See [v2.0.11 preparation](docs/release-2-0-11-review.md).
+Four existing bootstrap test failures still block release CI. A local tag is
+prepared; nothing has been pushed or published.
+
 ## v2.0.9 prepared — Game Icons WebKit fix
 
 Hyphenated Game Icons names now shape as a single ligature in WebKit.

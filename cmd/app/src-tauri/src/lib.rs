@@ -9,6 +9,16 @@ use tauri_plugin_cli::CliExt;
 use tauri_plugin_cli::{ArgData, Matches};
 
 #[tauri::command]
+fn runtime_console(level: String, message: String) -> Result<(), String> {
+    match level.as_str() {
+        "log" | "info" | "debug" => println!("[webview:{level}] {message}"),
+        "warn" | "error" => eprintln!("[webview:{level}] {message}"),
+        _ => return Err(format!("Unknown console level: {level}")),
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn runtime_project(project: tauri::State<'_, project::Project>) -> project::Project {
     project.inner().clone()
 }
@@ -70,11 +80,16 @@ fn runtime_diagnostics(
 }
 
 #[tauri::command]
-fn runtime_release_resource(
+async fn runtime_release_resource(
     resource: serde_json::Value,
     runtime: tauri::State<'_, runtime::Runtime>,
 ) -> Result<(), String> {
-    runtime.release_resource(resource)
+    // Wasmtime calls and resource destruction share a mutex. Never wait for
+    // an in-flight component call on the native event loop.
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || runtime.release_resource(resource))
+        .await
+        .map_err(|error| format!("runtime resource release task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -396,7 +411,11 @@ pub fn run() {
                 }
             }
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            let window =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
+            #[cfg(debug_assertions)]
+            let window = window.initialization_script(include_str!("dev-console.js"));
+            window
                 .title("GAMS")
                 .inner_size(1000.0, 700.0)
                 .build()?;
@@ -405,6 +424,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            runtime_console,
             runtime_project,
             runtime_download,
             runtime_load_from_bytes,

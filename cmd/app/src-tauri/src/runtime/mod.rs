@@ -2124,6 +2124,169 @@ mod tests {
         preopens
     }
 
+    // Explicit opt-in native SQL seam: no downloaded component or Project fixtures
+    // are required by the ordinary Host test suite.
+    fn external_sql_runtime(root: &Path) -> (Runtime, tempfile::TempDir) {
+        external_sql_runtime_with_permissions(root, true)
+    }
+
+    fn external_sql_runtime_with_permissions(root: &Path, read_only: bool) -> (Runtime, tempfile::TempDir) {
+        let component = PathBuf::from(
+            std::env::var_os("GAMS_TEST_SQL_COMPONENT")
+                .expect("set GAMS_TEST_SQL_COMPONENT to an absolute SQL component path"),
+        );
+        assert!(component.is_absolute(), "GAMS_TEST_SQL_COMPONENT must be absolute");
+        assert!(component.is_file(), "missing component: {}", component.display());
+        let mut preopens = test_preopens(root);
+        let component_parent = component.parent().unwrap().canonicalize().unwrap();
+        preopens.push(FsPreopen {
+            guest_path: component_parent.display().to_string(),
+            host_path: component_parent,
+        });
+        let runtime = Runtime::new_at(root.to_path_buf(), preopens.clone()).unwrap();
+        // Restrict the supplied Project, including directory-symlink targets, to
+        // read-only access without changing the production preopen contract.
+        let mut wasi = wasmtime_wasi::WasiCtx::builder();
+        for preopen in preopens {
+            wasi.preopened_dir(
+                preopen.host_path,
+                preopen.guest_path,
+                if read_only { wasmtime_wasi::DirPerms::READ } else { wasmtime_wasi::DirPerms::all() },
+                if read_only { wasmtime_wasi::FilePerms::READ } else { wasmtime_wasi::FilePerms::all() },
+            ).unwrap();
+        }
+        runtime.inner.lock().unwrap().store.data_mut().wasi_ctx = wasi.build();
+        let cache = tempfile::tempdir().unwrap();
+        runtime.set_compiled_component_cache_dir(cache.path().to_path_buf()).unwrap();
+        runtime.add_plugins(vec![component.display().to_string()], false).unwrap();
+        (runtime, cache)
+    }
+
+    fn external_sql_result(runtime: &Runtime, result: serde_json::Value) -> Result<serde_json::Value, String> {
+        if let Some(value) = result.get("ok") {
+            return Ok(value.clone());
+        }
+        let error = result.get("err").expect("SQL result must contain ok or err");
+        // Keep the returned resource verbatim: relabelling it to types would
+        // violate the runtime resource registry's original namespace check.
+        let trace = runtime.invoke("sql/types::[method]error.trace", serde_json::json!([error]));
+        runtime.release_resource(error.clone()).unwrap();
+        Err(format!("SQL error {error}: {}", trace.expect("error.trace must accept original resource")))
+    }
+
+    fn external_sql_query(runtime: &Runtime, connection: &serde_json::Value, sql: &str) -> Result<serde_json::Value, String> {
+        let prepared = runtime.invoke("sql/types::[static]statement.prepare", serde_json::json!([sql, []]))?;
+        let statement = external_sql_result(runtime, prepared)?;
+        let queried = runtime.invoke("sql/readwrite::query", serde_json::json!([connection, statement]));
+        runtime.release_resource(statement).unwrap();
+        external_sql_result(runtime, queried?)
+    }
+
+    #[test]
+    #[ignore = "requires externally supplied SQL component"]
+    fn external_sql_memory_query_error_preserves_resource_origin() {
+        let root = tempfile::tempdir().unwrap();
+        let (runtime, _cache) = external_sql_runtime(root.path());
+        let opened = runtime.invoke("sql/types::[static]connection.open", serde_json::json!([":memory:"])).unwrap();
+        let connection = external_sql_result(&runtime, opened).unwrap();
+        let cells = external_sql_query(&runtime, &connection, "SELECT 42 AS answer").unwrap();
+        assert_eq!(cells[0]["value"], serde_json::json!({"case": "int64", "value": 42}));
+        let statement = external_sql_result(&runtime, runtime.invoke(
+            "sql/types::[static]statement.prepare",
+            serde_json::json!(["SELECT * FROM gams_missing_table", []]),
+        ).unwrap()).unwrap();
+        let queried = runtime.invoke("sql/readwrite::query", serde_json::json!([connection, statement])).unwrap();
+        let error = queried.get("err").expect("missing-table query must fail");
+        assert_eq!(error["$resource"], "wasi:sql/readwrite");
+        let trace = external_sql_result(&runtime, queried).unwrap_err();
+        eprintln!("{trace}");
+        assert!(trace.contains("no such table") && trace.contains("gams_missing_table"), "{trace}");
+        runtime.release_resource(statement).unwrap();
+        runtime.release_resource(connection).unwrap();
+        assert_eq!(runtime.diagnostics().unwrap()["jsonResourceRefs"], 0);
+    }
+
+    #[test]
+    #[ignore = "requires externally supplied SQL component"]
+    fn external_sql_dotfile_lock_reports_original_error_resource() {
+        let root = tempfile::tempdir().unwrap();
+        let (runtime, _cache) = external_sql_runtime_with_permissions(root.path(), false);
+        let uri = "file:lock-test.sqlite?vfs=unix-dotfile";
+        let open = || {
+            external_sql_result(&runtime, runtime.invoke(
+                "sql/types::[static]connection.open", serde_json::json!([uri]),
+            ).unwrap()).unwrap()
+        };
+        let connection = open();
+        let statement = external_sql_result(&runtime, runtime.invoke(
+            "sql/types::[static]statement.prepare",
+            serde_json::json!(["CREATE TABLE records(id INTEGER)", []]),
+        ).unwrap()).unwrap();
+        let created = runtime.invoke("sql/readwrite::exec", serde_json::json!([connection, statement])).unwrap();
+        external_sql_result(&runtime, created).unwrap();
+        runtime.release_resource(statement).unwrap();
+        external_sql_query(&runtime, &connection, "SELECT count(*) FROM records").unwrap();
+        runtime.release_resource(connection).unwrap();
+
+        let lock = root.path().join("lock-test.sqlite.lock");
+        assert!(!lock.exists(), "closing the connection must release its lock");
+        std::fs::create_dir(&lock).unwrap();
+        let connection = open();
+        let trace = external_sql_query(&runtime, &connection, "SELECT count(*) FROM records").unwrap_err();
+        eprintln!("{trace}");
+        assert!(trace.contains("wasi:sql/readwrite") && trace.contains("database is locked"), "{trace}");
+        runtime.release_resource(connection).unwrap();
+        assert!(lock.is_dir(), "runtime must not delete an externally owned lock");
+        assert_eq!(std::fs::read_dir(&lock).unwrap().count(), 0);
+        // Only this test's synthetic lock is removed; supplied databases and
+        // lock directories are never opened for writes by the external seam.
+        std::fs::remove_dir(&lock).unwrap();
+        let connection = open();
+        external_sql_query(&runtime, &connection, "SELECT count(*) FROM records").unwrap();
+        runtime.release_resource(connection).unwrap();
+        assert_eq!(runtime.diagnostics().unwrap()["jsonResourceRefs"], 0);
+    }
+
+    #[test]
+    #[ignore = "requires externally supplied SQL component"]
+    fn external_sql_database_queries_read_only() {
+        let root = PathBuf::from(std::env::var_os("GAMS_TEST_SQL_PROJECT_ROOT")
+            .expect("set GAMS_TEST_SQL_PROJECT_ROOT to an absolute external Project path"));
+        assert!(root.is_absolute(), "GAMS_TEST_SQL_PROJECT_ROOT must be absolute");
+        let root = root.canonicalize().unwrap();
+        let database = std::env::var("GAMS_TEST_SQL_DATABASE").expect("set GAMS_TEST_SQL_DATABASE to a database path relative to the Project or absolute within its preopens");
+        assert!(!database.contains(['?', '#']), "supply a database path, not a URI");
+        let path = PathBuf::from(&database);
+        let host_path = if path.is_absolute() { path } else { root.join(&database) };
+        assert!(host_path.is_file(), "missing database: {}", host_path.display());
+        let (runtime, _cache) = external_sql_runtime(&root);
+        // Immutable avoids SQLite's WASI dotfile lock writes under read-only
+        // capabilities. This probes query/schema compatibility, not live locks;
+        // supply a stable snapshot if another process may modify the database.
+        let uri = format!("file:{}?mode=ro&immutable=1", database.replace('%', "%25").replace(' ', "%20"));
+        let opened = runtime.invoke("sql/types::[static]connection.open", serde_json::json!([uri])).unwrap();
+        let connection = external_sql_result(&runtime, opened).unwrap();
+        // External schemas stay outside the Host: supply a JSON string array.
+        let queries: Vec<String> = match std::env::var_os("GAMS_TEST_SQL_QUERIES") {
+            Some(path) => serde_json::from_slice(&std::fs::read(path).expect("read query JSON file")).expect("queries must be a JSON string array"),
+            None => vec!["SELECT 1 AS value".into(), "SELECT name FROM sqlite_schema ORDER BY name".into()],
+        };
+        assert!(!queries.is_empty(), "external SQL queries must not be empty");
+        let mut errors = Vec::new();
+        for query in queries {
+            match external_sql_query(&runtime, &connection, &query) {
+                Ok(cells) => eprintln!("{query}: {} cells", cells.as_array().expect("query cells").len()),
+                Err(error) => {
+                    eprintln!("{query}: {error}");
+                    errors.push(format!("{query}: {error}"));
+                }
+            }
+        }
+        runtime.release_resource(connection).unwrap();
+        assert_eq!(runtime.diagnostics().unwrap()["jsonResourceRefs"], 0);
+        assert!(errors.is_empty(), "native database query failures:\n{}", errors.join("\n"));
+    }
+
     fn tile_map_json_to_wit_value(value: serde_json::Value) -> serde_json::Value {
         let object = value.as_object().expect("tile map must be an object");
         let layers = object
