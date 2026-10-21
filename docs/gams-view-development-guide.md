@@ -36,6 +36,8 @@ Each view should contain exactly one main element.
 - `table` - main view render element when the view is primarily tabular.
 - `form` - main view render element when the view is primarily an editor, inspector, wizard, or other form-driven workflow.
 
+- `form>canvas+table` - stacks the table above a viewport-sized canvas.
+
 ### Optional elements
 
 Optional elements should appear at most once per view.

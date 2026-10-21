@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Canvas/table overlap regression</title>
+    <link rel="stylesheet" href="../../cmd/app/src/css/reset.css">
+    <link rel="stylesheet" href="../../cmd/app/src/css/base.css">
+    <style>
+        body { overflow: auto; }
+        main { width: 640px; height: 320px; --aside-width: 120px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <main id="light"></main>
+    <main id="shadow"><canvas-table-fixture style="display: contents"></canvas-table-fixture></main>
+    <main id="nonadjacent"><form><canvas></canvas><output>Between canvas and table</output><table><tbody><tr><td>Ordinary form</td></tr></tbody></table></form></main>
+    <output id="results">Waiting for checks…</output>
+    <script type="module">
+        import { checkCanvasTableOverlap } from "../canvas-table.browser.js"
+        const content = `<form><canvas aria-label="Canvas viewport"></canvas><table aria-label="Overlay"><tbody>${'<tr><td style="height: 32px">Overlay record</td></tr>'.repeat(20)}</tbody></table></form><aside>Side panel</aside><footer>Status</footer>`
+        document.querySelector('#light').innerHTML = content
+        const root = document.querySelector('canvas-table-fixture').attachShadow({ mode: 'open' })
+        root.innerHTML = '<link rel="stylesheet" href="../../cmd/app/src/css/reset.css"><link rel="stylesheet" href="../../cmd/app/src/css/base.css">' + content
+        await Promise.all([...root.querySelectorAll('link')].map(link => new Promise((resolve, reject) => {
+            link.onload = resolve
+            link.onerror = reject
+        })))
+        await new Promise(requestAnimationFrame)
+        try {
+            window.canvasTableResults = await checkCanvasTableOverlap()
+            document.querySelector('#results').textContent = `PASS: ${window.canvasTableResults.passed} checks`
+        } catch (error) {
+            window.canvasTableResults = { error: error.message }
+            document.querySelector('#results').textContent = `FAIL: ${error.message}`
+            throw error
+        }
+    </script>
+</body>
+</html>
