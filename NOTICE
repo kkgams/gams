@@ -15,7 +15,7 @@ repository.
 The exact third-party input and notice bytes for this review are listed in
 NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
 linked files to change independently; release checks validate the manifest.
-Third-party evidence SHA-256: `f22d3305860b6b7df2266bf0cef4cdc13c6477d1fb0e91657450c9bcb3196969`
+Third-party evidence SHA-256: `7a2af8bc8e94c9acb0f3b6338aeadbb17bba10a3ce3aad390d1570b93fc8eab2`
 
 Host browser fonts:
 - Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;

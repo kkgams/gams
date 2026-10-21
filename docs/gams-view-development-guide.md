@@ -185,6 +185,8 @@ APIs to select another font.
 - `tfoot` - optional table footer section.
 - `tr` - table row.
 - `th` - table header cell.
+- `th[aria-sort="ascending"]` / `th[aria-sort="descending"]` - currently sorted column. Set `aria-sort` only on the active header in each table and remove it from the previous header. First activation sorts ascending, repeated activation reverses direction, and activating another header starts ascending on that column. Preserve header focus after rerendering. Sort the full dataset before pagination and clear stale row selection/edit state.
+- Shared Host `base.css` owns sortable-header focus/interaction styling and the Material Symbols Rounded `::after` indicator (`arrow_upward` / `arrow_downward`) selected by `aria-sort`; Views must not add local indicator markup or CSS.
 - `th[role="button"][aria-expanded][tabindex="0"]` - collapsible table-group heading. It must activate with click, Enter, or Space and expose its expanded state through `aria-expanded`.
 - `td` - table data cell.
 

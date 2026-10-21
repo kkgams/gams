@@ -1,5 +1,13 @@
 # GAMS Host
 
+## v2.1.0 — sortable headers and async animation updates
+
+Shared table styling supplies Material Symbols direction indicators through
+`th[aria-sort]`; the View guide documents direct header activation without
+prescribing internal data hooks or focus attributes. This release also includes
+the additive cancellable async animation clip API committed after v2.0.12.
+See [v2.1.0 preparation](docs/release-2-1-0-review.md) for scope and validation.
+
 ## v2.0.12 — bootstrap test fixes
 
 The obsolete modules-directory assertion and startup import mock are updated.
