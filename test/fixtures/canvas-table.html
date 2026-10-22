@@ -17,7 +17,7 @@
     <output id="results">Waiting for checks…</output>
     <script type="module">
         import { checkCanvasTableOverlap } from "../canvas-table.browser.js"
-        const content = `<form><canvas aria-label="Canvas viewport"></canvas><table aria-label="Overlay"><tbody>${'<tr><td style="height: 32px">Overlay record</td></tr>'.repeat(20)}</tbody></table></form><aside>Side panel</aside><footer>Status</footer>`
+        const content = `<form><canvas aria-label="Canvas viewport"></canvas><table aria-label="Overlay"><tbody>${Array.from({ length: 20 }, (_, index) => `<tr><td aria-selected="${index === 0}" style="height: 32px"><span>Overlay record</span></td><td><span>Static area</span></td></tr>`).join('')}</tbody></table></form><aside>Side panel</aside><footer>Status</footer>`
         document.querySelector('#light').innerHTML = content
         const root = document.querySelector('canvas-table-fixture').attachShadow({ mode: 'open' })
         root.innerHTML = '<link rel="stylesheet" href="../../cmd/app/src/css/reset.css"><link rel="stylesheet" href="../../cmd/app/src/css/base.css">' + content

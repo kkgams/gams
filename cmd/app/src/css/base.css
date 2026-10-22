@@ -811,6 +811,12 @@
         grid-area: 1 / 1;
         position: relative;
         z-index: 1;
+        pointer-events: none;
+    }
+
+    main > form:has(> canvas + table) > canvas + table [aria-selected],
+    :host > form:has(> canvas + table) > canvas + table [aria-selected] {
+        pointer-events: auto;
     }
 
     aside {

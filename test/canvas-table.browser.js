@@ -15,9 +15,24 @@ export async function checkCanvasTableOverlap() {
         check(near(viewport.width, form.clientWidth) && near(viewport.height, form.clientHeight), `${name}: canvas fills the bounded viewport`)
         check(Number(getComputedStyle(table).zIndex) > Number(getComputedStyle(canvas).zIndex), `${name}: table is above the canvas`)
         check(overlay.height > surface.height && form.scrollHeight > form.clientHeight, `${name}: oversized table remains scrollable`)
-        const x = overlay.left + 20, y = overlay.top + 10
         const hitRoot = name === 'light' ? document : root
-        check(hitRoot.elementFromPoint(x, y).closest('table') === table, `${name}: table retains pointer input`)
+        const hit = element => {
+            const rect = element.getBoundingClientRect()
+            return hitRoot.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+        }
+        check(getComputedStyle(table).pointerEvents === 'none', `${name}: table ignores pointer input`)
+        for (const selected of ['true', 'false']) {
+            const cell = table.querySelector(`[aria-selected="${selected}"]`)
+            check(getComputedStyle(cell).pointerEvents === 'auto' && cell.contains(hit(cell)), `${name}: aria-selected=${selected} cells and descendants receive input`)
+            cell.setAttribute('aria-disabled', 'true')
+            check(getComputedStyle(cell).pointerEvents === 'auto', `${name}: disabled cells keep input routing for existing guards`)
+            cell.removeAttribute('aria-disabled')
+        }
+        const staticCell = table.rows[0].cells[1]
+        staticCell.style.backgroundColor = 'rgb(255, 0, 0)'
+        check(hit(staticCell) === canvas && getComputedStyle(staticCell.firstElementChild).pointerEvents === 'none', `${name}: static cells and descendants pass through to canvas`)
+        check(getComputedStyle(staticCell).backgroundColor === 'rgb(255, 0, 0)', `${name}: pointer pass-through does not alter cell painting`)
+        staticCell.style.removeProperty('background-color')
         form.scrollTop = 64
         await new Promise(requestAnimationFrame)
         const scrolled = canvas.getBoundingClientRect()
@@ -38,5 +53,6 @@ export async function checkCanvasTableOverlap() {
     }
     const ordinary = document.querySelector('#nonadjacent > form')
     check(getComputedStyle(ordinary).display === 'flex', 'nonadjacent canvas and table preserve ordinary form layout')
+    check(getComputedStyle(ordinary.querySelector('table')).pointerEvents === 'auto', 'ordinary tables retain pointer input')
     return { passed: results.length, results }
 }
