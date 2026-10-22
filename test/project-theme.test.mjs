@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import { loadProjectTheme } from "../cmd/app/src/core/project-theme.js"
 
 const config = { ui: { theme: { url: "https://example.com/theme.zip#themes/theme.css" } } }
@@ -64,11 +65,24 @@ test("CSS failure is propagated, restores the previous stylesheet, and releases 
     }
 })
 
+test("no selected theme keeps base styling without resolving or reading a Unit", async () => {
+    for (const theme of [undefined, null]) {
+        const f = fixture({ previousHref: "blob:previous-theme" })
+        assert.deepEqual(await loadProjectTheme({ ui: { theme } }, f.deps), { path: null, href: null })
+        assert.equal(f.link.getAttribute("href"), null)
+        assert.deepEqual(f.calls, [])
+        assert.equal(f.listeners.size, 0)
+    }
+})
+
 test("missing config/Host link and filesystem failures fail without applying a theme", async () => {
-    for (const invalid of [{}, { ui: {} }, { ui: { theme: {} } }, { ui: { theme: { url: 1 } } }]) {
+    for (const invalid of [{ ui: { theme: {} } }, { ui: { theme: { url: 1 } } }, { ui: { theme: { url: " " } } }]) {
         const f = fixture()
         await assert.rejects(loadProjectTheme(invalid, f.deps), /ui.theme.url is required/)
         assert.deepEqual(f.calls, [])
+    }
+    for (const invalid of [null, {}, { ui: [] }]) {
+        await assert.rejects(loadProjectTheme(invalid, fixture().deps), /ui must be an object/)
     }
     const missing = fixture()
     missing.deps.document.getElementById = () => null
@@ -81,6 +95,26 @@ test("missing config/Host link and filesystem failures fail without applying a t
         assert.equal(f.listeners.size, 0)
         assert.deepEqual(f.revoked, [])
     }
+})
+
+test("services bootstrap accepts no theme and clears shadow links without assigning a null URL", async () => {
+    const f = fixture({ previousHref: "blob:previous-theme" })
+    const shadow = fixture({ previousHref: "blob:previous-theme" }).link
+    f.deps.document.querySelectorAll = () => [{ shadowRoot: { querySelector: () => shadow } }]
+    const window = {}, revoked = []
+    const source = await readFile(new URL("../cmd/app/src/___/services.js", import.meta.url), "utf8")
+    const body = source.replace(/^import .*$/gm, "").replace(/^export /gm, "")
+    const run = new Function("loadProjectTheme", "projectUnits", "runtime", "document", "window", "URL",
+        `${body}\nreturn prepareTheme`)
+    const prepare = run(loadProjectTheme, f.deps.projectUnits, f.deps.runtime, f.deps.document, window,
+        { revokeObjectURL(href) { revoked.push(href) } })
+    await prepare({ ui: {} })
+    assert.equal(window.__currentThemePath, null)
+    assert.equal(window.__currentThemeStylesheetHref, null)
+    assert.equal(shadow.getAttribute("href"), null)
+    assert.equal(f.link.getAttribute("href"), null)
+    assert.deepEqual(f.calls, [])
+    assert.deepEqual(revoked, [])
 })
 
 test("legacy local theme path still uses the same explicit Project source", async () => {

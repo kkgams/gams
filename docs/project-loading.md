@@ -48,7 +48,11 @@ UI Services. UI initialization waits for both tasks and reuses the same theme
 promise, without a second theme download/read/application. Direct `init(config)`
 callers retain default theme preparation.
 
-`core/project-theme.js` resolves the Project's required `ui.theme.url` (or legacy
+A Project may omit `ui.theme` or set it to `null` to use Host base styling alone.
+No theme Unit is resolved or read in that case. A selected theme must still have
+a valid source; malformed configuration and theme loading failures remain errors.
+
+`core/project-theme.js` resolves the selected Project's `ui.theme.url` (or legacy
 local `path`), reads CSS through the filesystem plugin, and installs a blob URL
 on the required Host theme link. Listeners are installed before href assignment;
 CSS `load`, not href assignment, completes preparation. A failed stylesheet load

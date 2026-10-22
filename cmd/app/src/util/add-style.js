@@ -21,7 +21,9 @@ export function ensureThemeStylesheetLink(
   const sourceHref = source.getAttribute("href")
 
   if (target) {
-    if (sourceHref && target.getAttribute("href") !== sourceHref) {
+    if (!sourceHref) {
+      target.removeAttribute("href")
+    } else if (target.getAttribute("href") !== sourceHref) {
       target.setAttribute("href", sourceHref)
     }
     return target

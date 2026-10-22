@@ -130,7 +130,10 @@ export async function prepareTheme(config) {
 
     document.querySelectorAll("view-area, view-popup").forEach((el) => {
         const shadowLink = el.shadowRoot?.querySelector("link[data-theme-stylesheet]")
-        if (shadowLink) shadowLink.setAttribute("href", themeHref)
+        if (shadowLink) {
+            if (themeHref === null) shadowLink.removeAttribute("href")
+            else shadowLink.setAttribute("href", themeHref)
+        }
     })
 
     if (previousUrl) URL.revokeObjectURL(previousUrl)

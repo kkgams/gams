@@ -10,12 +10,18 @@ function unwrapRead(result) {
 // Resolving and reading a Project theme requires the filesystem bootstrap, not
 // other plugins or UI Services. Stylesheet load is part of startup completion.
 export async function loadProjectTheme(config, { projectUnits, runtime, document, url = URL }) {
-    if (!config || !config.ui || !config.ui.theme) throw new Error("gams config ui.theme.url is required")
-    const source = config.ui.theme.url ?? config.ui.theme.path
-    if (typeof source !== "string" || source.length === 0) throw new Error("gams config ui.theme.url is required")
+    if (!config || !config.ui || typeof config.ui !== "object" || Array.isArray(config.ui))
+        throw new Error("gams config ui must be an object")
     const link = document.getElementById("theme-stylesheet")
     if (!link || link.tagName !== "LINK" || link.getAttribute("rel") !== "stylesheet")
         throw new Error("Host theme stylesheet link is required")
+    // An absent/null theme means base styling, not a missing required Unit.
+    if (config.ui.theme == null) {
+        link.removeAttribute("href")
+        return { path: null, href: null }
+    }
+    const source = config.ui.theme.url ?? config.ui.theme.path
+    if (typeof source !== "string" || source.trim().length === 0) throw new Error("gams config ui.theme.url is required")
 
     const path = await projectUnits.resolve(source)
     const bytes = unwrapRead(await runtime.invoke("fs/fs::read-file", path))
