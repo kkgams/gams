@@ -48,6 +48,24 @@ class PromoContentTests(unittest.TestCase):
                 self.assertIn(copyright_notice, license_text)
                 self.assertIn("SIL OPEN FONT LICENSE Version 1.1", license_text)
 
+    def test_accent_text_contrast_in_both_themes(self):
+        css = (ROOT / "promo/style.css").read_text()
+        base = re.search(r":root \{(.*?)\}", css, re.S).group(1)
+        light = re.search(r':root\[data-theme="light"\] \{(.*?)\}', css, re.S).group(1)
+        def colors(block):
+            return dict(re.findall(r"--([\w-]+):\s*(#[\da-f]{6});", block))
+
+        def luminance(color):
+            channels = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+            linear = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4 for value in channels]
+            return sum(value * weight for value, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+        for theme, tokens in [("dark", colors(base)), ("light", colors(base) | colors(light))]:
+            for foreground, background in [("accent-ink", "page-bg"), ("accent-ink", "surface"), ("on-accent", "accent")]:
+                with self.subTest(theme=theme, foreground=foreground, background=background):
+                    values = sorted([luminance(tokens[foreground]), luminance(tokens[background])])
+                    self.assertGreaterEqual((values[1] + 0.05) / (values[0] + 0.05), 4.5)
+
     def test_header_logo_is_cropped_inline_and_theme_aware(self):
         logo = ET.parse(ROOT / "promo/new_logo.svg").getroot()
         ns = {"svg": "http://www.w3.org/2000/svg"}

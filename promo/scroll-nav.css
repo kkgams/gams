@@ -1,7 +1,9 @@
-:root { --scroll-bg: var(--page-bg); --scroll-ink: var(--ink); --scroll-accent: var(--accent); }
+:root { --scroll-bg: var(--page-bg); --scroll-ink: var(--ink); --scroll-accent: var(--accent-ink); }
 /* This navigation replaces browser chrome, not the scrolling mechanism. */
-html.scroll-nav-enabled, html.scroll-nav-enabled body { scrollbar-width: none; -ms-overflow-style: none; }
-html.scroll-nav-enabled::-webkit-scrollbar, html.scroll-nav-enabled body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (min-width: 700px) {
+    html.scroll-nav-enabled, html.scroll-nav-enabled body { scrollbar-width: none; -ms-overflow-style: none; }
+    html.scroll-nav-enabled::-webkit-scrollbar, html.scroll-nav-enabled body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}
 .scroll-ruler { position: fixed; inset: 0 0 0 auto; width: 60px; z-index: 40; overflow: hidden; cursor: crosshair; touch-action: none; user-select: none; color: var(--scroll-ink); }
 .scroll-ruler[hidden], .ruler-thumb[hidden], .ruler-readout[hidden] { display: none; }
 .ruler-readout { position: fixed; inset: 0 0 0 auto; width: 60px; z-index: 42; overflow: visible; color: var(--scroll-ink); pointer-events: none; }
@@ -24,5 +26,7 @@ html.scroll-nav-enabled::-webkit-scrollbar, html.scroll-nav-enabled body::-webki
 .scroll-label-hit { position: absolute; pointer-events: auto; cursor: pointer; border-radius: 2px; }
 .scroll-label-static { pointer-events: none; cursor: default; }
 .scroll-label-hit:focus-visible { outline: 1px solid var(--scroll-accent); outline-offset: 3px; background: color-mix(in srgb, var(--scroll-accent) 8%, transparent); }
-@media (max-width: 699px) { .scroll-ruler, .ruler-thumb, .ruler-readout { width: 32px; } .ruler-tick.major { width: 12px; } .ruler-tick { width: 6px; } .ruler-tick span { right: 16px; } }
+@media (max-width: 699px) {
+    .scroll-ruler, .ruler-thumb, .ruler-readout, .scroll-labels { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .ruler-thumb { transition: none; } }
