@@ -15,7 +15,7 @@ HOST_CXX_AUTO := $(shell if [ -x /Applications/Xcode.app/Contents/Developer/Tool
 HOST_CC ?= $(if $(CC),$(CC),$(HOST_CC_AUTO))
 HOST_CXX ?= $(if $(CXX),$(CXX),$(HOST_CXX_AUTO))
 
-.PHONY: run app-check app-test app-run app-build-release app-bundle-release app-icons game-icons-check serve-docs validate-docs clean
+.PHONY: run app-check app-test app-run app-build-release app-bundle-release app-icons game-icons-check serve-docs validate-docs build-docs serve-promo build-site clean
 
 # Deliberately independent: this checks Host Rust/Tauri source without sibling repos.
 app-check: app-icons
@@ -126,6 +126,9 @@ WIKI_VERSION ?= v1.4.0
 WIKI_MAKEFILE ?= $(BUILD_DIR)/wiki-$(WIKI_VERSION).mk
 WIKI_ENGINE ?= $(BUILD_DIR)/wiki-$(WIKI_VERSION)
 PORT ?= 8080
+DOCS_PORT ?= $(PORT)
+PROMO_PORT ?= 8081
+DOCS_OUTPUT ?= dist/docs
 
 $(WIKI_MAKEFILE):
 	mkdir -p "$(@D)"
@@ -137,11 +140,30 @@ docs/assets/game-icons.woff2: cmd/app/src/fonts/game-icons.woff2
 	cp "$<" "$@.tmp"
 	mv "$@.tmp" "$@"
 
-serve-docs validate-docs: $(WIKI_MAKEFILE) docs/assets/game-icons.woff2
+serve-docs validate-docs build-docs: $(WIKI_MAKEFILE) docs/assets/game-icons.woff2
 	@if [[ "$(abspath $(WIKI_ENGINE))" != "$(abspath $(BUILD_DIR)/wiki-$(WIKI_VERSION))" ]]; then
 	  test -f "$(WIKI_ENGINE)/scripts/serve.mjs" || { echo "Wiki engine not found: $(WIKI_ENGINE)" >&2; exit 1; }
 	fi
-	$(MAKE) -f "$(WIKI_MAKEFILE)" "$(patsubst %-docs,%,$@)" WIKI_REPOSITORY="$(WIKI_REPOSITORY)" WIKI_VERSION="$(WIKI_VERSION)" WIKI_ENGINE="$(WIKI_ENGINE)" WIKI_SOURCE="$(abspath docs)" PORT="$(PORT)"
+	$(MAKE) -f "$(WIKI_MAKEFILE)" "$(patsubst %-docs,%,$@)" WIKI_REPOSITORY="$(WIKI_REPOSITORY)" WIKI_VERSION="$(WIKI_VERSION)" WIKI_ENGINE="$(WIKI_ENGINE)" WIKI_SOURCE="$(abspath docs)" WIKI_OUTPUT="$(abspath $(DOCS_OUTPUT))" PORT="$(DOCS_PORT)"
+
+# Promo edits are live; /docs redirects to the independently running docs server.
+serve-promo:
+	python3 scripts/serve-promo.py --port "$(PROMO_PORT)" --docs-port "$(DOCS_PORT)"
+
+# Publish only promo and the assembled wiki, never the Host source tree.
+# Dereference the wiki's historical route aliases for the Pages artifact.
+build-site:
+	mkdir -p dist
+	stage=$$(mktemp -d "$(abspath dist)/.site.XXXXXX")
+	trap 'rm -rf "$$stage"' EXIT
+	$(MAKE) build-docs DOCS_OUTPUT="$$stage/wiki"
+	mkdir "$$stage/site"
+	cp -R promo/. "$$stage/site/"
+	cp -RL "$$stage/wiki" "$$stage/site/docs"
+	touch "$$stage/site/.nojekyll"
+	rm -rf dist/site
+	mv "$$stage/site" dist/site
+	@echo 'Built Pages site: dist/site'
 
 clean:
 	rm -rf "$(BUILD_DIR)"

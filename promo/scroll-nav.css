@@ -1,0 +1,28 @@
+:root { --scroll-bg: var(--page-bg); --scroll-ink: var(--ink); --scroll-accent: var(--accent); }
+/* This navigation replaces browser chrome, not the scrolling mechanism. */
+html.scroll-nav-enabled, html.scroll-nav-enabled body { scrollbar-width: none; -ms-overflow-style: none; }
+html.scroll-nav-enabled::-webkit-scrollbar, html.scroll-nav-enabled body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.scroll-ruler { position: fixed; inset: 0 0 0 auto; width: 60px; z-index: 40; overflow: hidden; cursor: crosshair; touch-action: none; user-select: none; color: var(--scroll-ink); }
+.scroll-ruler[hidden], .ruler-thumb[hidden], .ruler-readout[hidden] { display: none; }
+.ruler-readout { position: fixed; inset: 0 0 0 auto; width: 60px; z-index: 42; overflow: visible; color: var(--scroll-ink); pointer-events: none; }
+.ruler-scale { position: absolute; inset: 0 0 auto; will-change: transform; pointer-events: none; }
+.ruler-tick { position: absolute; right: 0; width: 10px; height: 1px; background: currentColor; opacity: .32; transform-origin: right center; }
+.ruler-tick.major { width: 20px; opacity: .65; }
+.ruler-tick span { position: absolute; right: 24px; top: 0; transform: translateY(-50%); font: 400 12px/1 var(--font-mono); letter-spacing: .08em; opacity: .7; }
+.ruler-position { position: absolute; inset: 0 0 auto; height: 1px; background: var(--scroll-accent); box-shadow: 0 0 6px var(--scroll-accent); pointer-events: none; }
+.ruler-position span { position: absolute; right: 2px; top: 5px; font: 400 12px/1 var(--font-mono); letter-spacing: .08em; color: var(--scroll-accent); }
+/* Separate fixed layer: the thumb wins hit-testing over letters only in its own bounds. */
+.ruler-thumb { position: fixed; inset: 0 0 auto auto; width: 60px; z-index: 41; color: var(--scroll-ink); background: color-mix(in srgb, var(--scroll-bg) 75%, transparent); backdrop-filter: blur(6px); border-block: 1px solid color-mix(in srgb, var(--scroll-ink) 45%, transparent); opacity: 0; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; transition: opacity .2s; }
+.ruler-thumb:hover, .scroll-ruler:is(:hover, :focus-visible, .dragging) ~ .ruler-thumb { opacity: 1; }
+.scroll-ruler.dragging ~ .ruler-thumb { cursor: grabbing; }
+.scroll-ruler:focus-visible { outline: 1px solid var(--scroll-accent); outline-offset: -2px; }
+.scroll-labels { pointer-events: none; position: fixed; inset: 0; z-index: 40; font: 600 34px/1 var(--font-heading); color: var(--scroll-ink); }
+.scroll-letter { position: absolute; top: 0; left: 0; white-space: pre; will-change: transform; text-shadow: 0 0 4px var(--scroll-bg), 0 0 10px var(--scroll-bg); }
+/* Re-rasterize the hero as it grows after a restored mid-page load. */
+.scroll-letter-hero { will-change: auto; }
+.scroll-letter.hovered { color: var(--scroll-accent); }
+.scroll-label-hit { position: absolute; pointer-events: auto; cursor: pointer; border-radius: 2px; }
+.scroll-label-static { pointer-events: none; cursor: default; }
+.scroll-label-hit:focus-visible { outline: 1px solid var(--scroll-accent); outline-offset: 3px; background: color-mix(in srgb, var(--scroll-accent) 8%, transparent); }
+@media (max-width: 699px) { .scroll-ruler, .ruler-thumb, .ruler-readout { width: 32px; } .ruler-tick.major { width: 12px; } .ruler-tick { width: 6px; } .ruler-tick span { right: 16px; } }
+@media (prefers-reduced-motion: reduce) { .ruler-thumb { transition: none; } }

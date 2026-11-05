@@ -44,7 +44,7 @@ From `gams/` with its development shell active:
 
 ```sh
 make serve-docs
-make serve-docs PORT=3000
+make serve-docs DOCS_PORT=3000
 make validate-docs
 ```
 
@@ -74,4 +74,6 @@ over. `WIKI_MAKEFILE=/path/to/wiki/Makefile` also allows a local upstream Makefi
 `WIKI_VERSION` selects another release and a separate cache path. `make clean`
 removes the default engine/Makefile caches. The server binds only to loopback
 and stops with Ctrl-C. This target does not publish or bundle docs inside the
-Host.
+Host. `make build-site` assembles promo at the Pages root and this wiki under
+`/docs/`; see the [repository README](https://github.com/kkgams/gams#promo-and-documentation)
+for publishing and independent local promo/docs previews.

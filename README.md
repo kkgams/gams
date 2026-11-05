@@ -117,11 +117,56 @@ example Project and visitor game. The Host neither vendors Project Units nor
 ships a Project or station ZIP. Users supply an external Project root with
 `gams.json` paths to independently installed Units.
 
-## Documentation preview
+## Promo and documentation
 
-Run `make serve-docs` from the development shell and open
-<http://localhost:8080>. Use `PORT=3000` for another port. This uses the same
-pinned wiki engine as `imprint-zero`, delegating to its upstream Makefile
+Run these in separate terminals from the development shell:
+
+```sh
+make serve-promo   # http://localhost:8081
+make serve-docs    # http://localhost:8080
+```
+
+Both serve live source: `promo/` contains the GAMS landing page as plain HTML,
+CSS, and JavaScript, with no package installation or frontend build dependency.
+Its scroll ruler and animated section links support keyboard navigation and
+reduced motion. The header includes a Project Unit resource directory, desktop
+downloads, GitHub, a saved light/dark preference, and a responsive mobile menu.
+Launch App opens `promo/app.html`, an explicit web-version-coming-soon page;
+there is no browser Host release linked there. `docs/` remains the canonical
+documentation. The promo preview's `/docs/` link
+redirects to the separate docs server, which must also be running. Both servers
+bind only to loopback; stop each with Ctrl-C. Python 3 serves promo; docs
+validation/build requires Node.js 22+, Make, curl, and tar (all available in the
+development shell).
+
+Override ports independently, using the same `DOCS_PORT` in both terminals:
+
+```sh
+make serve-promo PROMO_PORT=3000 DOCS_PORT=3001
+make serve-docs DOCS_PORT=3001
+```
+
+`PORT=3000` remains a compatible docs-only override; `DOCS_PORT` takes precedence.
+
+### GitHub Pages
+
+`make build-site` assembles `dist/site/`: promo at the site root and the pinned
+wiki with current docs at `docs/`. Generated output is ignored; no content is
+moved or duplicated in source. Wiki validation runs before replacing the site.
+`make build-docs` assembles only the wiki into `dist/docs/`.
+
+`.github/workflows/pages.yml` checks builds on pull requests and deploys pushes
+to the current default branch, `release` (or manual runs on that branch).
+In GitHub **Settings → Pages → Build and deployment**, select **GitHub Actions**
+as the source and allow the `github-pages` environment to deploy that branch.
+The resulting URLs are <https://kkgams.github.io/gams/> and
+<https://kkgams.github.io/gams/docs/>. Promo uses relative links, so the repository
+prefix does not need to be hardcoded. This workflow publishes web content only;
+it does not build or publish desktop releases.
+
+### Documentation engine
+
+`make serve-docs` delegates to the pinned wiki engine's upstream Makefile
 cached under `build.nosync`. It serves the wiki-native `docs/` files directly,
 without a preview script or content mirror. `make validate-docs` runs upstream
 validation. See the [documentation home](docs/index.md) for details and overrides.

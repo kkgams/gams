@@ -39,6 +39,40 @@ test('docs targets delegate to cached upstream Makefile with canonical docs and 
   });
 });
 
+test('docs port has an independent override and defaults remain compatible', async () => {
+  await fixture(async ({ make }) => {
+    let result = make('serve-docs');
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\|8080\|/);
+    result = make('serve-docs', 'PORT=3333', 'DOCS_PORT=4444');
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\|4444\|/);
+    result = make('-n', 'serve-promo', 'PROMO_PORT=5555', 'DOCS_PORT=4444');
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /--port "5555" --docs-port "4444"/);
+  });
+});
+
+test('site assembly nests the wiki, resolves aliases, and preserves output on failure', async () => {
+  await fixture(async ({ directory, make }) => {
+    await mkdir(join(directory, 'promo'));
+    await writeFile(join(directory, 'promo/index.html'), '<a href="docs/">Docs</a>');
+    await writeFile(join(directory, 'build.nosync/wiki-v1.4.0.mk'),
+      'build:\n\t@test "$(FAIL_BUILD)" != yes\n\t@mkdir -p "$(WIKI_OUTPUT)/content"\n\t@printf wiki > "$(WIKI_OUTPUT)/index.html"\n\t@printf page > "$(WIKI_OUTPUT)/content/original.md"\n\t@ln -s original.md "$(WIKI_OUTPUT)/content/alias.md"\n');
+    let result = make('build-site');
+    assert.equal(result.status, 0, result.stderr);
+    const site = join(directory, 'dist/site');
+    assert.match(await readFile(join(site, 'index.html'), 'utf8'), /href="docs\/"/);
+    assert.equal(await readFile(join(site, 'docs/index.html'), 'utf8'), 'wiki');
+    assert.equal(await readFile(join(site, 'docs/content/alias.md'), 'utf8'), 'page');
+    assert.equal(await realpath(join(site, 'docs/content/alias.md')), join(await realpath(site), 'docs/content/alias.md'));
+    assert.equal(await readFile(join(site, '.nojekyll'), 'utf8'), '');
+    result = make('build-site', 'FAIL_BUILD=yes');
+    assert.notEqual(result.status, 0);
+    assert.equal(await readFile(join(site, 'docs/index.html'), 'utf8'), 'wiki');
+  });
+});
+
 test('custom engines must exist and are not overwritten', async () => {
   await fixture(async ({ directory, make }) => {
     await mkdir(join(directory, 'custom/scripts'), { recursive: true });
