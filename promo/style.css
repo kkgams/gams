@@ -123,7 +123,11 @@ section:focus {
 .hero-wordmark { display: none; }
 .hero-content {
     position: relative;
-    padding: calc(36vh + clamp(40px, 5vw, 72px)) 28px 135px;
+    padding: calc(36vh + min(41px, 4.1667vw) + 10px) 28px 135px;
+    text-align: center;
+}
+.hero-content > .eyebrow {
+    margin: 0;
     text-align: center;
 }
 .eyebrow,
@@ -663,7 +667,7 @@ h3 {
     }
     .hero-content {
         text-align: left;
-        padding: calc(36vh + 40px) 20px 110px;
+        padding: calc(36vh + clamp(13.5px, 4.1625vw, 28.5px) + 10px) 20px 110px;
     }
     .hero-footer {
         left: 20px;
