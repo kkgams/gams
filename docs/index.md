@@ -1,9 +1,38 @@
 ---
-title: GAMS Host documentation
+title: GAMS documentation
 status: reference
 ---
 
-# GAMS Host documentation
+# GAMS
+
+## An editor built around your game
+
+GAMS is a workspace for building an editor that feels at home in your game.
+The game is not a preset inside GAMS, and it does not need to become a GAMS
+runtime application. Instead, you compose the editing tools around the game's
+content, systems, and visual language.
+
+The useful connection to a headless CMS is separation: content and game logic
+can remain independent of the interface used to author them. GAMS adds a
+composable editing workspace without prescribing one game engine, renderer,
+or universal content model.
+
+The goal is more than putting a different skin on a generic editor:
+
+- **The game's language.** Editors should expose the game's own concepts,
+  such as equipment, abilities, encounters, tracks, or districts.
+- **The game's systems.** Views and plugins can provide authoring tools for
+  the data and rules the game actually uses. Integration belongs to the
+  Project; GAMS does not automatically share or embed a game's runtime.
+- **The game's identity.** Themes and game-specific Views can bring the
+  game's visual language into its tools. Maps, worlds, inventories, and
+  logic editors should feel like parts of the same creative environment.
+
+A Project selects independently maintained Units and supplies its own content
+and configuration. The Host provides the shared runtime and workspace. Your
+game keeps its identity; its editor grows around it.
+
+## Using this documentation
 
 This wiki serves the canonical Markdown in `gams/docs` directly. The sidebar
 lists all pages; use the filter to find a topic.

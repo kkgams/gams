@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111315">
-  <meta name="description" content="GAMS is a runtime and desktop Host for your Projects. Compose independently released plugins, Views, UI Services, and themes.">
-  <meta property="og:title" content="GAMS — Your Project. Your workspace.">
+  <meta name="description" content="GAMS is a runtime and desktop Host for your Projects. Compose independently released plugins, Views, and themes.">
+  <meta property="og:title" content="GAMS: Your Project. Your workspace.">
   <meta property="og:description" content="A runtime and desktop Host. Your Project brings the tools, content, and configuration.">
   <meta property="og:type" content="website">
-  <title>GAMS — Your Project. Your workspace.</title>
+  <title>GAMS: Your Project. Your workspace.</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -28,17 +28,17 @@
       <details class="resources">
         <summary class="nav-link">Resources<svg class="resources-chevron" viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg></summary>
         <div class="resources-panel">
-          <div class="resources-heading"><span>PROJECT UNITS</span><a href="docs/#/project-unit-installation">How Units work ↗</a></div>
+          <div class="resources-heading"><span>UNITS</span><a href="docs/#/project-unit-installation">How Units work</a></div>
           <div class="resource-groups">
             <div><h2>Views</h2><a href="https://github.com/kkgams/view.files">Files <span>Browse Project files</span></a><a href="https://github.com/kkgams/view.code">Code <span>Edit in your workspace</span></a><a href="https://github.com/kkgams/view.animation">Animation <span>Work with animation</span></a></div>
             <div><h2>Plugins</h2><a href="https://github.com/kkgams/plugin.fs">Filesystem <span>Project file access</span></a><a href="https://github.com/kkgams/plugin.sql">SQL <span>Database capabilities</span></a></div>
-            <div><h2>UI Services</h2><a href="https://github.com/kkgams/ui-service.layout">Layout <span>Arrange the workspace</span></a><a href="https://github.com/kkgams/ui-service.popup">Popup <span>Shared popup flows</span></a></div>
             <div><h2>Themes</h2><a href="https://github.com/kkgams/theme.the98">The98 <span>A classic desktop theme</span></a></div>
           </div>
-          <a class="resources-docs" href="docs/">Explore the Host documentation <span aria-hidden="true">↗</span></a>
+          <a class="resources-docs" href="docs/">Explore the Host documentation</a>
         </div>
       </details>
       <a href="#download" class="nav-link">Download</a>
+      <a href="docs/" class="nav-link">Docs</a>
     </nav>
     <div class="nav-actions">
       <a class="icon-control" href="https://github.com/kkgams/gams" aria-label="GAMS on GitHub" title="GAMS on GitHub"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 1.72 2.63 1.22 3.27.93.1-.73.39-1.22.71-1.5-2.5-.28-5.13-1.25-5.13-5.56 0-1.23.44-2.23 1.16-3.01-.12-.29-.5-1.43.11-2.98 0 0 .95-.3 3.1 1.15a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.15 3.1-1.15.61 1.55.23 2.69.11 2.98.72.78 1.16 1.78 1.16 3.01 0 4.32-2.63 5.28-5.14 5.56.4.35.76 1.03.76 2.08v3.1c0 .3.2.65.78.54A11.25 11.25 0 0 0 12 .75Z"/></svg></a>
@@ -53,81 +53,418 @@
         <p class="eyebrow">A RUNTIME FOR YOUR PROJECTS</p>
         <h1>Your Project.<br>Your <em>workspace.</em></h1>
         <p class="intro">One Host. Independently released tools.<br>Bring your Project. Choose what belongs.</p>
-        <a class="button" href="docs/">EXPLORE THE DOCS</a>
+        <a class="button" href="#download">GET STARTED</a>
       </div>
-      <div class="hero-footer"><span>GAMS / <span class="hero-footer-detail">BUILT AROUND </span>YOUR PROJECT</span><span>PLUGINS · VIEWS · UI SERVICES · THEMES</span></div>
+      <div class="hero-footer"><span>GAMS / <span class="hero-footer-detail">BUILT AROUND </span>YOUR PROJECT</span><span>PLUGINS · VIEWS · THEMES</span></div>
     </section>
     <section id="projects" data-scroll-label="PROJECTS">
-      <div class="section-meta"><span>01 / PROJECTS</span><span>START WITH YOUR DIRECTORY</span></div>
+      <div class="section-meta"><span>01 / PROJECTS</span><span>AN EDITOR THAT BELONGS IN YOUR GAME</span></div>
       <div class="section-content">
-        <p class="eyebrow">YOUR WORK HAS A HOME</p>
-        <h2>A Project.<br>Not a <em>preset.</em></h2>
-        <p>A GAMS Project is an external directory rooted at <code>gams.json</code>. It owns its configuration, content, and choice of Project Units. The Host opens it; it does not bundle a Project of its own.</p>
-        <div class="tiles" aria-label="Project building blocks">
-          <div><span aria-hidden="true">⌘</span>Configuration</div>
-          <div><span aria-hidden="true">⊞</span>Views</div>
-          <div><span aria-hidden="true">↗</span>Plugins</div>
-          <div><span aria-hidden="true">◉</span>Themes</div>
+        <h2>Your game. Its <em>editor.</em></h2>
+        <p>GAMS is built around your game, not the other way around. Bring your game's UI, systems, and visual language into the tools you use to create it.</p>
+        <div class="project-grid" aria-label="A workspace shaped around your game">
+          <article class="project-card">
+            <div class="unit-label"><span>FANTASY RPG</span><span>01</span></div>
+            <img src="images/projects/fantasy-rpg.png" width="1551" height="1014" loading="lazy" decoding="async" alt="Fantasy-themed GAMS workspace with gold dragon motifs, parchment panels, a character editor, and an animation database.">
+            <div class="project-copy"><h3>Speak your game's language.</h3><p>Equipment, abilities, quests. Build editors around the things that matter in your game, with an interface that feels like part of its world.</p></div>
+          </article>
+          <article class="project-card">
+            <div class="unit-label"><span>BULLET HEAVEN</span><span>02</span></div>
+            <img src="images/projects/bullet-heaven.png" width="1536" height="1024" loading="lazy" decoding="async" alt="Forest-themed GAMS editor with a pixel-art arena, projectile pattern preview, encounter graph, and enemy wave timeline.">
+            <div class="project-copy"><h3>Shape every encounter.</h3><p>Work with enemy waves, projectile patterns, and encounter rules. Bring your game's systems into the tools that shape them.</p></div>
+          </article>
+          <article class="project-card">
+            <div class="unit-label"><span>COMBAT RACING</span><span>03</span></div>
+            <img src="images/projects/combat-racing.png" width="1551" height="1014" loading="lazy" decoding="async" alt="Sci-fi racing GAMS workspace with vehicle tuning, a car physics node graph, a neon track editor, and wheel properties.">
+            <div class="project-copy"><h3>Build the track. Tune the race.</h3><p>Tracks, vehicles, and race logic in a workspace built for your workflow. Your tools follow the game, not a generic editor's idea of it.</p></div>
+          </article>
+          <article class="project-card">
+            <div class="unit-label"><span>CYBERPUNK ACTION</span><span>04</span></div>
+            <img src="images/projects/cyberpunk-action.png" width="1536" height="1024" loading="lazy" decoding="async" alt="Industrial GAMS editor with a rain-soaked cyberpunk district, character augmentations, mission logic nodes, and patrol routes.">
+            <div class="project-copy"><h3>Create worlds from the inside.</h3><p>Districts, augmentations, and mission logic. Give your editors the same visual identity and vocabulary as the game you're creating.</p></div>
+          </article>
         </div>
-        <a class="text-link" href="docs/#/project-unit-installation">PROJECTS &amp; UNIT INSTALLATION ↗</a>
+        <a class="text-link" href="docs/">DISCOVER GAMS</a>
       </div>
     </section>
-    <section id="units" data-scroll-label="PROJECT UNITS">
-      <div class="section-meta"><span>02 / PROJECT UNITS</span><span>SEPARATE PARTS. ONE WORKSPACE.</span></div>
+    <section id="units" data-scroll-label="UNITS">
+      <div class="section-meta"><span>02 / UNITS</span><span>SEPARATE PARTS. ONE WORKSPACE.</span></div>
       <div class="section-content">
-        <p class="eyebrow">COMPOSE THE TOOLS YOU NEED</p>
-        <h2>Independent tools.<br>A shared <em>place.</em></h2>
-        <p>Plugins, Views, UI Services, and themes are independently released Project Units. Your Project declares the ones it uses; GAMS loads them into the workspace.</p>
-        <div class="diagram" aria-label="Four kinds of Project Unit"><span>PLUGINS</span><i aria-hidden="true">/</i><span>VIEWS</span><i aria-hidden="true">/</i><span>UI SERVICES</span><i aria-hidden="true">/</i><span>THEMES</span></div>
-        <a class="text-link" href="docs/#/direct-file-downloads">HOW UNITS ARE LOADED ↗</a>
+        <svg class="unit-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0"><defs>
+          <symbol id="unit-preview-files" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/>
+                <path class="art-rule" d="M48 67h384M156 67v168"/>
+                <circle class="art-accent" cx="65" cy="51" r="3"/>
+                <text x="80" y="55">PROJECT / FILES</text>
+                <path class="art-rule" d="M65 91h12l4 5h30v19H65zM65 137h12l4 5h30v19H65zM65 183h12l4 5h30v19H65z"/>
+                <rect class="art-selection" x="172" y="80" width="244" height="34"/>
+                <text class="art-ink" x="186" y="102">gams.json</text>
+                <text x="186" y="143">content/</text><text x="186" y="180">views/</text><text x="186" y="217">plugins/</text></symbol>
+          <symbol id="unit-preview-sql" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/>
+                <path class="art-rule" d="M48 67h384M48 125h384M48 160h384M48 197h384M175 125v110M304 125v110"/>
+                <circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / DATABASE</text>
+                <text class="art-ink" x="65" y="102"><tspan class="art-accent">SELECT</tspan> * <tspan class="art-accent">FROM</tspan> content;</text>
+                <text x="65" y="148">ID</text><text x="192" y="148">NAME</text><text x="321" y="148">TYPE</text>
+                <text x="65" y="184">001</text><text class="art-ink" x="192" y="184">scene</text><text x="321" y="184">record</text>
+                <text x="65" y="221">002</text><text class="art-ink" x="192" y="221">actor</text><text x="321" y="221">record</text></symbol>
+          <symbol id="unit-preview-theme" viewBox="0 0 480 270"><rect class="art-panel" x="72" y="35" width="312" height="175"/>
+                <path class="art-rule" d="M72 67h312"/><text x="89" y="55">PROJECT / APPEARANCE</text>
+                <rect class="art-panel" x="108" y="85" width="300" height="150"/>
+                <rect class="art-selection" x="108" y="85" width="300" height="30"/>
+                <text class="art-ink" x="124" y="105">THE98</text><path class="art-rule" d="m383 96 10 10m0-10-10 10"/>
+                <text x="128" y="145">A CLASSIC DESKTOP FEEL.</text>
+                <rect class="art-panel" x="128" y="167" width="76" height="44"/><rect class="art-selection" x="216" y="167" width="76" height="44"/><rect class="art-panel" x="304" y="167" width="84" height="44"/>
+                <path class="art-rule" d="M144 189h44M232 189h44M320 189h52"/></symbol>
+          <symbol id="unit-preview-code" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384M84 67v168"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / CODE</text><text x="62" y="99">1</text><text x="62" y="126">2</text><text x="62" y="153">3</text><text class="art-accent" x="104" y="99">function update(dt)</text><text class="art-ink" x="124" y="126">position.x = position.x + dt</text><text class="art-accent" x="104" y="153">end</text><path class="art-rule" d="M104 184h180M104 204h120"/></symbol>
+          <symbol id="unit-preview-image" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384M370 67v168"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / IMAGE</text><path class="art-rule" d="M68 87h282v128H68zM68 119h282M68 151h282M68 183h282M100 87v128M132 87v128M164 87v128M196 87v128M228 87v128M260 87v128M292 87v128M324 87v128"/><path class="art-selection" d="M132 183v-32h32v-32h32v-32h32v32h32v32h32v32z"/><rect class="art-selection" x="385" y="87" width="30" height="30"/><rect class="art-panel" x="385" y="131" width="30" height="30"/><rect class="art-panel" x="385" y="175" width="30" height="30"/></symbol>
+          <symbol id="unit-preview-animation" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / ANIMATION</text><path class="art-rule" d="M48 67h384M48 173h384M122 173v62M48 204h384"/><rect class="art-panel" x="168" y="86" width="144" height="68"/><path class="art-selection" d="m225 103 30 17-30 17z"/><text x="64" y="193">IDLE</text><text x="64" y="224">RUN</text><path class="art-rule" d="M146 188h260M146 220h260"/><path class="art-selection" d="m164 182 6 6-6 6-6-6zM218 182l6 6-6 6-6-6zM272 182l6 6-6 6-6-6zM326 182l6 6-6 6-6-6zM190 214l6 6-6 6-6-6zM298 214l6 6-6 6-6-6z"/></symbol>
+          <symbol id="unit-preview-map" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / WORLD</text><path class="art-rule" d="M48 67h384M80 67v168M112 67v168M144 67v168M176 67v168M208 67v168M240 67v168M272 67v168M304 67v168M336 67v168M368 67v168M400 67v168M48 99h384M48 131h384M48 163h384M48 195h384M48 227h384"/><path class="art-selection" d="M112 99h96v32h64v32h96v32H240v-32h-64v-32h-64z"/><circle class="art-accent" cx="128" cy="115" r="5"/><circle class="art-accent" cx="352" cy="179" r="5"/></symbol>
+          <symbol id="unit-preview-font" viewBox="0 0 480 270"><rect class="art-panel" x="48" y="35" width="384" height="200"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / FONT ATLAS</text><path class="art-rule" d="M48 67h384M48 152h384M144 67v168M240 67v168M336 67v168"/><text class="art-ink art-glyph" x="74" y="129">Aa</text><text class="art-accent art-glyph" x="172" y="129">Bb</text><text class="art-ink art-glyph" x="266" y="129">Cc</text><text class="art-glyph" x="360" y="129">Dd</text><text class="art-glyph" x="73" y="211">Ee</text><text class="art-glyph" x="169" y="211">Ff</text><text class="art-glyph" x="265" y="211">Gg</text><text class="art-glyph" x="361" y="211">Hh</text></symbol>
+          <symbol id="unit-preview-nodes" viewBox="0 0 480 270">
+            <rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / NODE GRAPH</text>
+            <path class="art-rule" d="M164 116c48 0 24 40 72 40M164 196c48 0 24-40 72-40M322 156h30"/>
+            <rect class="art-panel" x="68" y="88" width="96" height="56"/><rect class="art-panel" x="68" y="168" width="96" height="56"/><rect class="art-selection" x="236" y="128" width="86" height="56"/><rect class="art-panel" x="352" y="128" width="60" height="56"/>
+            <text x="82" y="121">INPUT</text><text x="82" y="201">VALUE</text><text class="art-ink" x="250" y="161">LOGIC</text><text x="366" y="161">OUT</text>
+            <circle class="art-accent" cx="164" cy="116" r="4"/><circle class="art-accent" cx="164" cy="196" r="4"/><circle class="art-accent" cx="236" cy="156" r="4"/><circle class="art-accent" cx="322" cy="156" r="4"/>
+          </symbol>
+          <symbol id="unit-preview-markov" viewBox="0 0 480 270">
+            <rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / MARKOV</text>
+            <path class="art-rule" d="M72 91h112v112H72zM100 91v112M128 91v112M156 91v112M72 119h112M72 147h112M72 175h112M248 91h160v112H248zM280 91v112M312 91v112M344 91v112M376 91v112M248 119h160M248 147h160M248 175h160"/>
+            <path class="art-selection" d="M100 119h28v28h28v28h-56zM248 119h32v28h64v28h32v28h-64v-28h-32v-28h-32zM344 91h32v28h32v28h-32v-28h-32z"/>
+            <text x="72" y="222">RULE</text><text x="248" y="222">GENERATE</text><path class="art-rule" d="M204 147h24m-8-8 8 8-8 8"/>
+          </symbol>
+          <symbol id="unit-preview-respack" viewBox="0 0 480 270">
+            <rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / RESOURCE PACK</text>
+            <rect class="art-panel" x="68" y="87" width="128" height="32"/><rect class="art-panel" x="68" y="135" width="128" height="32"/><rect class="art-panel" x="68" y="183" width="128" height="32"/>
+            <text x="82" y="108">SPRITES</text><text x="82" y="156">AUDIO</text><text x="82" y="204">DATA</text>
+            <path class="art-rule" d="M196 103h24v48h44M196 151h68M196 199h24v-48"/><rect class="art-selection" x="264" y="103" width="144" height="96"/><path class="art-rule" d="M264 132h144M308 103v29"/>
+            <text class="art-ink" x="282" y="158">GAME.RSPK</text><text x="282" y="182">PACKED ASSETS</text>
+          </symbol>
+        </defs></svg>
+        <div class="unit-grid" aria-label="Explore Units">
+          <a class="unit-card" href="https://github.com/kkgams/view.files" aria-labelledby="unit-view-files unit-view-files-kind">
+            <div class="unit-label"><span class="unit-number">01</span><span>File browser</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-files"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Fi</span>
+              <h3 id="unit-view-files">Files</h3>
+              <p>Browse and manage your Project files, with open and save selection.</p>
+              <span class="unit-kind" id="unit-view-files-kind">View</span>
+              <span class="unit-explore">Explore Files</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.code" aria-labelledby="unit-view-code unit-view-code-kind">
+            <div class="unit-label"><span class="unit-number">02</span><span>Code editor</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Co</span>
+              <h3 id="unit-view-code">Code</h3>
+              <p>Edit source files without leaving your workspace.</p>
+              <span class="unit-kind" id="unit-view-code-kind">View</span>
+              <span class="unit-explore">Explore Code</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.animation" aria-labelledby="unit-view-animation unit-view-animation-kind">
+            <div class="unit-label"><span class="unit-number">03</span><span>Animation tools</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-animation"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">An</span>
+              <h3 id="unit-view-animation">Animation</h3>
+              <p>Work with animation trees, parameters, playback, and blend spaces.</p>
+              <span class="unit-kind" id="unit-view-animation-kind">View</span>
+              <span class="unit-explore">Explore Animation</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.sql" aria-labelledby="unit-view-sql unit-view-sql-kind">
+            <div class="unit-label"><span class="unit-number">04</span><span>Database browser</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Sq</span>
+              <h3 id="unit-view-sql">SQL</h3>
+              <p>Browse tables, edit rows, and inspect query results.</p>
+              <span class="unit-kind" id="unit-view-sql-kind">View</span>
+              <span class="unit-explore">Explore SQL</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.image" aria-labelledby="unit-view-image unit-view-image-kind">
+            <div class="unit-label"><span class="unit-number">05</span><span>Image editor</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Im</span>
+              <h3 id="unit-view-image">Image</h3>
+              <p>Work with images, canvas edits, animation timelines, and exports.</p>
+              <span class="unit-kind" id="unit-view-image-kind">View</span>
+              <span class="unit-explore">Explore Image</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.tilemap" aria-labelledby="unit-view-tilemap unit-view-tilemap-kind">
+            <div class="unit-label"><span class="unit-number">06</span><span>Tilemap editor</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Ti</span>
+              <h3 id="unit-view-tilemap">Tilemap</h3>
+              <p>Paint tilemaps and extract tiles for your game worlds.</p>
+              <span class="unit-kind" id="unit-view-tilemap-kind">View</span>
+              <span class="unit-explore">Explore Tilemap</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.world" aria-labelledby="unit-view-world unit-view-world-kind">
+            <div class="unit-label"><span class="unit-number">07</span><span>World editor</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Wo</span>
+              <h3 id="unit-view-world">World</h3>
+              <p>Build worlds and work with the objects inside them.</p>
+              <span class="unit-kind" id="unit-view-world-kind">View</span>
+              <span class="unit-explore">Explore World</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.character" aria-labelledby="unit-view-character unit-view-character-kind">
+            <div class="unit-label"><span class="unit-number">08</span><span>Character composer</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Ch</span>
+              <h3 id="unit-view-character">Character</h3>
+              <p>Browse a supplied equipment catalog and compose characters.</p>
+              <span class="unit-kind" id="unit-view-character-kind">View</span>
+              <span class="unit-explore">Explore Character</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/plugin.font" aria-labelledby="unit-plugin-font unit-plugin-font-kind">
+            <div class="unit-label"><span class="unit-number">09</span><span>Font atlases</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-font"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Ft</span>
+              <h3 id="unit-plugin-font">Font</h3>
+              <p>Generate distance-field font atlases and preview your typography.</p>
+              <span class="unit-kind" id="unit-plugin-font-kind">Plugin</span>
+              <span class="unit-explore">Explore Font</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/plugin.image" aria-labelledby="unit-plugin-image unit-plugin-image-kind">
+            <div class="unit-label"><span class="unit-number">10</span><span>Image processing</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Px</span>
+              <h3 id="unit-plugin-image">Image</h3>
+              <p>Crop, resize, transform, and export images through WASM.</p>
+              <span class="unit-kind" id="unit-plugin-image-kind">Plugin</span>
+              <span class="unit-explore">Explore Image</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/plugin.lua" aria-labelledby="unit-plugin-lua unit-plugin-lua-kind">
+            <div class="unit-label"><span class="unit-number">11</span><span>Scripting</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Lu</span>
+              <h3 id="unit-plugin-lua">Lua</h3>
+              <p>Run Lua scripts with access to the GAMS runtime.</p>
+              <span class="unit-kind" id="unit-plugin-lua-kind">Plugin</span>
+              <span class="unit-explore">Explore Lua</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/plugin.sql" aria-labelledby="unit-plugin-sql unit-plugin-sql-kind">
+            <div class="unit-label"><span class="unit-number">12</span><span>Database engine</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Db</span>
+              <h3 id="unit-plugin-sql">SQL</h3>
+              <p>Bring SQL database capabilities to your Project.</p>
+              <span class="unit-kind" id="unit-plugin-sql-kind">Plugin</span>
+              <span class="unit-explore">Explore SQL</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.ng" aria-labelledby="unit-view-ng unit-view-ng-kind">
+            <div class="unit-label"><span class="unit-number">13</span><span>Node graph editor</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-nodes"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Ng</span>
+              <h3 id="unit-view-ng">Node Graph</h3>
+              <p>Connect nodes and shape your Project logic in a visual graph.</p>
+              <span class="unit-kind" id="unit-view-ng-kind">View</span>
+              <span class="unit-explore">Explore Node Graph</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/view.markov" aria-labelledby="unit-view-markov unit-view-markov-kind">
+            <div class="unit-label"><span class="unit-number">14</span><span>Procedural generation</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-markov"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Mk</span>
+              <h3 id="unit-view-markov">Markov</h3>
+              <p>Explore rule-based generation and turn patterns into procedural worlds.</p>
+              <span class="unit-kind" id="unit-view-markov-kind">View</span>
+              <span class="unit-explore">Explore Markov</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/plugin.respack" aria-labelledby="unit-plugin-respack unit-plugin-respack-kind">
+            <div class="unit-label"><span class="unit-number">15</span><span>Resource packaging</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-respack"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Rp</span>
+              <h3 id="unit-plugin-respack">Resource Pack</h3>
+              <p>Build resource packs from your Project assets for use in your game.</p>
+              <span class="unit-kind" id="unit-plugin-respack-kind">Plugin</span>
+              <span class="unit-explore">Explore Resource Pack</span>
+            </div>
+          </a>
+          <a class="unit-card" href="https://github.com/kkgams/theme.the98" aria-labelledby="unit-theme-the98 unit-theme-the98-kind">
+            <div class="unit-label"><span class="unit-number">16</span><span>Classic desktop theme</span></div>
+            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-theme"/></svg></div>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">98</span>
+              <h3 id="unit-theme-the98">The98</h3>
+              <p>Give shared controls and Views a classic desktop feel.</p>
+              <span class="unit-kind" id="unit-theme-the98-kind">Theme</span>
+              <span class="unit-explore">Explore The98</span>
+            </div>
+          </a>
+        </div>
+        <a class="text-link" href="https://github.com/orgs/kkgams/repositories">EXPLORE MORE UNITS</a>
       </div>
     </section>
-    <section id="runtime" data-scroll-label="THE RUNTIME" class="long-section">
-      <div class="section-meta"><span>03 / THE RUNTIME</span><span>THE HOST DOES ITS PART</span></div>
+    <section id="runtime" data-scroll-label="THE RUNTIME" class="runtime">
+      <div class="section-meta"><span>03 / THE RUNTIME</span><span>ONE RUNTIME. YOUR CHOICE.</span></div>
       <div class="section-content">
-        <p class="eyebrow">SHARED FOUNDATIONS</p>
-        <h2>Less shell.<br>More <em>Project.</em></h2>
-        <p>The Host provides the runtime and shared browser UI APIs. Project Units supply the tools and behavior, without becoming part of the Host itself.</p>
-        <div class="feature-list">
-          <article><span aria-hidden="true">01</span><div><h3>WASM plugins.</h3><p>Run component-based plugins through the runtime. Keep tool capabilities in independently maintained Units.</p></div></article>
-          <article><span aria-hidden="true">02</span><div><h3>Browser-rendered Views.</h3><p>Build Views with Host-owned widgets, helpers, and semantic UI contracts. Let the Project's theme shape their presentation.</p></div></article>
-          <article><span aria-hidden="true">03</span><div><h3>Visible startup.</h3><p>Follow Unit downloads, ZIP extraction, cache reuse, and initialization through the Host's startup progress screen.</p></div></article>
+        <h2>One runtime. Every way you <em>work.</em></h2>
+        <p>CLI, desktop, and a webserver in one download. That’s the GAMS promise. Build locally, host on your own server, and bring your team into the same workspace.</p>
+        <div class="runtime-actions">
+          <a class="button" href="https://github.com/kkgams/gams/releases/latest"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v12H3zM3 4h18v4M7 12l3 3-3 3m6 0h4"/></svg>DOWNLOAD GAMS</a>
+          <a class="text-link" href="app.html">USE ON WEB</a>
         </div>
-        <a class="text-link" href="docs/#/project-loading">INSIDE PROJECT STARTUP ↗</a>
       </div>
     </section>
     <section id="ownership" data-scroll-label="OWNERSHIP">
-      <div class="section-meta"><span>04 / OWNERSHIP</span><span>CLEAR BOUNDARIES</span></div>
+      <div class="section-meta"><span>04 / OWNERSHIP</span><span>FREE &amp; OPEN SOURCE</span></div>
       <div class="section-content">
-        <p class="eyebrow">YOUR PROJECT STAYS YOURS</p>
-        <h2>Keep the Host.<br>Change the <em>parts.</em></h2>
-        <p>Project configuration lives in your directory. Views and plugins own their persistent state; the Host coordinates save hooks and writes the current configuration back to <code>gams.json</code>.</p>
-        <div class="boundary-list"><p><span>HOST</span> Runtime, shell, shared UI APIs</p><p><span>PROJECT</span> Configuration, content, selected Units</p><p><span>PROJECT UNITS</span> Tools, behavior, persistent state</p></div>
-        <a class="text-link" href="docs/#/project-saving">HOW PROJECT SAVING WORKS ↗</a>
+        <h2>Stop renting. Start <em>owning.</em></h2>
+        <p>GAMS and its Units are free and open source. No subscriptions. No rental fees. Yours to keep, change, and build on.</p>
+        <div class="ownership-grid">
+          <article>
+            <h3>Open source</h3>
+            <p>The whole GAMS is on GitHub. Read it, fork it, make it yours.</p>
+            <a class="text-link" href="https://github.com/kkgams/gams"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 1.72 2.63 1.22 3.27.93.1-.73.39-1.22.71-1.5-2.5-.28-5.13-1.25-5.13-5.56 0-1.23.44-2.23 1.16-3.01-.12-.29-.5-1.43.11-2.98 0 0 .95-.3 3.1 1.15a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.15 3.1-1.15.61 1.55.23 2.69.11 2.98.72.78 1.16 1.78 1.16 3.01 0 4.32-2.63 5.28-5.14 5.56.4.35.76 1.03.76 2.08v3.1c0 .3.2.65.78.54A11.25 11.25 0 0 0 12 .75Z"/></svg>VIEW SOURCE</a>
+          </article>
+          <article>
+            <h3>Yours to keep</h3>
+            <p>Download it once. Keep it forever. No subscription to keep your tools running.</p>
+          </article>
+          <article>
+            <h3>Your tools. Your data. Your rules.</h3>
+            <p>GAMS is offline-first, and so are its plugins. No tracking. No data harvesting. Just the tools you need, without compromising your privacy.</p>
+          </article>
+        </div>
       </div>
     </section>
-    <section id="build" data-scroll-label="BUILD A VIEW">
-      <div class="section-meta"><span>05 / BUILD A VIEW</span><span>WORK WITH THE HOST</span></div>
+    <section id="community" data-scroll-label="COMMUNITY">
+      <div class="section-meta"><span>05 / COMMUNITY</span><span>MADE WITH GAMS</span></div>
       <div class="section-content">
-        <p class="eyebrow">A COMMON UI LANGUAGE</p>
-        <h2>Your tools.<br>A consistent <em>interface.</em></h2>
-        <p>The View development guide defines the shared UI vocabulary: semantic elements, widgets, selectable grids, icons, and UI Services. Start there when building a View for GAMS.</p>
-        <a class="text-link" href="docs/#/gams-view-development-guide">READ THE VIEW DEVELOPMENT GUIDE ↗</a>
+        <h2>Made with <em>GAMS.</em></h2>
+        <div class="showcase-grid" aria-label="Game showcase concepts">
+          <figure class="showcase-card">
+            <figcaption class="showcase-label"><span>Bullet Paradise</span><span>01</span></figcaption>
+            <img src="images/showcase/bullet-paradise.jpg" width="1280" height="720" loading="lazy" decoding="async" alt="A top-down pixel-art adventurer surrounded by monsters and golden projectiles in lush forest ruins.">
+          </figure>
+          <figure class="showcase-card">
+            <figcaption class="showcase-label"><span>Combat Racer</span><span>02</span></figcaption>
+            <img src="images/showcase/combat-racer.jpg" width="1280" height="720" loading="lazy" decoding="async" alt="Chunky armed racing buggies drifting around an elevated track in an alien industrial desert.">
+          </figure>
+          <figure class="showcase-card">
+            <figcaption class="showcase-label"><span>Imprint Zero</span><span>03</span></figcaption>
+            <img src="images/showcase/imprint-zero.jpg" width="1280" height="720" loading="lazy" decoding="async" alt="A cybernetic soldier fighting security drones on a rain-soaked walkway above a ruined neon city.">
+          </figure>
+        </div>
       </div>
     </section>
-    <section id="download" data-scroll-label="DOWNLOAD">
-      <div class="section-meta"><span>06 / DOWNLOAD</span><span>GAMS FOR YOUR DESKTOP</span></div>
+    <section id="download" data-scroll-label="GET STARTED" class="get-started">
+      <div class="section-meta"><span>06 / GET STARTED</span><span>FREE &amp; OPEN SOURCE</span></div>
       <div class="section-content">
-        <p class="eyebrow">TAKE YOUR WORKSPACE WITH YOU</p>
-        <h2>Your desktop.<br>Your <em>GAMS.</em></h2>
-        <p>Get the desktop Host from the official GitHub releases. Bring an external Project and install its Project Units separately.</p>
-        <div class="download-card"><div><span class="eyebrow">AVAILABLE PLATFORM</span><h3>macOS · Apple Silicon</h3><p>Check the release notes for installation instructions and checksums. Current builds are not notarized.</p></div><a class="button" href="https://github.com/kkgams/gams/releases/latest">VIEW LATEST RELEASE</a></div>
-        <p class="platform-note">Linux and Windows executables are not currently available. The web version of GAMS is coming soon.</p>
-        <div class="closing-links"><a class="text-link" href="docs/">READ THE DOCUMENTATION ↗</a><a class="text-link" href="https://github.com/kkgams/gams/releases">ALL RELEASES ↗</a></div>
+        <div class="start-intro">
+          <h2>Start <em>building.</em></h2>
+          <p>Get GAMS. Pick your Units. Make something yours.</p>
+        </div>
+        <div class="start-grid">
+          <article class="start-panel">
+            <div class="start-panel-label"><span>GAMS</span><span>THE RUNTIME</span></div>
+            <div class="start-panel-content">
+              <div class="start-icons" aria-hidden="true"><svg class="start-logo" xmlns="http://www.w3.org/2000/svg" viewBox="16 16 179.066 168" width="32" height="30" fill="currentColor" aria-hidden="true" focusable="false"><path d="m 96,16 h 72 c 16,0 24,8 24,24 0,12 -8,20 -24,20 H 96 c -24,0 -40,16 -40,40 0,24 16,44 40,44 h 36 l 12,-24 H 96 l 12,-20 c 0,0 7.36053,-16 28,-16 h 36 c 20,0 28,12 20,32 l -28,52 c -8,12 -16,16 -32,16 H 96 C 48,184 16,148 16,100 16,52 48,16 96,16 Z"/></svg></div>
+              <h3>Your workspace.<br>Your way.</h3>
+              <p>Bring your ideas to life with an open-source runtime for desktop, command line, and the web.</p>
+              <div class="start-actions">
+                <a class="button" href="https://github.com/kkgams/gams/releases/latest">DOWNLOAD GAMS</a>
+                <a class="text-link" href="app.html">USE ON WEB</a>
+              </div>
+              <p class="start-platform">macOS · Apple Silicon</p>
+              <a class="start-release-link" href="https://github.com/kkgams/gams/releases">All releases &amp; installation notes</a>
+            </div>
+          </article>
+          <article class="start-panel">
+            <div class="start-panel-label"><span>UNITS</span><span>YOUR TOOLKIT</span></div>
+            <div class="start-panel-content">
+              <div class="start-icons" aria-hidden="true"><span>Fi</span><span>Co</span><span>Ng</span><span>Mk</span><span>+12</span></div>
+              <h3>Pick your tools.<br>Build your workflow.</h3>
+              <p>Discover Views, plugins, and themes. Start with what you need and expand as you go.</p>
+              <div class="start-actions">
+                <a class="button" href="#units">EXPLORE UNITS</a>
+                <a class="text-link" href="docs/#/gams-view-development-guide">CREATE A UNIT</a>
+              </div>
+              <p class="start-platform">VIEWS · PLUGINS · THEMES</p>
+              <a class="start-release-link" href="docs/#/project-unit-installation">How to add Units to your workspace</a>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
   </main>
-  <footer><span>GAMS / RUNTIME &amp; DESKTOP HOST</span><a href="https://github.com/kkgams/gams">GAMS ON GITHUB ↗</a></footer>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div class="footer-column footer-about">
+          <a class="footer-brand" href="#hero" aria-label="GAMS home"><svg class="footer-mark" xmlns="http://www.w3.org/2000/svg" viewBox="16 16 179.066 168" width="32" height="30" fill="currentColor" aria-hidden="true" focusable="false"><path d="m 96,16 h 72 c 16,0 24,8 24,24 0,12 -8,20 -24,20 H 96 c -24,0 -40,16 -40,40 0,24 16,44 40,44 h 36 l 12,-24 H 96 l 12,-20 c 0,0 7.36053,-16 28,-16 h 36 c 20,0 28,12 20,32 l -28,52 c -8,12 -16,16 -32,16 H 96 C 48,184 16,148 16,100 16,52 48,16 96,16 Z"/></svg><span>GAMS</span></a>
+          <p>Free, open-source tools for making games. Your workspace. Your rules.</p>
+        </div>
+        <nav class="footer-column" aria-labelledby="footer-quick-start">
+          <h2 id="footer-quick-start">Quick Start</h2>
+          <ul>
+            <li><a href="https://github.com/kkgams/example.game1">Example Project</a></li>
+            <li><a href="https://github.com/kkgams/template.game.c">C game starter</a></li>
+            <li><a href="https://github.com/kkgams/template.game.odin">Odin game starter</a></li>
+            <li><a href="https://github.com/kkgams/template.view">Create a View</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-column" aria-labelledby="footer-plugins">
+          <h2 id="footer-plugins">Plugins</h2>
+          <ul>
+            <li><a href="https://github.com/kkgams/plugin.font">Font</a></li>
+            <li><a href="https://github.com/kkgams/plugin.image">Image</a></li>
+            <li><a href="https://github.com/kkgams/plugin.lua">Lua</a></li>
+            <li><a href="https://github.com/kkgams/plugin.sql">SQL</a></li>
+            <li><a href="https://github.com/kkgams/plugin.respack">Resource Pack</a></li>
+            <li><a href="https://github.com/orgs/kkgams/repositories?q=plugin.">Explore all plugins</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-column" aria-labelledby="footer-views">
+          <h2 id="footer-views">Views</h2>
+          <ul>
+            <li><a href="https://github.com/kkgams/view.files">Files</a></li>
+            <li><a href="https://github.com/kkgams/view.code">Code</a></li>
+            <li><a href="https://github.com/kkgams/view.animation">Animation</a></li>
+            <li><a href="https://github.com/kkgams/view.ng">Node Graph</a></li>
+            <li><a href="https://github.com/kkgams/view.markov">Markov</a></li>
+            <li><a href="https://github.com/orgs/kkgams/repositories?q=view.">Explore all Views</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-column" aria-labelledby="footer-community">
+          <h2 id="footer-community">Community</h2>
+          <ul>
+            <li><a href="#community">Made with GAMS</a></li>
+            <li><a href="https://github.com/kkgams/gams">GAMS on GitHub</a></li>
+            <li><a href="https://github.com/kkgams/gams/issues">Report an issue</a></li>
+            <li><a href="https://github.com/kkgams/gams/pulls">Contribute</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="footer-meta"><span>GAMS · FREE &amp; OPEN SOURCE</span><a href="docs/">DOCUMENTATION</a><span>YOUR WORKSPACE. YOUR RULES.</span></div>
+    </div>
+  </footer>
   <script type="module" src="site-nav.js"></script>
   <script type="module">import { createScrollNav } from './scroll-nav.js'; createScrollNav();</script>
 </body>

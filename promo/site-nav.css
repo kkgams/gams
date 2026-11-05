@@ -8,7 +8,7 @@
     background: color-mix(in srgb, var(--page-bg) 96%, transparent);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line);
-    font: 500 14px / 1.5 var(--font-heading);
+    font: 500 12px / 1.5 var(--font-heading);
     letter-spacing: .03em;
 }
 .brand {
@@ -23,6 +23,9 @@
 .brand-mark { display: block; width: 32px; height: 30px; }
 .main-links, .nav-actions, .back-link { display: flex; align-items: stretch; }
 .nav-actions { margin-left: auto; }
+.main-links > .nav-link:last-child {
+    border-left: 1px solid var(--line);
+}
 .nav-link, .icon-control, .launch-app {
     display: inline-flex;
     align-items: center;
@@ -54,7 +57,7 @@
     color: var(--page-bg);
     font-weight: 500;
 }
-.launch-app:hover { background: var(--accent); color: var(--page-bg); }
+.launch-app:hover { background: color-mix(in srgb, var(--ink) 85%, var(--page-bg)); color: var(--page-bg); }
 .resources { display: flex; align-items: stretch; }
 .resources > summary { height: 100%; gap: 6px; list-style: none; user-select: none; }
 .resources > summary::-webkit-details-marker { display: none; }
