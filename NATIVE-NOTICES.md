@@ -10,7 +10,7 @@ cargo-about's SPDX text; exact per-crate notices are deduplicated only
 when their text bytes match. This inventory does not cover non-Cargo
 frontend, font, system-framework or separately downloaded game inputs.
 
-Cargo.lock SHA-256: `eef80ef48e24c2f59c28075da4c0d5cfebaf03ea40c84e78de8e5a6cf5d79704`
+Cargo.lock SHA-256: `ade3fa553a183f1218aea270f2838f6e1030c5a798fe560f69869e57c5968174`
 
 Crates: **395**. Distinct full-text notices: **88**.
 

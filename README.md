@@ -1,5 +1,12 @@
 # GAMS Host
 
+## v2.2.0 — selectable Project config and canvas surfaces
+
+`GAMS_CONFIG` selects the Project config filename, defaulting to `gams.json`.
+This release also includes stacked canvas/table surfaces, overlay pointer
+pass-through, optional Project themes, and the revised promo site.
+See [v2.2.0 preparation](docs/release-2-2-0-review.md) for validation and limits.
+
 ## v2.1.0 — sortable headers and async animation updates
 
 Shared table styling supplies Material Symbols direction indicators through
