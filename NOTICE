@@ -77,8 +77,8 @@ Native desktop Host:
   dependencies in addition to potentially linked runtime crates. Packaging
   generates this appendix for the selected target and includes the corresponding
   unmodified MPL-covered Cargo source archives at NATIVE-SOURCE/; this provides
-  recipients the covered source. The checked-in appendix/source set records
-  the earlier Apple Silicon dependency graph.
+  recipients the covered source. The checked-in appendix records the earlier
+  Apple Silicon dependency graph; source archives are generated during packaging.
   Apple system libraries/frameworks are not copied into the app. The macOS
   Project folder chooser uses the already-listed objc2-app-kit and
   objc2-foundation crates; this changes the root Cargo.lock dependency edges,
