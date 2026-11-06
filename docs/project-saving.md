@@ -77,7 +77,8 @@ reject-on-failure behavior and console logging without requiring UI feedback.
 
 After all hooks succeed, the Host serializes the **current** `runtime.config` as
 pretty JSON with a trailing newline. It writes a uniquely named sibling
-`.gams.json.<uuid>.tmp` through `fs/fs::write-text`, then replaces `gams.json`
+`.<config-filename>.<uuid>.tmp` through `fs/fs::write-text`, then replaces the
+active config file (`GAMS_CONFIG`, default `gams.json`)
 through `fs/fs::rename`. Both paths are relative to the active native Project
 root, not the Unit installation directory. The filesystem Unit is required.
 

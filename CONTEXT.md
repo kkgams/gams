@@ -25,7 +25,8 @@ build caches, and exports are not Host-owned source.
 
 - **Host**: native/browser shell providing runtime facilities and loading
   Project Units. Host-specific behavior remains thin.
-- **Project**: external directory rooted at `gams.json`; `example.game1` owns an
+- **Project**: external directory rooted at `gams.json` (or the filename selected by
+  `GAMS_CONFIG`); `example.game1` owns an
   example, not a built-in Host Project. On macOS the native folder chooser
   selects an external Project for Finder launch; `GAMS_APP_CWD` explicitly
   selects one for Terminal or automation. The Host must not compile in a
@@ -55,7 +56,7 @@ thread. The JavaScript `releaseResource` API remains awaited and unchanged.
 
 The Host owns native File → Save Project, the `project.save` command, ordered JS
 `projectSave` hooks, and publication of current `runtime.config` to the active
-`gams.json`. Keyboard bindings remain Project-owned through `gams.json` `ui.keys`.
+config file (`GAMS_CONFIG`, default `gams.json`). Keyboard bindings remain Project-owned through `gams.json` `ui.keys`.
 Plugins/Views own persistent state and config updates; the Host does not capture
 layout automatically. See [`docs/project-saving.md`](docs/project-saving.md).
 

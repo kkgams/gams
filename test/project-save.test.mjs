@@ -8,13 +8,13 @@ const viewSource = await readFile(new URL("../cmd/app/src/util/view-plugin.js", 
 let moduleId = 0
 const importSource = source => import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${moduleId++}`).toString("base64")}`)
 
-async function setup(fail = () => null) {
+async function setup(fail = () => null, configFile = "gams.json") {
   const config = { plugins: [], ui: { layout: "initial" } }
-  const files = new Map([["gams.json", "original"]])
+  const files = new Map([[configFile, "original"]])
   const writes = []
   globalThis.__TAURI__ = {
     core: { async invoke(command, args) {
-      if (command === "runtime_project") return { config, modulesDir: "/project/gams_modules" }
+      if (command === "runtime_project") return { config, configFile, modulesDir: "/project/gams_modules" }
       if (command === "runtime_call_view_ready") return
       assert.equal(command, "runtime_invoke")
       writes.push(args)
@@ -296,4 +296,13 @@ test("UI initialization awaits layout loading before Save can be enabled", async
   await initialized
   assert.equal(complete, true)
   URL.revokeObjectURL(window.__currentThemeStylesheetHref)
+})
+
+test("Project Save publishes only the selected config filename", async () => {
+  const { runtime, files, writes } = await setup(() => null, "dev config.json")
+  await runtime.projectSave()
+  assert.deepEqual(JSON.parse(files.get("dev config.json")), runtime.config)
+  assert.equal(files.has("gams.json"), false)
+  assert.match(writes[0].args[0], /^\.dev config\.json\..+\.tmp$/)
+  assert.equal(writes[1].args[1], "dev config.json")
 })

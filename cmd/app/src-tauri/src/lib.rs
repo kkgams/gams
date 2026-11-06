@@ -114,25 +114,25 @@ fn runtime_clear_compiled_component_cache(
     runtime.clear_compiled_component_cache()
 }
 
-fn needs_project_picker(gui: bool, cwd: &Path) -> bool {
-    gui && !cwd.join("gams.json").is_file()
+fn needs_project_picker(gui: bool, cwd: &Path, config_file: &str) -> bool {
+    gui && !cwd.join(config_file).is_file()
 }
 
 #[cfg(target_os = "macos")]
-fn choose_project_folder() -> anyhow::Result<Option<PathBuf>> {
+fn choose_project_folder(config_file: &str) -> anyhow::Result<Option<PathBuf>> {
     use objc2_app_kit::{NSModalResponseCancel, NSModalResponseOK, NSOpenPanel};
     use objc2_foundation::{MainThreadMarker, NSString};
     use std::ffi::{CStr, OsStr};
     use std::os::unix::ffi::OsStrExt;
 
     let mtm = MainThreadMarker::new().expect("Project selection must run on the macOS main thread");
-    let mut message = "Select a GAMS Project folder containing gams.json";
+    let mut message = format!("Select a GAMS Project folder containing {config_file}");
     loop {
         let panel = NSOpenPanel::openPanel(mtm);
         panel.setCanChooseDirectories(true);
         panel.setCanChooseFiles(false);
         panel.setAllowsMultipleSelection(false);
-        panel.setMessage(Some(&NSString::from_str(message)));
+        panel.setMessage(Some(&NSString::from_str(&message)));
         match panel.runModal() {
             response if response == NSModalResponseCancel => return Ok(None),
             response if response == NSModalResponseOK => {
@@ -142,29 +142,29 @@ fn choose_project_folder() -> anyhow::Result<Option<PathBuf>> {
                 let bytes =
                     unsafe { CStr::from_ptr(url.fileSystemRepresentation().as_ptr()) }.to_bytes();
                 let path = PathBuf::from(OsStr::from_bytes(bytes));
-                if path.join("gams.json").is_file() {
+                if path.join(config_file).is_file() {
                     return Ok(Some(path.canonicalize()?));
                 }
-                message = "That folder has no gams.json. Select a GAMS Project folder.";
+                message = format!("That folder has no {config_file}. Select a GAMS Project folder.");
             }
             response => anyhow::bail!("Project folder dialog failed: {response}"),
         }
     }
 }
 
-fn runtime_root(gui: bool) -> anyhow::Result<Option<PathBuf>> {
+fn runtime_root(gui: bool, config_file: &str) -> anyhow::Result<Option<PathBuf>> {
     if let Some(value) = std::env::var_os("GAMS_APP_CWD") {
         anyhow::ensure!(!value.is_empty(), "GAMS_APP_CWD must not be empty");
         return Ok(Some(PathBuf::from(value).canonicalize()?));
     }
     let cwd = std::env::current_dir()?;
-    if needs_project_picker(gui, &cwd) {
+    if needs_project_picker(gui, &cwd, config_file) {
         #[cfg(target_os = "macos")]
         {
-            return choose_project_folder();
+            return choose_project_folder(config_file);
         }
         #[cfg(not(target_os = "macos"))]
-        anyhow::bail!("Set GAMS_APP_CWD to a Project folder containing gams.json");
+        anyhow::bail!("Set GAMS_APP_CWD to a Project folder containing {config_file}");
     }
     Ok(Some(cwd.canonicalize()?))
 }
@@ -286,7 +286,7 @@ fn run_cli_command(
             }
         }
         "init" => {
-            let path = root.join("gams.json");
+            let path = root.join(project::config_file(std::env::var_os("GAMS_CONFIG").as_deref())?);
             let file = std::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -366,8 +366,9 @@ pub fn run() {
         .plugin(tauri_plugin_macos_fps::init())
         .setup(move |app| {
             let matches = app.cli().matches().map_err(|error| error.to_string())?;
-            let Some(root) =
-                runtime_root(matches.subcommand.is_none()).map_err(|error| error.to_string())?
+            let config_file = project::config_file(std::env::var_os("GAMS_CONFIG").as_deref())?;
+            let Some(root) = runtime_root(matches.subcommand.is_none(), &config_file)
+                .map_err(|error| error.to_string())?
             else {
                 // Canceling the native Project chooser is a normal user action.
                 std::process::exit(0);
@@ -376,7 +377,7 @@ pub fn run() {
             let mut preopens = preopens_for_root(&root).map_err(|error| error.to_string())?;
             if matches.subcommand.is_none() {
                 let shared_modules = std::env::var_os("GAMS_MODULES_DIR");
-                let project = project::Project::load(&root, shared_modules.as_deref())
+                let project = project::Project::load(&root, shared_modules.as_deref(), &config_file)
                     .map_err(|error| format!("{error:#}"))?;
                 preopens.push(runtime::FsPreopen {
                     host_path: project.modules_dir.clone(),
@@ -447,9 +448,12 @@ mod launch_tests {
     #[test]
     fn gui_without_a_project_must_prompt_instead_of_using_finder_working_directory() {
         let directory = tempfile::tempdir().unwrap();
-        assert!(needs_project_picker(true, directory.path()));
-        assert!(!needs_project_picker(false, directory.path()));
+        assert!(needs_project_picker(true, directory.path(), "gams.json"));
+        assert!(!needs_project_picker(false, directory.path(), "gams.json"));
         std::fs::write(directory.path().join("gams.json"), "{}").unwrap();
-        assert!(!needs_project_picker(true, directory.path()));
+        assert!(!needs_project_picker(true, directory.path(), "gams.json"));
+        assert!(needs_project_picker(true, directory.path(), "dev.json"));
+        std::fs::write(directory.path().join("dev.json"), "{}").unwrap();
+        assert!(!needs_project_picker(true, directory.path(), "dev.json"));
     }
 }

@@ -16,8 +16,8 @@ test("make run uses the picker or resolves an explicit Project before changing d
   await mkdir(bin)
   await writeFile(join(project, "gams.json"), "{}")
   await writeFile(join(bin, "cargo"), `#!${process.execPath}\nconsole.log('LAUNCH:' + JSON.stringify({args: process.argv.slice(2), project: process.env.GAMS_APP_CWD ?? null, cwd: process.cwd()}))\n`, { mode: 0o755 })
-  function run(projectPath) {
-    return spawnSync("make", ["-o", "app-icons", "run", "HOST_CC=cc", "HOST_CXX=c++", `GAMS_APP_CWD=${projectPath}`], {
+  function run(projectPath, configFile = "gams.json") {
+    return spawnSync("make", ["-o", "app-icons", "run", "HOST_CC=cc", "HOST_CXX=c++", `GAMS_APP_CWD=${projectPath}`, `GAMS_CONFIG=${configFile}`], {
       cwd: root,
       env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
       encoding: "utf8",
@@ -33,6 +33,11 @@ test("make run uses the picker or resolves an explicit Project before changing d
     assert.deepEqual(explicit.args, ["tauri", "dev"])
     assert.equal(explicit.project, await realpath(project))
     assert.equal(explicit.cwd, join(root, "cmd/app/src-tauri"))
+    assert.notEqual(run(project, "dev config.json").status, 0)
+    await writeFile(join(project, "dev config.json"), "{}")
+    assert.equal(launch(run(project, "dev config.json")).project, await realpath(project))
+    for (const invalid of ["", ".", "..", "../gams.json", "dir/config.json", "dir\\config.json"])
+      assert.notEqual(run(project, invalid).status, 0)
     const missing = run(join(directory, "missing"))
     assert.notEqual(missing.status, 0)
     assert.match(missing.stderr, /Project root with gams.json/)

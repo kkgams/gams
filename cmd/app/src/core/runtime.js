@@ -28,6 +28,7 @@ export class Runtime {
   #mainPlugins = new Map()
   #projectConfig = null
   #modulesDir = null
+  #configFile = null
   #projectSaveInFlight = null
 
   constructor() {
@@ -37,6 +38,8 @@ export class Runtime {
   async #initialize() {
     const project = await invokeCommand("runtime_project", {})
     this.setProjectConfig(project.config)
+    assertString(project.configFile, "runtime config filename")
+    this.#configFile = project.configFile
     assertString(project.modulesDir, "runtime modules directory")
     this.#modulesDir = project.modulesDir
     await this.#setupCallViewBridge()
@@ -205,13 +208,13 @@ export class Runtime {
       completed++
     }
 
-    await report("Writing gams.json")
+    await report(`Writing ${this.#configFile}`)
     const text = `${JSON.stringify(this.config, null, 2)}\n`
-    const temporary = `.gams.json.${crypto.randomUUID()}.tmp`
+    const temporary = `.${this.#configFile}.${crypto.randomUUID()}.tmp`
     unwrap(await this.invoke("fs/fs::write-text", temporary, text), "write Project config")
     completed++
-    await report("Publishing gams.json")
-    unwrap(await this.invoke("fs/fs::rename", temporary, "gams.json"), "publish Project config")
+    await report(`Publishing ${this.#configFile}`)
+    unwrap(await this.invoke("fs/fs::rename", temporary, this.#configFile), "publish Project config")
     completed++
     await report("Project saved")
     return { ok: true }

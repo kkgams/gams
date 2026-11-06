@@ -9,6 +9,8 @@ TAURI_APP_DIR := cmd/app
 TAURI_SRC_DIR := $(TAURI_APP_DIR)/src-tauri
 TAURI_TARGET_DIR ?= $(if $(value CARGO_TARGET_DIR),$(abspath $(value CARGO_TARGET_DIR)),$(abspath $(BUILD_DIR)/app/target))
 APP_BUNDLES ?= app
+GAMS_CONFIG ?= gams.json
+export GAMS_CONFIG
 GAMS_APP_CWD ?=
 HOST_CC_AUTO := $(shell if [ -x /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang ]; then echo /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang; else command -v clang || command -v cc; fi)
 HOST_CXX_AUTO := $(shell if [ -x /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ ]; then echo /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++; else command -v clang++ || command -v c++; fi)
@@ -37,8 +39,11 @@ app-icons:
 run: app-run
 
 app-run: app-icons
+	case "$$GAMS_CONFIG" in
+	  ''|.|..|*/*|*\\*) echo 'GAMS_CONFIG must be a non-empty filename within the Project directory' >&2; exit 1 ;;
+	esac
 	if [[ -n "$(GAMS_APP_CWD)" ]]; then
-	  [[ -f "$(GAMS_APP_CWD)/gams.json" ]] || { echo 'GAMS_APP_CWD must point to a Project root with gams.json' >&2; exit 1; }
+	  [[ -f "$(GAMS_APP_CWD)/$$GAMS_CONFIG" ]] || { echo "GAMS_APP_CWD must point to a Project root with $$GAMS_CONFIG" >&2; exit 1; }
 	  export GAMS_APP_CWD="$$(cd "$(GAMS_APP_CWD)" && pwd -P)"
 	else
 	  unset GAMS_APP_CWD

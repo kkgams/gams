@@ -223,6 +223,20 @@ Units; local assembly remains separate tooling for native CLI integration.
 Host builds do not assemble or bundle these Units. Build the visitor game using
 `example.game1`'s instructions.
 
+### Selecting a Project config
+
+Set `GAMS_CONFIG` to a filename within the Project directory, for example:
+
+```sh
+GAMS_CONFIG=gams.dev.json make run GAMS_APP_CWD=/path/to/project
+```
+
+When unset, it defaults to `gams.json`. Empty values and paths are rejected.
+The selected file must contain a JSON object; missing or invalid files fail
+without falling back to another config. The folder picker, Project Save, and
+CLI `init` use the selected filename too. Project-relative Unit paths and
+`GAMS_APP_CWD` are unchanged; `init` never overwrites an existing file.
+
 ## Project bootstrap and Unit storage
 
 After `await runtime.ready`, frontend code can read native-loaded `gams.json`
