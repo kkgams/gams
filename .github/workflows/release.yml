@@ -61,6 +61,10 @@ jobs:
           $before = @{}
           Get-ChildItem Env: | ForEach-Object { $before[$_.Name] = $_.Value }
           & "$installation\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          # Git Bash prepends its own link.exe; Cargo must use MSVC explicitly.
+          $linker = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+          if (!(Test-Path -LiteralPath $linker -PathType Leaf)) { throw "MSVC linker not found: $linker" }
+          $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = $linker
           Get-ChildItem Env: | Where-Object { $before[$_.Name] -ne $_.Value } | ForEach-Object {
             "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV
           }
