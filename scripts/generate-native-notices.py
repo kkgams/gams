@@ -72,7 +72,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(f"Refusing to overwrite reviewed notice: {args.output}")
-    args.output.write_text(render(json.loads(args.json.read_text()), args.lock.read_bytes(), args.target))
+    args.output.write_text(
+        render(json.loads(args.json.read_text(encoding="utf-8")), args.lock.read_bytes(), args.target),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

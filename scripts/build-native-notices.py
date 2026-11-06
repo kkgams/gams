@@ -25,7 +25,7 @@ def main():
         "--config", str(root / "native-about.toml"), "--target", args.target,
         "--output-file", str(metadata_path),
     ], check=True)
-    metadata = json.loads(metadata_path.read_text())
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     spec = importlib.util.spec_from_file_location("native_notices", root / "scripts/generate-native-notices.py")
     renderer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(renderer)
@@ -56,10 +56,11 @@ def main():
         "Unmodified original Cargo registry source archives for the dependencies\n"
         "selected under MPL-2.0 in the accompanying NATIVE-NOTICES.md. Full terms\n"
         "are included there. Modified dependencies require their modified sources.\n\n"
-        + "".join(f"- {name}\n" for name in sorted(archives))
+        + "".join(f"- {name}\n" for name in sorted(archives)),
+        encoding="utf-8",
     )
     temporary = output.with_suffix(".tmp")
-    temporary.write_text(text)
+    temporary.write_text(text, encoding="utf-8")
     temporary.replace(output)
 
 
