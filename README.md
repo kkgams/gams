@@ -67,8 +67,7 @@ Make-managed build, package, temporary, documentation and cache output lives
 under `build.nosync/`. Tauri itself also emits capability schemas at its fixed
 `cmd/app/src-tauri/gen/schemas/` location. `clean`
 removes only its known generated schema files, preserving unrelated files. `clean` preserves authored assets/configuration, unrelated
-files, existing legacy `dist/` output and downloaded Project Units in
-`gams_modules/`. Those Units may include user-managed local content.
+files and downloaded Project Units in `gams_modules/`. Those Units may include user-managed local content.
 
 ## CI
 
