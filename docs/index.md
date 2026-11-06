@@ -39,6 +39,7 @@ lists all pages; use the filter to find a topic.
 
 ## Host and Project Units
 
+- [[host-runtime|Host runtime and configuration]]
 - [[project-unit-installation|Project Unit installation]]
 - [[direct-file-downloads|Direct-file downloads]]
 - [[zip-project-units|ZIP Project Units]]
@@ -48,24 +49,34 @@ lists all pages; use the filter to find a topic.
 ## Shared UI
 
 - [[gams-view-development-guide|GAMS View Development Guide]] — canonical, protected Core View UI vocabulary
+- [[animation-preview|Animation previews]]
 - [[selectable-grids|Selectable grids]]
 - [[game-icons|Game Icons catalogue]] — icon previews and all 4,180 ligatures
 - [[game-icons-build|Game Icons build and usage]]
 
-## Review records
+## Desktop packages
 
-- [[release-2-0-8-review|v2.0.8 local preparation]]
-- [[release-2-0-7-review|v2.0.7 candidate review]]
-- [[http-license-review|HTTP licensing review]]
-- [[release-2-0-5-review|v2.0.5 release review]]
-- [[release-2-0-6-review|v2.0.6 release review]]
+| System | Architecture | `TARGET` | Release asset |
+| --- | --- | --- | --- |
+| macOS | Apple Silicon | `aarch64-apple-darwin` | `GAMS-macos-aarch64.zip` |
+| Windows | x86_64 | `x86_64-pc-windows-msvc` | `GAMS-windows-x86_64.zip` |
+| Linux | x86_64 | `x86_64-unknown-linux-gnu` | `GAMS-linux-x86_64.tar.gz` |
 
-These pages retain their own approval boundaries. The `reference` metadata
-classifies documentation, not release acceptance or publication approval.
-Release records keep their historical dotted filenames; the kebab-case symlink
-aliases supply native wiki routes without moving or duplicating the records.
-The engine validator warns about the historical filenames and their duplicate
-routes; these warnings are expected, not suppressed.
+## Development
+
+| Command | Description |
+| --- | --- |
+| `make run` | Run from source; use the macOS Project picker or set `GAMS_APP_CWD`. |
+| `make open` | Run from source with this repository's root `gams.json` development preview. |
+| `make test` | Run native Rust, JavaScript and Python tooling tests; does not create release packages. |
+| `make build` | Compile the native release executable without an archive. |
+| `make package` | Build the selected platform application and its archive/checksum through incremental file targets. |
+| `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
+| `make docs` | Build the portable wiki under `build.nosync/docs/`. |
+| `make serve-docs DOCS_PORT=8080` | Preview the prepared wiki; restart after source edits. |
+| `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.4.0. |
+| `make promo` | Assemble promo and documentation under `build.nosync/site/`. |
+| `make serve-promo PROMO_PORT=8081` | Preview promo; `/docs` points to the independent docs server. |
 
 ## Preview locally
 
@@ -81,14 +92,14 @@ Open <http://localhost:8080> (or the selected port). Make fetches the upstream
 `justgook/wiki` **v1.4.0 Makefile**, then delegates to its `serve` target. That
 Makefile installs the engine and chooses Bun, Node.js, or Python. This is the
 same engine release used by `imprint-zero`; no custom preview script, content
-mirror, npm installation, or Host build is involved. The only prepared docs
-asset is a byte-for-byte copy of the checked-in Game Icons font under
-`docs/assets/`, loaded by `custom.css` for the catalogue. Validation delegates to the
-upstream `validate` target and requires Node.js 22 or newer.
+mirror, npm installation, or Host build is involved. The prepared documentation tree and a byte-for-byte copy of the checked-in
+Game Icons catalogue font are under `build.nosync/docs-source/`, loaded by
+`custom.css` for the catalogue. Validation delegates to the
+upstream `validate` target and requires Node.js 24.
 
 The upstream Makefile and engine are cached at `build.nosync/wiki-v1.4.0.mk` and
-`build.nosync/wiki-v1.4.0/`. Source changes are live: refresh the browser to see
-edits. Add new pages to `_sidebar.md` as part of authoring. Links to files outside
+`build.nosync/wiki-v1.4.0/`. Make prepares documentation and the catalogue font under build.nosync; restart
+serve-docs after source edits to refresh that prepared content. Add new pages to `_sidebar.md` as part of authoring. Links to files outside
 `docs/` open their upstream repository sources rather than exposing the Host's
 source tree or build caches through the wiki.
 
@@ -103,6 +114,6 @@ over. `WIKI_MAKEFILE=/path/to/wiki/Makefile` also allows a local upstream Makefi
 `WIKI_VERSION` selects another release and a separate cache path. `make clean`
 removes the default engine/Makefile caches. The server binds only to loopback
 and stops with Ctrl-C. This target does not publish or bundle docs inside the
-Host. `make build-site` assembles promo at the Pages root and this wiki under
+Host. `make promo` assembles promo at the Pages root and this wiki under
 `/docs/`; see the [repository README](https://github.com/kkgams/gams#promo-and-documentation)
 for publishing and independent local promo/docs previews.

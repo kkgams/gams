@@ -4,6 +4,7 @@
 
 ## Host and Project Units
 
+- [[host-runtime|Host runtime and configuration]]
 - [[project-unit-installation|Project Unit installation]]
 - [[direct-file-downloads|Direct-file downloads]]
 - [[zip-project-units|ZIP Project Units]]
@@ -13,14 +14,7 @@
 ## Shared UI
 
 - [[gams-view-development-guide|GAMS View Development Guide]]
+- [[animation-preview|Animation previews]]
 - [[selectable-grids|Selectable grids]]
 - [[game-icons|Game Icons catalogue]]
 - [[game-icons-build|Game Icons build and usage]]
-
-## Review records
-
-- [[release-2-1-0-review|v2.1.0 release preparation]]
-- [[release-2-0-7-review|v2.0.7 candidate review]]
-- [[http-license-review|HTTP licensing review]]
-- [[release-2-0-5-review|v2.0.5 release review]]
-- [[release-2-0-6-review|v2.0.6 release review]]

@@ -4,7 +4,6 @@ on:
   push:
     branches: [release]
   pull_request:
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,26 +14,21 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-      - name: Test site tooling
-        run: |
-          node --test test/docs-target.test.mjs test/promo.test.mjs
-          python3 -m unittest discover -s test -p test_promo.py
-      - name: Assemble promo and validated documentation
-        run: make build-site
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Assemble promo and validated documentation with Node 24
+        run: nix develop --command make validate-docs promo
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
         with:
-          path: dist/site
+          path: build.nosync/site
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/release'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write

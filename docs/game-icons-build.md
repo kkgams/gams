@@ -46,7 +46,7 @@ The font is tracked with its generated JSON manifest, provenance, contributor
 notices and Markdown catalogue. The file target has **no prerequisites**:
 when it exists, Make does nothing, even if `build.nosync` is empty. Normal Host
 builds do not run npm, pip, or download icons. `make clean` removes caches,
-not the checked-in font. The repository's default Make goal is unchanged.
+not the checked-in font. The default Make goal runs the source Host.
 
 To deliberately regenerate after changing scripts or the upstream pin:
 
@@ -57,16 +57,20 @@ make cmd/app/src/fonts/game-icons.woff2
 
 The recipe recursively builds intermediate file targets under
 `build.nosync/game-icons/`: immutable-revision archive download, extracted source,
-prepared SVGs, locked npm tooling, pinned Python tooling, then generated outputs.
+prepared SVGs, Nix-provisioned svgtofont/Python tooling, then generated outputs.
 Archive checksum verification is intentionally omitted. Interrupted stages do
 not receive completion stamps. The final font is installed last, after its
 companion files. Cached intermediate targets still use ordinary dependency
 tracking. A new source pin invalidates preparation and generation.
 
-Build prerequisites: Make, bash, curl, tar, Node/npm, and Python with venv/pip.
-The npm tree is pinned in `scripts/game-icons/package-lock.json`; Python packages
-are pinned in `requirements.txt`. They are installed only under `build.nosync`.
-The shell must permit HTTPS downloads on the first generation/check setup.
+Build prerequisites are provided by the pinned Nix flake and direnv shell.
+The optional `game-icons-tooling` Nix output installs the existing locked
+svgtofont dependency tree outside the checkout; Python font libraries come from
+the pinned shell. Make runs neither npm nor pip installs. Normal Host builds use
+the committed font without realizing this optional compiler. The historical
+requirements.txt records the Python versions used for the committed font; the
+Nix toolchain may produce different bytes on deliberate regeneration. No font
+bytes are changed by this command migration.
 
 ## Conversion and verification
 
@@ -88,7 +92,7 @@ Font timestamps are fixed for reproducible output.
 
 The wiki catalogue renders the actual WOFF2 through name ligatures, not SVG
 images. `make serve-docs` and `make validate-docs` copy the canonical Host font
-to ignored `docs/assets/game-icons.woff2`; `docs/custom.css` loads those exact
+to `build.nosync/docs-source/assets/game-icons.woff2`; `docs/custom.css` loads those exact
 bytes. No second font build or remote image requests are needed. `make clean`
 removes the generated docs copy, not the checked-in Host font. Plain GitHub
 Markdown cannot load this CSS/font and shows the ligature text instead.
@@ -115,10 +119,7 @@ Full legal texts were obtained from
 https://creativecommons.org/licenses/by/3.0/legalcode.txt and
 https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt.
 
-**Release review pending:** the new font is outside all previously approved
-NOTICE evidence. The [v2.0.7 preparation](#/release-2-0-7-review) refreshes the
-candidate NOTICE and 57-input manifest within its recorded boundary. Exact
-owner approval is still required before candidate distribution; consistency
-checks passing do not satisfy that approval gate. Readable release packaging
-includes the generated font metadata and provenance under `FONT-LICENSES/`,
-in addition to the license texts; the ZIP checker enforces their exact bytes. No release or publication is authorized by this implementation.
+Distribution includes readable metadata, per-icon contributor attribution and
+original license texts under FONT-LICENSES/. Preserve those obligations when
+regenerating or redistributing the font; automated shaping checks do not change
+its license terms.

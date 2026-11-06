@@ -16,6 +16,7 @@ source headers. Complete applicable terms are in `NATIVE-NOTICES.md`.
 | `option-ext-0.2.0.crate` | `04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d` |
 | `selectors-0.36.1.crate` | `c5d9c0c92a92d33f08817311cf3f2c29a3538a8240e94a6a3c622ce652d7e00c` |
 
-`python3 scripts/check-mpl-source.py` checks every archive against Cargo.lock
-before staging. Do not assume a future modified version can use these
-unmodified upstream source archives as its source offer.
+New packages prepare their selected target's MPL source archives from Cargo's
+registry cache alongside the generated NATIVE-NOTICES.md. This checked-in set
+records the earlier Apple Silicon graph. Modified dependency versions require
+their corresponding modified source, not these unmodified upstream archives.

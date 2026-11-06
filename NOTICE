@@ -4,18 +4,13 @@ GAMS-authored Runtime and desktop Host code are distributed under Apache-2.0;
 see the root LICENSE. This notice does not relicense the
 independent third-party materials below. Their copyright notices and full
 license texts are retained at the indicated paths in this source repository.
-The macOS app ZIP also includes the relevant human-readable third-party
-terms beside GAMS.app, since the Host embeds its browser resources and many
-Rust dependencies in the signed executable. Inside that ZIP the license
+Desktop Host archives include the relevant human-readable third-party
+terms beside the application, since the Host embeds its browser resources and
+many Rust dependencies in the executable. Inside each archive the license
 texts are under FONT-LICENSES/ and BUNDLE-LICENSES/, with NATIVE-NOTICES.md,
 NATIVE-SOURCE/ (covered MPL source), and FONT-PROVENANCE.md at ZIP root;
 the source paths below refer to the Git
 repository.
-
-The exact third-party input and notice bytes for this review are listed in
-NOTICE-EVIDENCE.sha256. An unchanged root NOTICE authorizes **none** of its
-linked files to change independently; release checks validate the manifest.
-Third-party evidence SHA-256: `1b78a246c274432807e89301db09465c08a3a9c7f0c32c507076260b251147c1`
 
 Host browser fonts:
 - Bebas Neue; IBM Plex Mono (400, 500 and 600); JetBrains Mono; Orbitron;
@@ -79,10 +74,11 @@ Native desktop Host:
   upstream or SPDX license text (including Apache-2.0 with LLVM exception,
   MPL-2.0, Unicode-3.0 and CDLA-Permissive-2.0 where applicable) are in
   NATIVE-NOTICES.md. The appendix conservatively includes build and dev
-  dependencies in addition to potentially linked runtime crates. Exact
-  unmodified source archives for all five MPL-covered crates (notably the
-  runtime-path option-ext) are at NATIVE-SOURCE/ alongside the app ZIP,
-  verified against Cargo.lock; this provides recipients the covered source.
+  dependencies in addition to potentially linked runtime crates. Packaging
+  generates this appendix for the selected target and includes the corresponding
+  unmodified MPL-covered Cargo source archives at NATIVE-SOURCE/; this provides
+  recipients the covered source. The checked-in appendix/source set records
+  the earlier Apple Silicon dependency graph.
   Apple system libraries/frameworks are not copied into the app. The macOS
   Project folder chooser uses the already-listed objc2-app-kit and
   objc2-foundation crates; this changes the root Cargo.lock dependency edges,
@@ -92,11 +88,13 @@ Native desktop Host:
   hyper-rustls, ryu, serde_urlencoded, sync_wrapper, tower, tower-http,
   tower-layer and tower-service. It retains all previously indexed crates
   and notices, adds the reqwest Apache text and the two distinct Tower MIT
-  copyright texts, and now indexes 395 third-party crates and 88 full texts.
-  TLS-related crates already present in the Host remain covered there.
-  No additional MPL-covered crate source archive is required by this update.
+  copyright texts. The earlier Apple Silicon appendix indexes 395 third-party
+  crates and 88 full texts; each package's generated appendix covers its selected
+  target. TLS-related crates are covered there, with corresponding MPL sources
+  included where applicable.
 
-This Host repository does not contain an example Project or game source.
+The root gams.json is a development-only Host preview using released Units.
+This Host repository does not contain an example game's source.
 `example.game1` is a separate Project repository with its own independent
 notice and publication review; the Host ZIP contains neither that source nor
 assembled Project Units or compiled game WASM.

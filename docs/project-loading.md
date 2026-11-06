@@ -83,7 +83,7 @@ there is no historical-event replay for already settled in-process requests.
 The app subscribes before startup and unsubscribes on both success and failure.
 Lazy source loading after startup does not reopen this screen.
 
-Checks: `nix develop --command make app-test`. Node tests exercise real installer
+Checks: `nix develop --command make test`. Node tests exercise real installer
 progress plus a small DOM boundary double, stylesheet load/error and resource
 cleanup, and the actual app bootstrap with deferred boundary dependencies. Checks
 cover FS-first concurrency, both parallel failure orders, theme-promise reuse and

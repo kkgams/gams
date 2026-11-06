@@ -361,9 +361,11 @@ fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init())
-        .plugin(tauri_plugin_macos_fps::init())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_cli::init());
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_macos_fps::init());
+
+    builder
         .setup(move |app| {
             let matches = app.cli().matches().map_err(|error| error.to_string())?;
             let config_file = project::config_file(std::env::var_os("GAMS_CONFIG").as_deref())?;

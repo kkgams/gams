@@ -17,9 +17,10 @@ local assembly, integration, and game build tools.
   vocabulary, published through the Host documentation wiki. Workspace agents
   and independently released Core Views reference this Host-owned guide.
 
-The Host must have **zero** example/station source, including in public Git
-history. Generated files, external Project assets, assembled sibling artifacts,
-build caches, and exports are not Host-owned source.
+The Host must have **zero** example-game/station source, including in public Git
+history. The root gams.json is a development-only preview using released Units,
+not a bundled example Project. Generated files, external Project assets,
+assembled sibling artifacts, build caches, and exports are not Host-owned source.
 
 ## Runtime vocabulary
 
@@ -62,7 +63,7 @@ layout automatically. See [`docs/project-saving.md`](docs/project-saving.md).
 
 ## Boundaries and invariants
 
-`make app-check` needs no sibling repositories. Host release builds never run
+`make test`, `make build` and `make package` need no sibling repositories. Host release builds never run
 example setup, vendor Unit source, or include station Project artifacts or a
 station ZIP. The filesystem plugin is required by bootstrap. The Host selects the sole
 `plugins` source with exact basename `plugin.fs.wasm`, or uses its v0.1.1
@@ -84,9 +85,9 @@ testing. A Host-owned startup progress screen now reports download/extraction
 and initialization; see [`docs/project-loading.md`](docs/project-loading.md).
 Git sources remain pending. ZIP extraction uses
 staging and path containment; archive-level deduplication, CRC verification and
-expanded-byte limits are deliberately deferred. The ZIP browser bundle is now included in the v2.0.5 candidate NOTICE/evidence
-and readable license packaging; exact-byte owner approval was recorded 2026-10-12.
-See `docs/release-2.0.5-review.md`. Verification of an
-external Project belongs to the example repository. Host publication still
-requires clean source/history, fresh Host-only NOTICE approval, and the release
-checks in `LICENSING.md` and `VERIFICATION.md`.
+expanded-byte limits are deliberately deferred. The ZIP browser bundle retains its original third-party license texts in
+source and distribution. Verification of an external Project belongs to its
+own repository. Numeric version-tag pushes build the supported native packages
+and publish once without tests or audit/approval wrappers; release-branch pushes
+run tests/validation and publish docs/promo without release packages. The root
+README defines commands, platform prerequisites and distribution limits.

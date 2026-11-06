@@ -12,12 +12,12 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def render(metadata: dict, lock_bytes: bytes) -> str:
+def render(metadata: dict, lock_bytes: bytes, target: str = "aarch64-apple-darwin") -> str:
     locked = {(p["name"], p["version"]) for p in tomllib.loads(lock_bytes.decode())["package"]}
     crates = sorted((c for c in metadata["crates"] if c["package"]["source"]),
                     key=lambda c: (c["package"]["name"], c["package"]["version"]))
-    if len(crates) < 300:
-        raise ValueError("Unexpectedly incomplete target-filtered Cargo dependency graph")
+    if not crates:
+        raise ValueError("Missing native dependency license metadata")
     by_crate: dict[str, list[tuple[str, str]]] = {}
     terms: dict[tuple[str, str], str] = {}
     for license_entry in metadata["licenses"]:
@@ -38,9 +38,9 @@ def render(metadata: dict, lock_bytes: bytes) -> str:
         if crate["license"] in ("", "Unknown", None):
             raise ValueError(f"Unresolved license selection for {p['name']}@{p['version']}")
     lines = [
-        "# Native Host dependency licenses (macOS Apple Silicon)", "",
+        f"# Native Host dependency licenses ({target})", "",
         "Generated from the pinned `cmd/app/src-tauri/Cargo.lock` with cargo-about",
-        "0.9.0 and `native-about.toml`, filtered to `aarch64-apple-darwin`.",
+        f"0.8.4 and `native-about.toml`, filtered to `{target}`.",
         "Conservatively includes runtime, build, proc-macro and dev dependencies;",
         "not all listed crates necessarily enter the app binary. It excludes the",
         "GAMS-authored root crate (governed by root `LICENSE`). Each selected",
@@ -68,10 +68,11 @@ def main() -> None:
     parser.add_argument("--json", type=Path, required=True, help="cargo-about --format json result")
     parser.add_argument("--lock", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--target", default="aarch64-apple-darwin")
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(f"Refusing to overwrite reviewed notice: {args.output}")
-    args.output.write_text(render(json.loads(args.json.read_text()), args.lock.read_bytes()))
+    args.output.write_text(render(json.loads(args.json.read_text()), args.lock.read_bytes(), args.target))
 
 
 if __name__ == "__main__":

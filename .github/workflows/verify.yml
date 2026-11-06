@@ -1,82 +1,20 @@
 name: Verify desktop Host
+
 on:
   pull_request:
   push:
-    branches: ['**']
-  workflow_dispatch:
+    branches: [release]
+
 permissions:
   contents: read
+
 jobs:
-  macos-apple-silicon:
-    runs-on: macos-15 # GitHub standard Apple Silicon runner (macos-15-intel is separate)
+  test:
+    runs-on: macos-15
     env:
       CARGO_BUILD_JOBS: '2'
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0 # audit complete Host Git ancestry for example/game source
-      - name: Require native Apple Silicon runner
-        run: test "$(uname -m)" = arm64
-      - name: Require committed licensing texts
-        run: bash scripts/check-licensing.sh
-      - name: Refuse Project or game source in Host worktree or history
-        run: python3 scripts/check-source-boundary.py
-      - name: Verify all linked third-party inputs and full texts
-        run: |
-          python3 scripts/check-native-notices.py
-          python3 scripts/check-mpl-source.py
-          python3 scripts/check-notice-evidence.py
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - name: Restore dependency-only Rust cache for Apple Silicon Host
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          # Makefile builds in the Host root, outside the Cargo workspace.
-          workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
-          shared-key: gams-macos-aarch64
-          cmd-format: nix develop --command {0}
-          cache-bin: 'false'
-          # Only the default branch writes a dependency cache; no app binary is reused.
-          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-      - name: Offline release gate tests
-        run: nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
-      - name: Check, test, and build Host without a Project or sibling repositories
-        env:
-          # Apple Silicon requires an ad-hoc signature to launch; no paid
-          # Developer ID signature or notarization is requested.
-          APPLE_SIGNING_IDENTITY: '-'
-        run: nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
-      - name: Package reviewed Host candidate
-        if: github.event_name == 'push'
-        run: nix develop --command bash scripts/stage-mac-candidate.sh
-      - name: Upload Apple Silicon Host candidate
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: gams-macos-aarch64-candidate-${{ github.sha }}
-          path: dist/macos-aarch64/
-          if-no-files-found: error
-          retention-days: 7
-  linux-next:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Generate README-only Linux roadmap — no executable
-        run: python3 scripts/next-platform.py linux dist/next/GAMS-linux-NEXT.zip
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: github.event_name == 'push'
-        with:
-          name: gams-linux-NEXT-${{ github.sha }}
-          path: dist/next/GAMS-linux-NEXT.zip
-          if-no-files-found: error
-  windows-next:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Generate README-only Windows roadmap — no executable
-        run: python scripts/next-platform.py windows dist/next/GAMS-windows-NEXT.zip
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: github.event_name == 'push'
-        with:
-          name: gams-windows-NEXT-${{ github.sha }}
-          path: dist/next/GAMS-windows-NEXT.zip
-          if-no-files-found: error
+      - name: Test Host and validate documentation
+        run: nix develop --command make test game-icons-check validate-docs

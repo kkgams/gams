@@ -8,7 +8,11 @@ import { spawnSync } from "node:child_process"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 
-test("make run uses the picker or resolves an explicit Project before changing directory", async () => {
+// This fixture intercepts the POSIX shell launcher with an executable shebang.
+// Native Project/config behavior remains covered by Cargo tests on Windows.
+test("make run leaves Project selection to the Host or resolves an explicit Project before changing directory", {
+  skip: process.platform === "win32" ? "POSIX launcher fixture uses an executable shebang and PATH" : false,
+}, async () => {
   const directory = await mkdtemp(join(tmpdir(), "gams-run-"))
   const project = join(directory, "Project with spaces")
   const bin = join(directory, "bin")

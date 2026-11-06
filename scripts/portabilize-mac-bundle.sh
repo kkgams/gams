@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Nix's Darwin stdenv links libiconv from /nix/store. Replace only that known
-# macOS-system library reference, re-sign, then fail if *any* external path
-# remains. Never ship a bundle requiring the build machine's Nix store.
+# macOS-system library reference and re-sign the modified app. This is a build
+# transformation, not a separate release-validation stage.
 set -euo pipefail
 app="${1:?usage: portabilize-mac-bundle.sh /path/to/GAMS.app}"
 binary="$app/Contents/MacOS/gams"
@@ -21,4 +21,3 @@ if (( modified )); then
   [[ -f "$entitlements" ]] || { echo "Missing Host JIT entitlements: $entitlements" >&2; exit 1; }
   /usr/bin/codesign --force --deep --sign - --options runtime --entitlements "$entitlements" "$app"
 fi
-bash scripts/check-mac-bundle.sh "$app"

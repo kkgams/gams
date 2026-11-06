@@ -102,7 +102,7 @@ browser `fetch`, to access it from the Tauri frontend.
 Regular Host checks remain independent of sibling repositories:
 
 ```sh
-nix develop --command make app-test
+nix develop --command make test
 ```
 
 ## Release gate

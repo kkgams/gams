@@ -1,116 +1,116 @@
-name: Publish Apple Silicon Host release
+name: Publish desktop Host release
+
 on:
   push:
-    tags: ['v*']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
 concurrency:
   group: host-release-${{ github.ref }}
   cancel-in-progress: false
+
 jobs:
-  macos-candidate:
-    runs-on: macos-15 # Apple Silicon; no Intel build in this release slice
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            platform: macos-aarch64
+            archive: GAMS-macos-aarch64.zip
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+            archive: GAMS-windows-x86_64.zip
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+            archive: GAMS-linux-x86_64.tar.gz
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     env:
+      TARGET: ${{ matrix.target }}
       CARGO_BUILD_JOBS: '2'
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0 # audit complete Host Git ancestry
-      - name: Require native Apple Silicon runner
-        run: test "$(uname -m)" = arm64
-      - name: Refuse Project or game source in Host history
-        run: python3 scripts/check-source-boundary.py
-      - name: Require matching version tag and committed licensing before build
-        run: |
-          bash scripts/check-release-metadata.sh
-          python3 scripts/check-native-notices.py
-          python3 scripts/check-mpl-source.py
-          python3 scripts/check-notice-evidence.py
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - name: Restore Host dependencies without a cached app binary
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
-          shared-key: gams-macos-aarch64
-          cmd-format: nix develop --command {0}
-          cache-bin: 'false'
-          # Never publish a tag-scoped cache or reuse a branch binary.
-          save-if: 'false'
-      - name: Independently check, test and bundle Host
-        env:
-          # Local launch on Apple Silicon needs ad-hoc signing, not a paid
-          # Developer ID certificate or Apple notarization.
-          APPLE_SIGNING_IDENTITY: '-'
+        if: runner.os == 'macOS'
+      # Release ELF binaries must link system GTK/WebKit, not /nix/store.
+      # Developer/test shells still use the repository's pinned Nix flake.
+      - name: Install Linux native release dependencies
+        if: runner.os == 'Linux'
         run: |
-          nix develop --command python3 -m unittest discover -s test -p 'test_*.py'
-          nix develop --command make app-check app-test app-bundle-release APP_BUNDLES=app
-          nix develop --command bash scripts/stage-mac-candidate.sh
-      # Only matching version tags run this workflow and publish a Host.
-      - name: Upload tagged Host candidate
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+            libxdo-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      # Nix has no native Windows support; use the runner's MSVC/Windows SDK.
+      - name: Activate native Windows toolchain and GNU Make
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install make --no-progress -y
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (!$installation) { throw 'MSVC installation not found' }
+          $before = @{}
+          Get-ChildItem Env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          & "$installation\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          Get-ChildItem Env: | Where-Object { $before[$_.Name] -ne $_.Value } | ForEach-Object {
+            "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV
+          }
+      - name: Install pinned native Rust and packaging tools
+        if: runner.os != 'macOS'
+        run: |
+          rustup toolchain install 1.94.1 --profile minimal --target "$TARGET"
+          rustup default 1.94.1
+          cargo install tauri-cli --version 2.11.0 --locked
+          cargo install cargo-about --version 0.8.4 --locked
+      - name: Package native macOS Host
+        if: runner.os == 'macOS'
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: RELEASE_VERSION="${GITHUB_REF_NAME#v}" nix develop --command make package
+      - name: Package native Windows Host with Git Bash recipes
+        if: runner.os == 'Windows'
+        run: RELEASE_VERSION="${GITHUB_REF_NAME#v}" make package SHELL="$(cygpath -m "$(command -v bash)")"
+      - name: Package native Linux Host
+        if: runner.os == 'Linux'
+        run: RELEASE_VERSION="${GITHUB_REF_NAME#v}" make package
+      - name: Upload platform release assets
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: gams-macos-aarch64-${{ github.ref_name }}
-          path: dist/macos-aarch64/
+          name: host-${{ matrix.platform }}
+          path: |
+            build.nosync/${{ matrix.archive }}
+            build.nosync/SHA256SUMS-${{ matrix.platform }}
           if-no-files-found: error
-  publish-release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: macos-candidate
+
+  publish:
+    needs: package
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0 # repeat ancestry audit before public release creation
-      - name: Refuse Project or game source in Host history
-        run: python3 scripts/check-source-boundary.py
-      - name: Recheck matching tag and committed evidence
-        run: |
-          bash scripts/check-release-metadata.sh
-          python3 scripts/check-native-notices.py
-          python3 scripts/check-mpl-source.py
-          python3 scripts/check-notice-evidence.py
-      - name: Refuse to overwrite any existing GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/check-release-absent.sh
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: gams-macos-aarch64-${{ github.ref_name }}
-          path: dist/macos
-      - name: Verify Host ZIP, checksum and licensing bytes
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          app="dist/macos/GAMS-${version}-macos-aarch64.zip"
-          test -f "$app"
-          test "$(find dist/macos -name '*.zip' | wc -l | tr -d ' ')" = 1
-          (cd dist/macos && shasum -a 256 --check SHA256SUMS-macos-aarch64)
-          unzip -tqq "$app"
-          for file in LICENSE NOTICE NOTICE-EVIDENCE.sha256; do
-            unzip -p "$app" "$file" | cmp - "$file"
-          done
-          unzip -p "$app" README.txt | grep -q 'Project Units'
-          python3 scripts/check-candidate-notices.py "$app"
-          mkdir dist/publish
-          cp "$app" dist/macos/SHA256SUMS-macos-aarch64 dist/publish/
-          test "$(find dist/publish -type f | wc -l | tr -d ' ')" = 2
-      - name: Generate complete commit and author release notes
+          pattern: host-*
+          merge-multiple: true
+          path: build.nosync
+      - name: Publish all native packages once
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          # gh's built-in --jq is incompatible with --slurp. Flatten pages
-          # with external jq; pipefail preserves API/authentication failures.
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            | jq -e 'add' > dist/releases.json
-          python3 scripts/generate-release-notes.py \
-            --tag "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
-            --releases dist/releases.json --output dist/release-notes.md
-      - name: Publish tag-named macOS Host release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" --verify-tag \
-            --title "$GITHUB_REF_NAME" --notes-file dist/release-notes.md \
-            dist/publish/* LICENSE NOTICE
+          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag \
+            build.nosync/GAMS-macos-aarch64.zip \
+            build.nosync/SHA256SUMS-macos-aarch64 \
+            build.nosync/GAMS-windows-x86_64.zip \
+            build.nosync/SHA256SUMS-windows-x86_64 \
+            build.nosync/GAMS-linux-x86_64.tar.gz \
+            build.nosync/SHA256SUMS-linux-x86_64
