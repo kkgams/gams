@@ -1,11 +1,11 @@
 # Bundled web-font provenance
 
-## Generated Game Icons addition — release review pending
+## Generated Game Icons font
 
 `game-icons.woff2` is a modified, generated font, **not** one of the ten upstream
 Google downloads below. See [its provenance](GAME-ICONS-PROVENANCE.md), per-icon
 credits in `game-icons.json`, and the `licenses/game-icons.*.txt` notices/full
-texts. Existing NOTICE approval does not cover this addition.
+texts.
 
 ## Unmodified Google fonts
 

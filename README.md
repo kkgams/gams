@@ -28,8 +28,7 @@ this checkout. `.envrc` loads the toolchain pinned by `flake.lock`, including
 Rust, the Tauri CLI, native license tooling, Node.js 24, Python and Make. Use
 `nix develop --command make <target>` without direnv. macOS additionally needs
 Xcode command-line tools. Linux development uses the flake's GTK/WebKit libraries.
-The optional font compiler's existing dependency lock is a native asset-tool
-input, not a Project Unit manifest or task runner; Nix provisions its tools.
+Nix provisions the optional font compiler only for deliberate font regeneration.
 
 Native Windows uses MSVC/Windows SDK, Rust 1.94.1, Tauri CLI 2.11.0, cargo-about
 0.8.4, GNU Make, Node.js 24 and Python 3. Nix/direnv do not provide a native
@@ -66,7 +65,7 @@ directory; their native folder picker is not implemented.
 
 Make-managed build, package, temporary, documentation and cache output lives
 under `build.nosync/`. Tauri itself also emits capability schemas at its fixed
-`cmd/app/src-tauri/gen/schemas/` location, an approved SDK exception. `clean`
+`cmd/app/src-tauri/gen/schemas/` location. `clean`
 removes only its known generated schema files, preserving unrelated files. `clean` preserves authored assets/configuration, unrelated
 files, existing legacy `dist/` output and downloaded Project Units in
 `gams_modules/`. Those Units may include user-managed local content.

@@ -240,7 +240,7 @@ promo:
 	mv "$$stage/site" "$(BUILD_DIR)/site"
 	@echo 'Built Pages site: $(BUILD_DIR)/site'
 
-# Tauri's fixed SDK schema location is an owner-approved output exception.
+# Tauri writes these generated SDK schemas at a fixed source-tree location.
 TAURI_SCHEMA_FILES := $(addprefix $(TAURI_SRC_DIR)/gen/schemas/,acl-manifests.json capabilities.json desktop-schema.json macOS-schema.json windows-schema.json linux-schema.json)
 
 # Only declared recreatable outputs; unrelated files/logs under build.nosync stay.

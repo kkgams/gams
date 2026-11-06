@@ -84,8 +84,5 @@ are not external Project/Unit source. Tests exercise real zip.js extraction and
 Node-backed filesystem doubles; they do not establish native WebView startup.
 
 Pinned package/bundle hashes and original license texts are under
-`cmd/app/src/util/vendor/zipjs/`. The v2.0.5 candidate NOTICE/evidence now binds
-these inputs; candidate ZIP staging includes the original licenses and provenance
-under `BUNDLE-LICENSES/zipjs/`. The owner separately approved the exact refreshed
-NOTICE/evidence on 2026-10-12; see `release-2.0.5-review.md`. Hosted and clean-Mac
-release review remain required. Historical approval is not retroactively extended.
+`cmd/app/src/util/vendor/zipjs/`. Host distributions include the original licenses
+and provenance under `BUNDLE-LICENSES/zipjs/`; preserve their attribution and terms.

@@ -1,4 +1,4 @@
-# zip.js browser library — v2.0.5 review candidate, approval pending
+# zip.js browser library
 
 The unmodified `zip-native.js` is `index-native.min.js` from the official npm
 package `@zip.js/zip.js@2.23.0`. It is a standalone ES module with the JavaScript
@@ -26,10 +26,6 @@ establish the exact fallback source revision used to build the npm bundle.
 The native variant is upstream's altered TypeScript/JavaScript port of zlib,
 not GAMS-authored compression code or the original C zlib.
 
-The v2.0.5 candidate NOTICE/evidence now binds this bundle and its retained
-licenses/provenance. Candidate staging includes all three readable documents
-under `BUNDLE-LICENSES/zipjs/`; byte checks reject missing or altered texts.
-Renewed exact-byte owner approval is still required before candidate distribution
-or publication. This refresh does not extend the historical v2.0.4 approval or
-resolve the fallback build-revision limitation above. See
-`../../../../../../docs/release-2.0.5-review.md` for the bounded review delta.
+Host distributions retain the original license, fallback license and this
+provenance under `BUNDLE-LICENSES/zipjs/`. Preserve the upstream notices and
+license conditions when redistributing these libraries.
