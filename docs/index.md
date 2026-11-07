@@ -37,6 +37,31 @@ game keeps its identity; its editor grows around it.
 This wiki serves the canonical Markdown in `gams/docs` directly. The sidebar
 lists all pages; use the filter to find a topic.
 
+## Runtime
+
+GAMS has three execution modes: a native application, a web server, and a
+terminal client. The following pages define their runtime contract. Current
+implementation availability is listed separately below; the contract does not
+imply that every mode or connection is already available.
+
+A **Runtime Session** owns loaded WASM plugins, their state and resource handles.
+A **UI client** runs Views and UI Services and registers its context and callable
+operations. A session can have multiple UI clients, each containing multiple
+Views. Context identifies the intended clients and Views; actions can target one
+View, a group, or all Views within an explicit scope.
+
+**RPC** connects terminal clients and external tools to an existing session,
+regardless of its execution mode. Discovery describes callable WASM and UI
+operations, including their arguments, results and execution requirements.
+Registered placeholders are not supported actions. RPC is a shared connection
+mechanism, not a fourth execution mode.
+
+| Mode | Execution | Current availability |
+| --- | --- | --- |
+| [[runtime-native|Native application]] | Local WASM plugins and an embedded desktop UI client. | Desktop Host is available; external RPC attachment and discoverable UI control are not implemented. |
+| [[runtime-web-server|Web server]] | Server-side WASM plugins with browser UI clients connected over the network. | Not implemented. The current CLI `serve` placeholder does not provide this mode. |
+| [[runtime-terminal|Terminal (CLI / REPL)]] | A terminal-owned session or a connection to an existing session; single-call, piped or interactive input. | One-shot local plugin invocation is available. Persistent REPL, piped request sessions and RPC attachment are not implemented. |
+
 ## Host and Project Units
 
 - [[host-runtime|Host runtime and configuration]]
