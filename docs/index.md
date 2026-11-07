@@ -39,28 +39,24 @@ lists all pages; use the filter to find a topic.
 
 ## Runtime
 
-GAMS has three execution modes: a native application, a web server, and a
-terminal client. The following pages define their runtime contract. Current
-implementation availability is listed separately below; the contract does not
-imply that every mode or connection is already available.
+Choose where plugins execute and how you interact with the Project.
 
-A **Runtime Session** owns loaded WASM plugins, their state and resource handles.
-A **UI client** runs Views and UI Services and registers its context and callable
-operations. A session can have multiple UI clients, each containing multiple
-Views. Context identifies the intended clients and Views; actions can target one
-View, a group, or all Views within an explicit scope.
-
-**RPC** connects terminal clients and external tools to an existing session,
-regardless of its execution mode. Discovery describes callable WASM and UI
-operations, including their arguments, results and execution requirements.
-Registered placeholders are not supported actions. RPC is a shared connection
-mechanism, not a fourth execution mode.
-
-| Mode | Execution | Current availability |
+| Mode | Use for | Plugin execution |
 | --- | --- | --- |
-| [[runtime-native|Native application]] | Local WASM plugins and an embedded desktop UI client. | Desktop Host is available; external RPC attachment and discoverable UI control are not implemented. |
-| [[runtime-web-server|Web server]] | Server-side WASM plugins with browser UI clients connected over the network. | Not implemented. The current CLI `serve` placeholder does not provide this mode. |
-| [[runtime-terminal|Terminal (CLI / REPL)]] | A terminal-owned session or a connection to an existing session; single-call, piped or interactive input. | One-shot local plugin invocation is available. Persistent REPL, piped request sessions and RPC attachment are not implemented. |
+| [[runtime-native|Native application]] | Local editing through desktop Views and UI Services. | Local Host |
+| [[runtime-web-server|Web server]] | Browser-based editing with server-side processing. | Server |
+| [[runtime-terminal|Terminal (CLI / REPL)]] | Single calls, piped automation and interactive sessions. | Terminal-owned session or attached Host |
+
+| Term | Meaning |
+| --- | --- |
+| Runtime Session | Loaded WASM plugins, their state and resource handles. |
+| UI client | Desktop or browser interface containing Views and UI Services. A session can have multiple UI clients. |
+| UI context | Relevant clients, Views, selections and supported actions. Actions target one View, a group, or all Views within an explicit scope. |
+| RPC | Connects terminals and external tools to an existing session for discovery, calls, results and execution events. |
+
+Discover an operation to inspect its arguments and results before calling it.
+Plugin operations execute in the session; UI operations execute in the selected
+UI client.
 
 ## Host and Project Units
 

@@ -5,53 +5,33 @@ status: reference
 
 # Web server
 
-The web server runs GAMS Runtime Sessions on a server. WASM plugins execute on
-that server; Views and UI Services execute in connected browsers. Plugin calls
-cross the network through RPC instead of invoking a browser-local WASM Runtime.
+Use the web server to run plugins remotely while editing through a browser.
 
-This page defines the runtime-mode contract. See [[index|Runtime overview]] for
-current implementation availability.
+| Part | Runs in |
+| --- | --- |
+| WASM plugins, filesystem operations and session state | Server |
+| Views, UI Services and theme | Browser |
+| Plugin calls, results and execution events | RPC connection |
 
-## Server execution
+## Connect to a workspace
 
-Each session owns its loaded WASM plugins, execution state and resource handles.
-A browser or terminal attaches to a specific session. Attaching does not create
-a second copy of its plugin state.
+1. Open the GAMS server in a browser and authenticate.
+2. Open or attach to the intended Runtime Session.
+3. Load the Project's interface and work through its Views.
+4. Connect a terminal or agent to that session to share its plugin state.
 
-Filesystem and native operations run in the server's environment with the
-session's permitted access. A path passed to a filesystem plugin refers to that
-environment, not the browser user's local filesystem. Browser-local files require
-an explicit transfer; passing a local filename does not upload its contents.
+## Work with files and UI
 
-## Browser interface
+| Task | Rule |
+| --- | --- |
+| Read or write a path | Paths refer to the server's filesystem and permitted access. |
+| Use a browser-local file | Transfer the file explicitly before server-side processing. |
+| Discover operations | Inspect plugin tools and registered UI actions, including where they execute. |
+| Control a View | Resolve its UI client and View scope from context or an explicit target. |
+| Control multiple Views | Target a group or all Views within an explicit scope. |
+| Call an unavailable UI client or action | The call fails; it is not redirected to another browser. |
 
-Browsers load the Project's Views, UI Services and theme. Their registered UI
-operations and context are discoverable alongside the session's plugin
-operations, with their execution location identified.
+Each UI client has its own Views and selections. Authorization controls access
+to the session and its operations, including server files and native commands.
 
-A session can have multiple UI clients. Each client has its own visible Views,
-focus and selections. UI calls resolve their intended client and View scope
-from context or an explicit target; they do not silently select whichever browser
-was last active. A context can
-include multiple Views and expose actions targeting one View, a group, or all
-Views within that scope.
-
-Plugin operations that need a UI route their requests to the intended client.
-An unavailable client or unsupported action produces an explicit failure rather
-than silently executing in another browser.
-
-## Terminal and external access
-
-Terminal clients and external tools attach to the same server-side session as
-the browsers. They can discover operations, invoke plugins, inspect UI context
-and call registered UI actions. Results and execution events return over RPC;
-UI operations execute in the selected browser.
-
-Network access requires authentication and authorization for the requested
-session and operations. A network connection must not automatically inherit
-unrestricted access to the server's files or native shell.
-
-## Related documentation
-
-- [[runtime-native|Native application]] — local execution with a desktop interface
-- [[runtime-terminal|Terminal (CLI / REPL)]] — terminal-owned and attached sessions
+See [[runtime-native|native application]] and [[runtime-terminal|terminal access]].

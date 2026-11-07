@@ -5,62 +5,45 @@ status: reference
 
 # Terminal (CLI / REPL)
 
-Terminal mode runs GAMS without creating a graphical interface. It supports a
-single call, a piped sequence of calls, or an interactive read–eval–print loop
-(REPL). These are input/output forms of the same terminal client, not different
-plugin runtimes. A full-screen terminal user interface (TUI) is not required.
+Use the terminal for automation, CI and interactive plugin calls.
 
-This page defines the runtime-mode contract. See [[index|Runtime overview]] for
-current implementation availability.
+## Choose input and session
 
-## Session ownership
+| Input | Use for | Behavior |
+| --- | --- | --- |
+| Single call | Shell commands and CI steps | Execute one operation and return its result. |
+| Piped requests | Multi-step scripts and CI jobs | Read structured requests from stdin; write responses to stdout. |
+| Interactive REPL | Exploration and dependent calls | Discover tools, inspect results and reuse values. |
 
-The terminal client either starts a Runtime Session or attaches to an existing
-one through RPC.
+| Session | Behavior | Lifetime |
+| --- | --- | --- |
+| Start your own | Load WASM plugins and dependencies; no GUI required. | Ends with terminal execution unless explicitly kept running. |
+| Attach | Share a native, server or terminal session's plugins, state and UI operations. | Disconnecting leaves the session running. |
 
-A terminal-owned session loads WASM plugins and their dependencies without
-requiring Views or UI Services. It retains plugin state and resource handles
-while calls continue. Other authorized clients can attach while the session is
-running. A call that requires an unavailable UI reports that requirement; terminal
-mode does not emulate a browser.
+Protocol input/output is separate from plugin streams, logs and prompts.
+Failures are machine-readable; process exit status identifies failed execution.
 
-An attached terminal uses the target session's existing plugins, state and
-resources. The session can belong to a [[runtime-native|native application]], a
-[[runtime-web-server|web server]], or another running terminal process. Ending
-that terminal connection does not terminate the session it attached to.
+## Chain calls
 
-## Input and output
+1. Discover the operation and its arguments.
+2. Invoke it and inspect the result.
+3. Reuse returned values or resource handles in subsequent calls.
+4. Release resources when finished.
 
-- **Single-call input** executes one operation and returns its result. It suits
-  shell commands and CI steps that need no subsequent calls in the same session.
-- **Piped input** accepts a sequence of structured requests and emits structured
-  responses. Calls in the same session can use resource handles returned by
-  earlier calls. Protocol input/output must remain separate from plugin standard
-  streams, logs and interactive prompts.
-- **Interactive input** supports discovering operations, inspecting arguments and
-  results, retaining returned values and using them in subsequent calls. Resource
-  handles can be explicitly released when no longer needed.
+Example: open a SQL connection → prepare a statement → query using both handles
+→ inspect rows → release the statement and connection.
 
-The callable operations and their validation do not depend on the input form.
-Machine-readable failures and process exit status must let CI distinguish a
-failed operation from successful execution.
+## Session rules
 
-## Lifetime and resources
+| Situation | Behavior |
+| --- | --- |
+| An authorized client attaches | It shares the running session. |
+| A call needs an unavailable UI | The call reports the missing requirement. |
+| A handle belongs to another session | It cannot be used here. |
+| Session termination or plugin reload invalidates a handle | Further use reports an invalid handle. |
+| A single-shot process exits | Its ended session cannot be attached to. |
 
-Resource handles refer to objects in the session that created them; they are
-not portable values that can be passed to an unrelated Runtime Session.
+Release only resources you own. Disconnecting must not release resources owned
+by other clients.
 
-A terminal-owned session normally ends when its execution finishes. Attaching
-requires a live session: a completed single-shot command cannot be attached to
-later. Keeping a session alive must be explicit rather than an accidental result
-of an external client connection.
-
-Closing a connection and ending a session are separate operations. Resource
-cleanup must respect ownership and must not release resources still owned by
-another client. Calls must report handles invalidated by session termination or
-plugin reload rather than treating them as new objects.
-
-## Related documentation
-
-- [[runtime-native|Native application]] — attach to a running desktop workspace
-- [[runtime-web-server|Web server]] — attach to server-side plugin execution
+See [[runtime-native|native application]] and [[runtime-web-server|web server]].

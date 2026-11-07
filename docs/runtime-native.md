@@ -5,51 +5,35 @@ status: reference
 
 # Native application
 
-The native application runs a GAMS Runtime Session and displays the Project's
-Views and UI Services in a desktop window. WASM plugins execute locally in the
-Host; the interface runs in its embedded browser.
+Use the native application to edit a Project locally and connect external tools
+to the same workspace.
 
-This page defines the runtime-mode contract. See [[index|Runtime overview]] for
-current implementation availability.
+| Part | Runs in |
+| --- | --- |
+| WASM plugins and session state | Local Host |
+| Views and UI Services | Desktop window |
+| Attached terminal or agent | External process, connected through RPC |
 
-## Runtime Session
+## Open a Project
 
-The session owns the loaded WASM plugins, their execution state and resource
-handles. The desktop interface is a UI client of that session. Closing a terminal
-connection does not close the desktop application or its session.
+1. Open GAMS with the Project directory containing `gams.json`.
+2. Work through the Project's configured Views and UI Services.
+3. To automate the workspace, authorize an RPC connection to its Runtime Session.
 
-A terminal or external tool attaches to the existing session through RPC. It
-uses the same loaded plugins and state as the desktop interface, rather than
-starting another Runtime against the Project's files.
+## Control the workspace
 
-## Interface control
+| Task | Action |
+| --- | --- |
+| Find callable operations | Discover the session's tools and argument descriptions. |
+| Inspect the interface | Read UI context for visible Views, selections and supported actions. |
+| Act on a selection | Resolve the target from context or select specific Views. |
+| Act across Views | Target a group or all Views within an explicit scope. |
+| Show a notification or popup | Call the registered UI Service in the intended UI client. |
+| Follow execution | Read the call's results and progress events. |
 
-The UI client registers its Views, UI Services and callable operations for
-discovery. UI context describes the visible Views, their state and supported
-actions; it is not limited to the most recently focused View.
+Attached callers share the application's plugin state. Reuse returned resource
+handles in that session and release them when finished. Disconnecting an external
+caller leaves the desktop session running.
 
-An attached caller can inspect that context and target a specific View, a group
-of Views, or all Views within an explicit scope. For example, deleting a selection
-in one View does not implicitly delete selections in other Views or other UI
-clients. Views own the meaning of their selections and actions.
-
-Notifications, popups and other UI operations execute through the registered
-UI Services. The Host routes calls and responses; it does not duplicate their
-implementation or replace them with arbitrary JavaScript evaluation.
-
-## External access
-
-RPC exposes the session's discoverable operations to terminal clients and
-external tools. Calls return structured results, including resource handles that
-can be used in later calls to the same session. Execution events identify the
-call they belong to so callers can follow progress and results.
-
-Access to a session also grants access to the operations it exposes. Attaching
-requires authorization; a running desktop application must not expose its Project
-or shell operations to arbitrary network callers.
-
-## Related documentation
-
-- [[host-runtime|Host runtime and configuration]] — current Project selection and startup behavior
-- [[runtime-web-server|Web server]] — server-side plugin execution with browser UI clients
-- [[runtime-terminal|Terminal (CLI / REPL)]] — single-call, piped and interactive execution
+See [[host-runtime|Project configuration]], [[runtime-terminal|terminal access]]
+and [[runtime-web-server|web server]].
