@@ -29,7 +29,7 @@ Arguments are supplied in the order shown. Use the [[runtime-terminal#make-a-cal
 | `gams/host::clear-cache` | None | Clear compiled plugin cache files used by this GAMS build; loaded plugins and unrelated files remain available. |
 | `gams/host::release-resource` | Complete resource reference as a JSON object | Release a resource returned by a plugin. |
 | `gams/host::project-init` | None | Create the selected Project config containing `{}`; never overwrite an existing file. |
-| `gams:shell/shell@1.0.0::run` | Command string, timeout in milliseconds | Run an OS shell command; return its exit code and captured output, or a shell error. |
+| `shell/shell::run` | Command string, timeout in milliseconds | Run an OS shell command; return its exit code and captured output, or a shell error. |
 
 Plugin paths are relative to the Project directory unless absolute. Pass all
 required plugin files together so GAMS can load their dependencies in order.
@@ -47,6 +47,10 @@ To inspect or clear the compiled cache:
 ```text
 gams/host::diagnostics
 gams/host::clear-cache
+```
+
+```text
+shell/shell::run "echo hello" 5000
 ```
 
 Shell commands run with your operating-system permissions in the Project
