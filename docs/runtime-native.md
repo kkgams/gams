@@ -33,6 +33,7 @@ Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
 | Argument | Environment variable | Values / default | Description |
 | --- | --- | --- | --- |
 | `--devtools` | `GAMS_DEVTOOLS` | `true`, `false`; default: `false`. The bare flag means `true`. | Enable the Native window's developer tools to inspect and debug the interface. |
+| `--rpc` | `GAMS_RPC` | `true`, `false`; default: `false`. The bare flag means `true`. | Allow authorized tools on this computer to connect to the open workspace. |
 
 These commands both enable developer tools:
 
@@ -46,7 +47,18 @@ This option is available only in Native.
 
 ## Use external tools
 
-1. Choose the open workspace to control.
+Enable local connections when starting Native:
+
+```sh
+gams --runtime native --rpc
+GAMS_RUNTIME=native GAMS_RPC=true gams
+```
+
+Use `--rpc=false` to disable access even when `GAMS_RPC=true` is set.
+RPC access is off by default and accepts only local connections. For remote
+access, use [[runtime-web-server|WebServer]].
+
+1. Connect your tool to the open workspace and authorize access.
 2. Inspect its available tools, Views and selections.
 3. Choose the action, supply its arguments and confirm the intended Views.
 4. Run it and check the result. Follow progress and notifications in the workspace.

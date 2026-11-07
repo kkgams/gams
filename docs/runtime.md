@@ -13,7 +13,7 @@ Choose how you want to use GAMS.
 | [[runtime-web-server|WebServer]] | `gams --runtime server` | Make a Project available through a browser. |
 | [[runtime-terminal|REPL/CLI]] | `gams --runtime terminal` | Run tools interactively, from scripts or in CI. |
 | [[runtime-web|Web]] | Open GAMS in your browser. | Edit a Project without a desktop app or GAMS backend server. |
-| [[runtime-rpc|RPC]] | Connect to a running Native, WebServer or REPL/CLI workspace. | Use external tools or agents with an already-open workspace. |
+| [[runtime-rpc|RPC]] | Use Native's opt-in local connection, WebServer's existing address or REPL/CLI stdin/stdout. | Make calls from external tools or agents. |
 
 ## Arguments and environment
 
@@ -40,7 +40,7 @@ gams --runtime native --project-dir /path/to/project --config gams.dev.json
 GAMS_RUNTIME=native GAMS_APP_CWD=/path/to/project GAMS_CONFIG=gams.dev.json gams
 ```
 
-See [[runtime-native|Native]] for developer tools,
+See [[runtime-native|Native]] for developer tools and local RPC access,
 [[runtime-web-server|WebServer]] for listening options and
 [[runtime-terminal|REPL/CLI]] for plugin and tool-call options.
 [[runtime-web|Web]] opens directly in the browser and uses no process arguments

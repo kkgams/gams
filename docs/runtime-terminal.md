@@ -44,9 +44,11 @@ GAMS_RUNTIME=terminal GAMS_PLUGINS='["plugins/plugin.fs.wasm"]' \
 | Piped requests | Send a sequence of requests through stdin and read results from stdout. |
 | Interactive REPL | Explore tools, inspect results and build the next call from an earlier result. |
 
-Start your own workspace for independent processing. Connect to an open desktop,
-server or terminal workspace through [[runtime-rpc|RPC]] when you want to work with its existing
-data or control its Views.
+To automate a terminal workspace, send requests through stdin and read responses
+from stdout. Keep its input open for dependent calls; no RPC enable flag is needed.
+
+To work with an open Native or WebServer workspace instead, use its
+[[runtime-rpc|RPC connection]].
 
 ## Make a call
 
@@ -91,7 +93,7 @@ statement and database connection.
 | A tool requires an open View | Connect to a workspace containing that View. |
 | A returned reference is no longer valid | Open the object again; references cannot be reused after their workspace closes or its plugins reload. |
 | A call fails in CI | Read the structured error and check the process exit status. |
-| You finish with an attached workspace | Disconnect; the workspace stays open. |
+| You finish with an attached Native or WebServer workspace | Disconnect; the workspace stays open. |
 
 Keep dependent calls in the same workspace. A completed single-shot command
 cannot accept further calls; use piped input or the REPL to continue working.
