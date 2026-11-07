@@ -48,6 +48,20 @@ Start your own workspace for independent processing. Connect to an open desktop,
 server or terminal workspace through RPC when you want to work with its existing
 data or control its Views.
 
+## Make a call
+
+Enter the operation name followed by its arguments:
+
+```text
+fs/fs::read-text README.md
+```
+
+Read the result or error, then send the next call. Use the same call format
+interactively or through stdin.
+
+The call protocol has no variables, expressions or control flow. Use your own
+script or agent to combine results, transform data or repeat calls.
+
 ## Run a sequence
 
 1. Choose a tool and read its argument help.
