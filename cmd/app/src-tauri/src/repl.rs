@@ -1,5 +1,6 @@
 use std::io::{self, BufRead, Write};
 
+use crate::output::Format;
 use serde_json::Value;
 
 #[derive(Debug, PartialEq)]
@@ -54,18 +55,12 @@ pub fn parse(line: &str) -> Result<Call, String> {
     })
 }
 
-pub fn response(result: Result<Value, String>) -> Value {
-    match result {
-        Ok(value) => serde_json::json!({ "ok": value }),
-        Err(message) => serde_json::json!({ "error": { "message": message } }),
-    }
-}
-
 /// Flush one compact JSON response per nonempty physical input line until EOF.
 /// Request errors continue the session; I/O errors end it. The caller owns state.
 pub fn run(
     mut reader: impl BufRead,
     mut writer: impl Write,
+    format: Format,
     mut invoke: impl FnMut(&str, Vec<Value>) -> Result<Value, String>,
 ) -> io::Result<()> {
     let mut line = String::new();
@@ -78,9 +73,7 @@ pub fn run(
             continue;
         }
         let result = parse(&line).and_then(|call| invoke(&call.target, call.args));
-        let response = response(result);
-        serde_json::to_writer(&mut writer, &response)?;
-        writer.write_all(b"\n")?;
+        writer.write_all(&format.encode(result)?)?;
         writer.flush()?;
     }
 }
@@ -205,18 +198,23 @@ mod tests {
         let mut output = Vec::new();
         let mut total = 0;
         let mut invocations = 0;
-        run(Cursor::new(input), &mut output, |target, args| {
-            invocations += 1;
-            match target {
-                "add" => {
-                    total += args[0].as_i64().unwrap();
-                    Ok(json!(total))
+        run(
+            Cursor::new(input),
+            &mut output,
+            Format::Json,
+            |target, args| {
+                invocations += 1;
+                match target {
+                    "add" => {
+                        total += args[0].as_i64().unwrap();
+                        Ok(json!(total))
+                    }
+                    "fail" => Err("operation failed\nwith details".into()),
+                    "text" => Ok(json!({"text": "line one\nline two", "nested": [1, 2]})),
+                    _ => panic!("unexpected invocation"),
                 }
-                "fail" => Err("operation failed\nwith details".into()),
-                "text" => Ok(json!({"text": "line one\nline two", "nested": [1, 2]})),
-                _ => panic!("unexpected invocation"),
-            }
-        })
+            },
+        )
         .unwrap();
         assert_eq!(invocations, 4);
         assert_eq!(total, 5);
@@ -250,14 +248,20 @@ mod tests {
 
     #[test]
     fn propagates_io_errors() {
-        assert!(run(Cursor::new([0xff, b'\n']), Vec::new(), |_, _| Ok(
-            Value::Null
-        ))
+        assert!(run(
+            Cursor::new([0xff, b'\n']),
+            Vec::new(),
+            Format::Json,
+            |_, _| Ok(Value::Null)
+        )
         .is_err());
         let mut output = [0u8; 0];
-        assert!(run(Cursor::new("call\n"), &mut output[..], |_, _| Ok(
-            Value::Null
-        ))
+        assert!(run(
+            Cursor::new("call\n"),
+            &mut output[..],
+            Format::Json,
+            |_, _| Ok(Value::Null)
+        )
         .is_err());
     }
 }

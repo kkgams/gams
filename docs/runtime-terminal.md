@@ -23,6 +23,15 @@ Use the [[runtime#arguments-and-environment|shared runtime options]] to select
 the Project and startup settings. You can also start the REPL with
 `GAMS_RUNTIME=repl gams`.
 
+| Argument | Environment variable | Values / default | Description |
+| --- | --- | --- | --- |
+| `--format` | `GAMS_FORMAT` | `json`, `human`; default: `json` | Choose compact JSON or readable responses. REPL only. |
+
+JSON remains the default for both interactive and piped input. To choose readable
+output, run `gams --runtime repl --format=human` or set
+`GAMS_RUNTIME=repl GAMS_FORMAT=human`. `--format=json` overrides a human environment
+setting. Native RPC selects its format through `--rpc=json` or `--rpc=human`.
+
 Send operations and their arguments through stdin, not startup flags.
 
 ## Choose how to work
@@ -71,10 +80,24 @@ Do not add another layer of quotes around a JSON array or object.
 Send one complete call per line. Keep JSON arrays and objects on that line;
 use JSON escapes for newlines inside strings. Blank lines are ignored.
 
-Each call returns one JSON line: `{"ok": <result>}` on success or
+In the default JSON format, each call returns one JSON line: `{"ok": <result>}` on success or
 `{"error": {"message": "..."}}` on an input or execution error. The operation's
 result is returned unchanged, including any plugin-specific `ok`/`err` values.
 Errors do not end the REPL; correct the call and continue.
+
+With `--format=human`, a response starts with `OK` or `ERROR`, followed by the
+result or error message formatted as indented JSON. Every response ends with
+`--- end ---` on its own line:
+
+```text
+OK
+[]
+--- end ---
+```
+
+For errors, the message is JSON-quoted. Newlines inside strings stay escaped, so
+result data cannot be mistaken for an end marker. Human responses can span
+multiple lines; use JSON when a script expects one response per line.
 
 Stdout contains only responses; plugin output and diagnostics use stderr.
 

@@ -33,7 +33,7 @@ Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
 | Argument | Environment variable | Values / default | Description |
 | --- | --- | --- | --- |
 | `--devtools` | `GAMS_DEVTOOLS` | `true`, `false`; default: `false`. The bare flag means `true`. | Enable the Native window's developer tools to inspect and debug the interface. |
-| `--rpc` | `GAMS_RPC` | `true`, `false`; default: `false`. The bare flag means `true`. | Allow local tools to call the open workspace through a Unix socket or Windows named pipe. |
+| `--rpc` | `GAMS_RPC` | `json`, `human`, `false`; default: `false`. The bare flag means `json`; `true` is a compatibility alias for `json`. | Enable local socket/pipe calls and choose their response format. |
 
 These commands both enable developer tools:
 
@@ -51,10 +51,11 @@ Enable local connections when starting Native:
 
 ```sh
 gams --runtime native --rpc
-GAMS_RUNTIME=native GAMS_RPC=true gams
+GAMS_RUNTIME=native GAMS_RPC=json gams
 ```
 
-Use `--rpc=false` to disable access even when `GAMS_RPC=true` is set.
+Use `--rpc=human` for readable responses, or `--rpc=json` for compact JSON.
+Use `--rpc=false` to disable access even when `GAMS_RPC` enables it.
 RPC access is off by default and accepts only local connections. There is no
 password, token or approval dialog. Any process with OS permission to access the
 endpoint can invoke operations, including file changes and shell commands. Enable

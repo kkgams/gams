@@ -337,9 +337,12 @@ mod tests {
         };
         let input = b"gams/host::load-plugins [\"counter.wat\"]\nnext\nnext\nmissing-operation\nnext\ngams/host::plugins\n";
         let mut output = Vec::new();
-        crate::repl::run(&input[..], &mut output, |target, args| {
-            commands.invoke(target, args)
-        })
+        crate::repl::run(
+            &input[..],
+            &mut output,
+            crate::output::Format::Json,
+            |target, args| commands.invoke(target, args),
+        )
         .unwrap();
         let responses: Vec<Value> = String::from_utf8(output)
             .unwrap()

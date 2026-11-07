@@ -1,6 +1,7 @@
 mod commands;
 mod download;
 mod options;
+mod output;
 mod project;
 mod repl;
 mod rpc;
@@ -216,7 +217,8 @@ const STARTUP_HELP: &str = "GAMS startup options (argument / environment variabl
   --modules-dir ABSOLUTE_PATH       GAMS_MODULES_DIR
   --plugin-cache-dir PATH           GAMS_WASMTIME_CACHE_DIR
   --devtools[=true|false]           GAMS_DEVTOOLS (Native only; default: false)
-  --rpc[=true|false]                GAMS_RPC (Native only; default: false)
+  --rpc[=json|human|false]          GAMS_RPC (Native only; default: false)
+  --format json|human              GAMS_FORMAT (REPL only; default: json)
   --listen HOST:PORT                GAMS_LISTEN_ADDR (WebServer only)
   --help
 
@@ -324,6 +326,7 @@ fn run_repl(options: &options::Options, root: PathBuf) -> anyhow::Result<()> {
     repl::run(
         std::io::stdin().lock(),
         std::io::stdout().lock(),
+        options.format,
         |target, args| commands.invoke(target, args),
     )?;
     Ok(())
@@ -386,8 +389,8 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
                 .inner_size(1000.0, 700.0)
                 .devtools(options.devtools)
                 .build()?;
-            if options.rpc {
-                let server = tauri::async_runtime::block_on(rpc::Server::start(commands))?;
+            if let Some(format) = options.rpc {
+                let server = tauri::async_runtime::block_on(rpc::Server::start(commands, format))?;
                 eprintln!("GAMS RPC: {}", server.endpoint);
                 *startup_rpc_server
                     .lock()

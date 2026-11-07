@@ -1,3 +1,4 @@
+use crate::output::Format;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
@@ -19,7 +20,8 @@ pub struct Options {
     pub modules_dir: Option<PathBuf>,
     pub plugin_cache_dir: Option<PathBuf>,
     pub devtools: bool,
-    pub rpc: bool,
+    pub rpc: Option<Format>,
+    pub format: Format,
 }
 
 impl Options {
@@ -41,21 +43,22 @@ impl Options {
                 Some((name, value)) => (name, Some(value.to_owned())),
                 None => (arg.as_str(), None),
             };
-            let boolean = match name {
-                "--devtools" | "--rpc" => true,
+            let bare_value = match name {
+                "--devtools" => Some("true"),
+                "--rpc" => Some("json"),
                 "--runtime" | "--project-dir" | "--config" | "--modules-dir"
-                | "--plugin-cache-dir" | "--listen" => false,
+                | "--plugin-cache-dir" | "--listen" | "--format" => None,
                 _ => return Err(format!("unknown startup argument: {arg}")),
             };
             if values.contains_key(name) {
                 return Err(format!("{name} may only be specified once"));
             }
-            let value = match inline {
-                Some(value) => value,
-                None if boolean && args.peek().map_or(true, |next| next.starts_with('-')) => {
-                    "true".to_owned()
+            let value = match (inline, bare_value) {
+                (Some(value), _) => value,
+                (None, Some(value)) if args.peek().map_or(true, |next| next.starts_with('-')) => {
+                    value.to_owned()
                 }
-                None => match args.next() {
+                (None, _) => match args.next() {
                     Some(value) if !value.starts_with("--") && value != "-h" => value,
                     _ => return Err(format!("{name} requires a value")),
                 },
@@ -114,8 +117,26 @@ impl Options {
             selected("--devtools", "GAMS_DEVTOOLS")?,
             "--devtools / GAMS_DEVTOOLS",
         )?;
-        let rpc = parse_bool(selected("--rpc", "GAMS_RPC")?, "--rpc / GAMS_RPC")?;
-        if runtime != Runtime::Native && (devtools || rpc) {
+        let rpc = match selected("--rpc", "GAMS_RPC")?.as_deref() {
+            None | Some("false") => None,
+            Some("true" | "json") => Some(Format::Json),
+            Some("human") => Some(Format::Human),
+            Some(value) => {
+                return Err(format!(
+                    "invalid --rpc / GAMS_RPC value {value:?}; expected json, human, true or false"
+                ))
+            }
+        };
+        let format = selected("--format", "GAMS_FORMAT")?;
+        if runtime != Runtime::Repl && format.is_some() {
+            return Err("--format / GAMS_FORMAT is only available in the repl runtime".into());
+        }
+        let format = format
+            .as_deref()
+            .map(Format::parse)
+            .transpose()?
+            .unwrap_or_default();
+        if runtime != Runtime::Native && (devtools || rpc.is_some()) {
             return Err(
                 "--devtools and --rpc may only be enabled in the native runtime".to_owned(),
             );
@@ -129,6 +150,7 @@ impl Options {
             plugin_cache_dir,
             devtools,
             rpc,
+            format,
         }))
     }
 }
@@ -213,8 +235,43 @@ mod tests {
         assert_eq!(result.config, "gams.json");
         assert_eq!(result.modules_dir, None);
         assert_eq!(result.plugin_cache_dir, None);
-        assert!(!result.devtools && !result.rpc);
+        assert!(!result.devtools && result.rpc.is_none());
     }
+    #[test]
+    fn formats_are_explicit_and_json_is_always_the_default() {
+        assert_eq!(options(&["--runtime=repl"], &[]).format, Format::Json);
+        assert_eq!(options(&["--rpc"], &[]).rpc, Some(Format::Json));
+        for (name, format) in [("json", Format::Json), ("human", Format::Human)] {
+            assert_eq!(options(&[&format!("--rpc={name}")], &[]).rpc, Some(format));
+            assert_eq!(options(&[], &[("GAMS_RPC", name)]).rpc, Some(format));
+            assert_eq!(options(&["--rpc=false"], &[("GAMS_RPC", name)]).rpc, None);
+            assert_eq!(
+                options(
+                    &["--runtime=repl", &format!("--format={name}")],
+                    &[("GAMS_FORMAT", "invalid")]
+                )
+                .format,
+                format
+            );
+            assert_eq!(
+                options(&["--runtime=repl"], &[("GAMS_FORMAT", name)]).format,
+                format
+            );
+            assert_eq!(
+                options(&[&format!("--rpc={name}")], &[("GAMS_RPC", "invalid")]).rpc,
+                Some(format)
+            );
+            assert!(parse(&["--runtime=repl", &format!("--rpc={name}")], &[]).is_err());
+            assert!(parse(&[&format!("--format={name}")], &[]).is_err());
+            assert!(parse(&["--runtime=server"], &[("GAMS_FORMAT", name)]).is_err());
+        }
+        for value in ["", "pretty", "JSON", " human ", "false"] {
+            assert!(parse(&["--runtime=repl", &format!("--format={value}")], &[]).is_err());
+            assert!(parse(&["--runtime=repl"], &[("GAMS_FORMAT", value)]).is_err());
+        }
+        assert!(parse(&["--rpc=pretty"], &[]).is_err());
+    }
+
     #[test]
     fn selects_each_runtime_from_both_sources() {
         for (name, runtime) in [
@@ -251,7 +308,7 @@ mod tests {
             result.plugin_cache_dir,
             Some(PathBuf::from("relative/cache"))
         );
-        assert!(result.devtools && result.rpc);
+        assert!(result.devtools && result.rpc.is_some());
     }
     #[test]
     fn arguments_override_matching_invalid_environment_values() {
@@ -279,7 +336,7 @@ mod tests {
         assert_eq!(result.project_dir, Some(PathBuf::from("chosen")));
         assert_eq!(result.config, "chosen.json");
         assert_eq!(result.modules_dir, Some(PathBuf::from(absolute)));
-        assert!(!result.devtools && !result.rpc);
+        assert!(!result.devtools && result.rpc.is_none());
         assert_eq!(
             options(&["--runtime=native"], &[("GAMS_CONFIG", "env.json")]).config,
             "env.json"
@@ -308,7 +365,7 @@ mod tests {
     #[test]
     fn accepts_bare_and_explicit_boolean_forms() {
         let result = options(&["--devtools", "--rpc"], &[]);
-        assert!(result.devtools && result.rpc);
+        assert!(result.devtools && result.rpc.is_some());
         for name in ["--devtools", "--rpc"] {
             for value in ["true", "false"] {
                 for args in [
@@ -318,7 +375,7 @@ mod tests {
                     let result = Options::parse(args, |_| None).unwrap().unwrap();
                     assert_eq!(
                         if name == "--rpc" {
-                            result.rpc
+                            result.rpc.is_some()
                         } else {
                             result.devtools
                         },
@@ -364,6 +421,7 @@ mod tests {
             ("--devtools", "true"),
             ("--rpc", "false"),
             ("--listen", "localhost:8080"),
+            ("--format", "json"),
         ] {
             let error = parse(&[arg, value, &format!("{arg}={value}")], &[]).unwrap_err();
             assert!(error.contains("only be specified once"), "{error}");
@@ -378,6 +436,7 @@ mod tests {
             "--modules-dir",
             "--plugin-cache-dir",
             "--listen",
+            "--format",
         ] {
             assert!(parse(&[arg], &[]).is_err(), "{arg}");
             assert!(parse(&[arg, "--rpc"], &[]).is_err(), "{arg}");
@@ -556,6 +615,7 @@ mod tests {
             ("--devtools", "GAMS_DEVTOOLS", "false"),
             ("--rpc", "GAMS_RPC", "false"),
             ("--listen", "GAMS_LISTEN_ADDR", "localhost:8080"),
+            ("--format", "GAMS_FORMAT", "json"),
         ] {
             let env = |name: &str| (name == variable).then(invalid_unicode);
             assert!(
@@ -567,6 +627,12 @@ mod tests {
             let args = if arg == "--listen" {
                 vec![
                     "--runtime=server".to_owned(),
+                    arg.to_owned(),
+                    value.to_owned(),
+                ]
+            } else if arg == "--format" {
+                vec![
+                    "--runtime=repl".to_owned(),
                     arg.to_owned(),
                     value.to_owned(),
                 ]

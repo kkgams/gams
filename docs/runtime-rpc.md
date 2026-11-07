@@ -12,7 +12,7 @@ connection option, not another runtime.
 
 | Workspace | How to connect |
 | --- | --- |
-| [[runtime-native|Native]] | Start with `--rpc` or `GAMS_RPC=true`, then connect to its local socket or named pipe. No authentication or approval dialog. |
+| [[runtime-native|Native]] | Start with `--rpc` or `GAMS_RPC=json`, then connect to its local socket or named pipe. No authentication or approval dialog. |
 | [[runtime-web-server|WebServer]] | Connect through the server's existing address and authorize access. No RPC enable flag is needed. |
 | [[runtime-terminal|REPL]] | Send requests through stdin and read responses from stdout. No RPC enable flag is needed. |
 
@@ -27,11 +27,11 @@ The endpoint is also printed to stderr when stderr is attached.
 | Platform | Endpoint for PID `12345` |
 | --- | --- |
 | macOS / Linux | `/tmp/gams-rpc-12345/rpc.sock` |
-| Windows | `\\\\.\\pipe\\gams-rpc-12345` |
+| Windows | `\\.\pipe\gams-rpc-12345` |
 
 Use the PID of the running GAMS executable, not a launcher or parent shell.
 Multiple GAMS processes have separate endpoints. Access is disabled unless
-`--rpc` or `GAMS_RPC=true` is set. No TCP/HTTP port is opened; Windows pipes reject
+`--rpc` or `GAMS_RPC=json` is set. No TCP/HTTP port is opened; Windows pipes reject
 remote clients. Unix endpoints have an owner-only directory and socket.
 
 There is no authentication. Any process permitted by the operating system to
@@ -74,8 +74,27 @@ try {
 }
 ```
 
-Each nonblank request occupies one line and returns one compact JSON response:
-`{"ok": ...}` or `{"error":{"message":"..."}}`. Invalid calls do not close the
+`--rpc` and `--rpc=json` select compact JSON responses. `--rpc=human` enables the
+same endpoint with readable responses; `--rpc=false` disables access.
+`GAMS_RPC` accepts the same values; legacy `true` means `json`. No flag/environment
+setting means no RPC endpoint. `--format` / `GAMS_FORMAT` applies only to REPL.
+
+For example, use a native terminal client with human output on macOS:
+
+```sh
+# Start GAMS from the Project directory:
+gams --runtime native --rpc=human
+# In another terminal, replace 12345 with its PID:
+nc -U /tmp/gams-rpc-12345/rpc.sock
+```
+
+In JSON mode, each nonblank request occupies one line and returns one compact JSON
+response: `{"ok": ...}` or `{"error":{"message":"..."}}`. The Python/PowerShell
+examples above expect this format. Human mode starts responses with `OK` or
+`ERROR`, formats the value/message as indented JSON, and ends each response with
+`--- end ---` on its own line. String newlines are escaped, making the end marker
+unambiguous. Use a terminal client or read through that marker for human mode,
+not a single-line JSON reader. Invalid calls do not close the
 connection. Continue on the same connection or reconnect to use the same loaded
 plugins and resource references. Closing a connection does not close GAMS.
 

@@ -13,6 +13,7 @@ fn gams(root: &std::path::Path) -> Command {
         "GAMS_WASMTIME_CACHE_DIR",
         "GAMS_DEVTOOLS",
         "GAMS_RPC",
+        "GAMS_FORMAT",
         "GAMS_LISTEN_ADDR",
     ] {
         command.env_remove(name);
@@ -73,6 +74,60 @@ fn headless_process_keeps_wasm_state_and_recovers_from_bad_requests() {
     assert_eq!(responses[4], json!({"ok":2}));
     assert!(responses[5]["error"]["message"].is_string());
     assert_eq!(responses[6], json!({"ok":3}));
+}
+
+#[test]
+fn human_format_is_explicit_and_recovers_after_errors() {
+    let root = tempfile::tempdir().unwrap();
+    let mut child = gams(root.path())
+        .env("GAMS_FORMAT", "invalid")
+        .args(["--runtime", "repl", "--format=human"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"gams/host::plugins\ngams/host::missing\ngams/host::plugins\n")
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        concat!(
+        "OK\n[]\n--- end ---\n",
+        "ERROR\n\"Unknown GAMS command 'gams/host::missing'; use gams/host::help\"\n--- end ---\n",
+        "OK\n[]\n--- end ---\n",
+    )
+    );
+    for (args, expected) in [
+        (vec!["--runtime", "repl"], "OK\n[]\n--- end ---\n"),
+        (vec!["--runtime", "repl", "--format=json"], "{\"ok\":[]}\n"),
+    ] {
+        let mut child = gams(root.path())
+            .env("GAMS_FORMAT", "human")
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"gams/host::plugins\n")
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
+    }
 }
 
 #[test]

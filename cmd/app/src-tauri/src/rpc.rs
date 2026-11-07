@@ -1,4 +1,4 @@
-use crate::{commands::Commands, repl};
+use crate::{commands::Commands, output::Format, repl};
 use std::io;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::task::{JoinHandle, JoinSet};
@@ -13,7 +13,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn start(commands: Commands) -> io::Result<Self> {
+    pub async fn start(commands: Commands, format: Format) -> io::Result<Self> {
         let (mut listener, endpoint) = local::Listener::bind()?;
         #[cfg(unix)]
         let socket = listener
@@ -37,7 +37,7 @@ impl Server {
                 }
                 let commands = commands.clone();
                 clients.spawn(async move {
-                    if let Err(error) = serve(stream, commands).await {
+                    if let Err(error) = serve(stream, commands, format).await {
                         eprintln!("GAMS RPC connection failed: {error}");
                     }
                 });
@@ -58,7 +58,11 @@ impl Drop for Server {
     }
 }
 
-async fn serve(stream: impl AsyncRead + AsyncWrite + Unpin, commands: Commands) -> io::Result<()> {
+async fn serve(
+    stream: impl AsyncRead + AsyncWrite + Unpin,
+    commands: Commands,
+    format: Format,
+) -> io::Result<()> {
     let (read, mut write) = tokio::io::split(stream);
     let mut lines = BufReader::new(read).lines();
     while let Some(line) = lines.next_line().await? {
@@ -76,9 +80,7 @@ async fn serve(stream: impl AsyncRead + AsyncWrite + Unpin, commands: Commands) 
             }
             Err(message) => Err(message),
         };
-        let mut bytes = serde_json::to_vec(&repl::response(result))?;
-        bytes.push(b'\n');
-        write.write_all(&bytes).await?;
+        write.write_all(&format.encode(result)?).await?;
     }
     Ok(())
 }
@@ -226,6 +228,25 @@ mod tests {
     }
 
     #[test]
+    fn human_connections_use_the_same_commands_and_response_boundaries() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            let (server, mut client) = tokio::io::duplex(4096);
+            let task = tokio::spawn(serve(server, commands(root.path()), Format::Human));
+            client.write_all(b"gams/host::plugins\ngams/host::missing\ngams/host::plugins\n").await.unwrap();
+            client.shutdown().await.unwrap();
+            let mut text = String::new();
+            tokio::io::AsyncReadExt::read_to_string(&mut client, &mut text).await.unwrap();
+            task.await.unwrap().unwrap();
+            assert_eq!(text, concat!(
+                "OK\n[]\n--- end ---\n",
+                "ERROR\n\"Unknown GAMS command 'gams/host::missing'; use gams/host::help\"\n--- end ---\n",
+                "OK\n[]\n--- end ---\n",
+            ));
+        });
+    }
+
+    #[test]
     fn clients_share_native_commands_and_recover_from_bad_calls() {
         let executor = tokio::runtime::Runtime::new().unwrap();
         executor.block_on(async {
@@ -248,8 +269,8 @@ mod tests {
                 .invoke("gams/host::load-plugins", vec![json!(["counter.wat"])])
                 .unwrap();
             assert_eq!(commands.invoke("next", vec![]).unwrap(), json!(1));
-            let server = Server::start(commands.clone()).await.unwrap();
-            assert!(Server::start(commands.clone()).await.is_err());
+            let server = Server::start(commands.clone(), Format::Json).await.unwrap();
+            assert!(Server::start(commands.clone(), Format::Json).await.is_err());
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
