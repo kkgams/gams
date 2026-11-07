@@ -1,11 +1,12 @@
 ---
-title: Web server
+title: WebServer
 status: reference
 ---
 
-# Web server
+# WebServer
 
-Use a Project through your browser without installing the desktop application.
+Use a server-hosted Project through your browser. For browser-only use without
+a GAMS server, choose [[runtime-web|Web]].
 
 ## Start and open a workspace
 

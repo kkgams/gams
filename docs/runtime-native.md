@@ -1,9 +1,9 @@
 ---
-title: Native application
+title: Native
 status: reference
 ---
 
-# Native application
+# Native
 
 Edit a Project on your computer using its configured Views and tools.
 

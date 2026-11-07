@@ -1,9 +1,9 @@
 ---
-title: Terminal (CLI / REPL)
+title: REPL/CLI
 status: reference
 ---
 
-# Terminal (CLI / REPL)
+# REPL/CLI
 
 Run Project tools without opening a graphical interface.
 

@@ -2,9 +2,10 @@
 
 - [[index|GAMS Host documentation]]
 - [[runtime|Runtime]]
-  - [[runtime-native|Native application]]
-  - [[runtime-web-server|Web server]]
-  - [[runtime-terminal|Terminal (CLI / REPL)]]
+  - [[runtime-native|Native]]
+  - [[runtime-web-server|WebServer]]
+  - [[runtime-terminal|REPL/CLI]]
+  - [[runtime-web|Web]]
 
 ## Host and Project Units
 
