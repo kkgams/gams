@@ -9,6 +9,14 @@
   - [[runtime-rpc|RPC]]
 - [[runtime-commands|GAMS commands]]
 
+## Plugins
+
+- [[plugin-font|plugin.font]]
+
+## Views
+
+- [[view-files|view.files]]
+
 ## Host and Project Units
 
 - [[host-runtime|Host runtime and configuration]]
@@ -25,11 +33,3 @@
 - [[selectable-grids|Selectable grids]]
 - [[game-icons|Game Icons catalogue]]
 - [[game-icons-build|Game Icons build and usage]]
-
-## Plugins
-
-- [[plugin-font|plugin.font]]
-
-## Views
-
-- [[view-files|view.files]]
