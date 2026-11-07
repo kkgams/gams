@@ -25,3 +25,11 @@
 - [[selectable-grids|Selectable grids]]
 - [[game-icons|Game Icons catalogue]]
 - [[game-icons-build|Game Icons build and usage]]
+
+## Plugins
+
+- [[plugin-font|plugin.font]]
+
+## Views
+
+- [[view-files|view.files]]

@@ -79,7 +79,7 @@ connect clients to a session.
 | `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
 | `make docs` | Build the portable wiki under `build.nosync/docs/`. |
 | `make serve-docs DOCS_PORT=8080` | Preview the prepared wiki; restart after source edits. |
-| `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.4.0. |
+| `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.6.0. |
 | `make promo` | Assemble promo and documentation under `build.nosync/site/`. |
 | `make serve-promo PROMO_PORT=8081` | Preview promo; `/docs` points to the independent docs server. |
 
@@ -94,16 +94,15 @@ make validate-docs
 ```
 
 Open <http://localhost:8080> (or the selected port). Make fetches the upstream
-`justgook/wiki` **v1.4.0 Makefile**, then delegates to its `serve` target. That
-Makefile installs the engine and chooses Bun, Node.js, or Python. This is the
-same engine release used by `imprint-zero`; no custom preview script, content
-mirror, npm installation, or Host build is involved. The prepared documentation tree and a byte-for-byte copy of the checked-in
+`justgook/wiki` **v1.6.0 Makefile**, then delegates to its `serve` target. That
+Makefile installs the engine and chooses Bun, Node.js, or Python. No custom
+preview script, content mirror, npm installation, or Host build is involved. The prepared documentation tree and a byte-for-byte copy of the checked-in
 Game Icons catalogue font are under `build.nosync/docs-source/`, loaded by
 `custom.css` for the catalogue. Validation delegates to the
 upstream `validate` target and requires Node.js 24.
 
-The upstream Makefile and engine are cached at `build.nosync/wiki-v1.4.0.mk` and
-`build.nosync/wiki-v1.4.0/`. Make prepares documentation and the catalogue font under build.nosync; restart
+The upstream Makefile and engine are cached at `build.nosync/wiki-v1.6.0.mk` and
+`build.nosync/wiki-v1.6.0/`. Make prepares documentation and the catalogue font under build.nosync; restart
 serve-docs after source edits to refresh that prepared content. Add new pages to `_sidebar.md` as part of authoring. Links to files outside
 `docs/` open their upstream repository sources rather than exposing the Host's
 source tree or build caches through the wiki.

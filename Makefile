@@ -208,7 +208,7 @@ game-icons-check: cmd/app/src/fonts/game-icons.woff2
 
 # Delegate to the pinned wiki engine; all assembly/cache output stays disposable.
 WIKI_REPOSITORY ?= https://github.com/justgook/wiki
-WIKI_VERSION ?= v1.4.0
+WIKI_VERSION ?= v1.6.0
 WIKI_MAKEFILE ?= $(BUILD_DIR)/wiki-$(WIKI_VERSION).mk
 WIKI_ENGINE ?= $(BUILD_DIR)/wiki-$(WIKI_VERSION)
 PORT ?= 8080

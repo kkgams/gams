@@ -63,7 +63,7 @@ rejects Nix-store-linked Linux binaries, so use the native system SDK for packag
 | `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
 | `make docs` | Build the portable wiki under `build.nosync/docs/`. |
 | `make serve-docs DOCS_PORT=8080` | Preview the prepared wiki; restart after source edits. |
-| `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.4.0. |
+| `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.6.0. |
 | `make promo` | Assemble promo and documentation under `build.nosync/site/`. |
 | `make serve-promo PROMO_PORT=8081` | Preview promo; `/docs` points to the independent docs server. |
 
