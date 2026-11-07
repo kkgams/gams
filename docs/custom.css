@@ -1,4 +1,23 @@
-/* The wiki serves custom.css at its root in both preview and assembled sites. */
+/* Match promo/style.css; the wiki serves this in preview and assembled sites. */
+:root {
+    color-scheme: dark;
+    --bg: #111315;
+    --surface: #1c2023;
+    --surface-raised: #292d30;
+    --border: #343638;
+    --border-strong: #5c666b;
+    --text: #eeefe9;
+    --prose-text: #b9c4c9;
+    --muted: #a2a8a8;
+    --faint: #a2a8a8;
+    /* Promo's brighter orange keeps small accent text readable on surfaces. */
+    --accent: #f45a0d;
+    --accent-ink: #111315;
+    --secondary: #f45a0d;
+    --selection-bg: #ec4e00;
+    --focus-ring: var(--secondary);
+}
+
 @font-face {
     font-family: "GAMS Game Icons";
     src: url("content/assets/game-icons.woff2") format("woff2");
