@@ -11,6 +11,31 @@ Run Project tools without opening a graphical interface.
 gams --runtime terminal
 ```
 
+## Arguments and environment
+
+Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
+
+| Argument | Environment variable | Values / default | Description |
+| --- | --- | --- | --- |
+| `--plug` | `GAMS_PLUGINS` | Repeatable file path; environment: JSON array of paths; default: none | Load plugin files. Include the plugins they depend on. |
+| `--target` | `GAMS_TARGET` | Tool name, such as `fs/fs::read-text`; default: none | Run one tool and exit. |
+| `--args` | `GAMS_ARGS` | JSON array; default: `[]` | Supply the tool's arguments in order. |
+| `--args-file` | `GAMS_ARGS_FILE` | File path; default: none | Read the JSON argument array from a file. Takes priority over inline arguments. |
+
+Repeated `--plug` arguments replace the environment's plugin list rather than
+adding to it. Without a target, interactive input opens the REPL; piped input
+accepts a sequence of requests.
+
+These commands perform the same call:
+
+```sh
+gams --runtime terminal --plug plugins/plugin.fs.wasm \
+  --target fs/fs::read-text --args '["README.md"]'
+
+GAMS_RUNTIME=terminal GAMS_PLUGINS='["plugins/plugin.fs.wasm"]' \
+  GAMS_TARGET=fs/fs::read-text GAMS_ARGS='["README.md"]' gams
+```
+
 ## Choose how to work
 
 | Input | Use for |

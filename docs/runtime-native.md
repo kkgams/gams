@@ -15,6 +15,10 @@ From the directory containing your `gams.json`, run:
 gams --runtime native
 ```
 
+You can also set `GAMS_RUNTIME=native` and run `gams`. Use the
+[[runtime#arguments-and-environment|shared arguments and environment variables]] to choose a Project,
+config file, Unit storage directory or plugin cache.
+
 | Task | What to do |
 | --- | --- |
 | Edit content | Open the appropriate View and use its tools. |

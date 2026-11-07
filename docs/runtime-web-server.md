@@ -20,6 +20,25 @@ gams --runtime server
 2. Authenticate and choose the workspace to open.
 3. Edit content through the Project's Views and tools.
 
+## Arguments and environment
+
+Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
+
+| Argument | Environment variable | Values / default | Description |
+| --- | --- | --- | --- |
+| `--listen` | `GAMS_LISTEN_ADDR` | `host:port`; default: `127.0.0.1:8080` | Choose the address and port accepting browser connections. |
+
+These commands use the same address:
+
+```sh
+gams --runtime server --listen 127.0.0.1:8081
+GAMS_RUNTIME=server GAMS_LISTEN_ADDR=127.0.0.1:8081 gams
+```
+
+`127.0.0.1` accepts connections only from the server computer. To allow other
+computers, choose an appropriate network interface; `0.0.0.0` listens on all
+IPv4 interfaces. Remote access still requires authorization.
+
 ## Files and automation
 
 | Task | What to do |

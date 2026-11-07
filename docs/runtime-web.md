@@ -15,6 +15,11 @@ is required.
 3. Edit content through the Project's Views and tools.
 4. Save or export your changes before closing the workspace.
 
+## Arguments and environment
+
+Web has no process arguments or shell environment variables. Choose the Project
+and grant file access in the browser; native startup settings do not apply.
+
 ## Files and tools
 
 | Task | What to do |
