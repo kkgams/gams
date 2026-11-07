@@ -54,6 +54,8 @@ jobs:
           & dumpbin.exe /imports $test.FullName | Out-File build.nosync/windows-loader/imports.txt
           & mt.exe "-inputresource:$($test.FullName);#1" -out:build.nosync/windows-loader/manifest.xml
           Write-Output "[DEBUG-v3-win] MANIFEST-EXTRACTION-EXIT $LASTEXITCODE"
+          & $test.FullName --list
+          Write-Output "[DEBUG-v3-win] TEST-LIST-EXIT $LASTEXITCODE"
           python scripts/diagnose-windows-imports.py $test.FullName
           foreach ($name in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
             $path = Join-Path "$env:SystemRoot/System32" $name
