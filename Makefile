@@ -12,6 +12,7 @@ export TEMP := $(TMPDIR)
 export PYTHONPYCACHEPREFIX := $(abspath $(BUILD_DIR)/pycache)
 # CI supplies the triggering tag's version; local builds retain source metadata.
 RELEASE_VERSION ?=
+RUST_TEST_ARGS ?=
 TAURI_VERSION_CONFIG = $(if $(strip $(RELEASE_VERSION)),{"version":"$(RELEASE_VERSION)"},{})
 TAURI_VERSION_ARGS = $(if $(strip $(RELEASE_VERSION)),--config '$(TAURI_VERSION_CONFIG)')
 TAURI_APP_DIR := cmd/app
@@ -29,13 +30,13 @@ HOST_CXX ?= $(if $(CXX),$(CXX),$(HOST_CXX_AUTO))
 # MSVC discovers its compiler through the native developer environment.
 COMPILER_ENV = case "$$(uname -s)" in MINGW*|MSYS*|CYGWIN*) unset CC CXX ;; *) if [[ -n "$(HOST_CC)" ]]; then export CC="$(HOST_CC)"; fi; if [[ -n "$(HOST_CXX)" ]]; then export CXX="$(HOST_CXX)"; fi ;; esac
 
-.PHONY: run open test build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo clean
+.PHONY: run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo clean
 
 $(BUILD_DIR)/tmp:
 	mkdir -p "$@"
 
 # Order-only: creating the shared temporary directory never invalidates outputs.
-run open test build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo: | $(BUILD_DIR)/tmp
+run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo: | $(BUILD_DIR)/tmp
 
 # Source development: no Project means the existing native picker behavior.
 run: app-icons
@@ -59,9 +60,12 @@ open:
 test: app-icons
 	node --test test/*.test.mjs
 	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_*.py'
+	$(MAKE) test-rust
+
+test-rust: app-icons
 	$(COMPILER_ENV)
 	cd "$(TAURI_SRC_DIR)"
-	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo test
+	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo test --locked $(RUST_TEST_ARGS)
 
 app-icons: $(BUILD_DIR)/app/icons/icon.icns
 
@@ -246,4 +250,4 @@ TAURI_SCHEMA_FILES := $(addprefix $(TAURI_SRC_DIR)/gen/schemas/,acl-manifests.js
 # Only declared recreatable outputs; unrelated files/logs under build.nosync stay.
 # Tracked paths and symlink ancestors are refused before deleting anything.
 clean:
-	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")
+	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")

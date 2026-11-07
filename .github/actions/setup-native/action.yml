@@ -1,0 +1,71 @@
+name: Set up native Host build
+description: Install the platform SDK tools and restore the shared Cargo dependency cache.
+inputs:
+  target:
+    description: Native Rust target triple
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Configure job-local Cargo directories
+      shell: bash
+      env:
+        CARGO_CACHE: ${{ github.workspace }}/build.nosync/cargo
+        CARGO_TARGET: ${{ github.workspace }}/build.nosync/app/target
+      run: |
+        printf 'CARGO_HOME=%s\n' "$CARGO_CACHE" >> "$GITHUB_ENV"
+        printf 'CARGO_TARGET_DIR=%s\n' "$CARGO_TARGET" >> "$GITHUB_ENV"
+    - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      if: runner.os == 'macOS'
+    # Release ELF binaries must link system GTK/WebKit, not /nix/store.
+    - name: Install Linux native dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y \
+          build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+          libxdo-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+    - name: Activate native Windows toolchain and GNU Make
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        choco install make --no-progress -y
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (!$installation) { throw 'MSVC installation not found' }
+        $before = @{}
+        Get-ChildItem Env: | ForEach-Object { $before[$_.Name] = $_.Value }
+        & "$installation\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+        # Git Bash prepends its own link.exe; Cargo must use MSVC explicitly.
+        $linker = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+        if (!(Test-Path -LiteralPath $linker -PathType Leaf)) { throw "MSVC linker not found: $linker" }
+        $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = $linker
+        Get-ChildItem Env: | Where-Object { $before[$_.Name] -ne $_.Value } | ForEach-Object {
+          "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV
+        }
+    - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2
+      if: runner.os != 'macOS'
+      with:
+        toolchain: '1.94.1'
+        target: ${{ inputs.target }}
+        build-warnings: ''
+        # Use the same explicit cache configuration as the Nix platform below.
+        cache: 'false'
+    - name: Restore Cargo dependencies
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        workspaces: cmd/app/src-tauri -> ../../../build.nosync/app/target
+        shared-key: native-${{ inputs.target }}
+        key: ${{ runner.os == 'macOS' && hashFiles('flake.lock') || 'system-sdk' }}
+        cmd-format: ${{ runner.os == 'macOS' && 'nix develop -c {0}' || '{0}' }}
+        cache-bin: 'false'
+        # Default-branch caches are readable by tag runs; sibling tags are not.
+        # Cache test dependencies only, never release archives or app bundles.
+        save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/release' }}
+    - name: Install prebuilt packaging tools
+      if: runner.os != 'macOS'
+      shell: bash
+      env:
+        NATIVE_TARGET: ${{ inputs.target }}
+      run: python3 scripts/install-ci-tools.py --target "$NATIVE_TARGET"

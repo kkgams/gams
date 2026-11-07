@@ -10,11 +10,36 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     env:
+      TARGET: ${{ matrix.target }}
       CARGO_BUILD_JOBS: '2'
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - uses: ./.github/actions/setup-native
+        with:
+          target: ${{ matrix.target }}
+      # Optimized test dependencies also warm the next tag's native build cache.
+      # These are test binaries, not release executables, bundles or archives.
       - name: Test Host and validate documentation
-        run: nix develop --command make test game-icons-check validate-docs
+        if: runner.os == 'macOS'
+        run: nix develop --command make test game-icons-check validate-docs RUST_TEST_ARGS="--release --target $TARGET"
+      - name: Test native Windows Rust Host
+        if: runner.os == 'Windows'
+        run: make test-rust RUST_TEST_ARGS="--release --target $TARGET" SHELL="$(cygpath -m "$(command -v bash)")"
+      - name: Test native Linux Rust Host
+        if: runner.os == 'Linux'
+        run: make test-rust RUST_TEST_ARGS="--release --target $TARGET"

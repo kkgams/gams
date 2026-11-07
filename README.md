@@ -42,6 +42,7 @@ rejects Nix-store-linked Linux binaries, so use the native system SDK for packag
 | `make run` | Run from source; use the macOS Project picker or set `GAMS_APP_CWD`. |
 | `make open` | Run from source with this repository's root `gams.json` development preview. |
 | `make test` | Run native Rust, JavaScript and Python tooling tests; does not create release packages. |
+| `make test-rust` | Run only Rust tests; use `RUST_TEST_ARGS="--release --target <triple>"` for optimized native tests. |
 | `make build` | Compile the native release executable without an archive. |
 | `make package` | Build the selected platform application and its archive/checksum through incremental file targets. |
 | `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
@@ -79,8 +80,15 @@ steps. Existing releases and assets are not overwritten.
 
 Pushes to `release` run tests/documentation validation and build/deploy promo plus
 docs through Pages. They do not build release executables, bundles or archives;
-Rust tests still compile their test binaries. Pull requests test/validate without
-publishing. GitHub Pages uses the GitHub Actions deployment source.
+Rust tests run in the optimized profile on all three native runners; JavaScript,
+Python, font and documentation checks run on macOS. Trusted `release` pushes save
+Cargo dependency caches for subsequent branch and tag runs, using the same target
+directory and platform keys. CI keeps its Cargo registry under `build.nosync/cargo/`. Pull requests and tags restore without saving caches;
+release archives and app bundles are not cached. Windows/Linux download pinned,
+SHA-256-verified Tauri CLI and cargo-about binaries into `build.nosync/ci-tools/`
+instead of compiling the tools. macOS retains its pinned Nix toolchain. The first
+branch run populates caches; different tags cannot share tag-only caches.
+GitHub Pages uses the GitHub Actions deployment source.
 
 ## Documentation and licenses
 
