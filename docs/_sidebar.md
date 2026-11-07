@@ -5,9 +5,9 @@
   - [[runtime-native|Native]]
   - [[runtime-web-server|WebServer]]
   - [[runtime-terminal|REPL]]
-    - [[runtime-commands|GAMS commands]]
   - [[runtime-web|Web]]
   - [[runtime-rpc|RPC]]
+- [[runtime-commands|GAMS commands]]
 
 ## Host and Project Units
 
