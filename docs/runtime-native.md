@@ -8,6 +8,10 @@ status: reference
 Use the native application to edit a Project locally and connect external tools
 to the same workspace.
 
+```sh
+gams --runtime native
+```
+
 | Part | Runs in |
 | --- | --- |
 | WASM plugins and session state | Local Host |
@@ -35,5 +39,5 @@ Attached callers share the application's plugin state. Reuse returned resource
 handles in that session and release them when finished. Disconnecting an external
 caller leaves the desktop session running.
 
-See [[host-runtime|Project configuration]], [[runtime-terminal|terminal access]]
+See [[runtime|runtime modes]], [[host-runtime|Project configuration]], [[runtime-terminal|terminal access]]
 and [[runtime-web-server|web server]].

@@ -7,6 +7,10 @@ status: reference
 
 Use the web server to run plugins remotely while editing through a browser.
 
+```sh
+gams --runtime server
+```
+
 | Part | Runs in |
 | --- | --- |
 | WASM plugins, filesystem operations and session state | Server |
@@ -34,4 +38,4 @@ Use the web server to run plugins remotely while editing through a browser.
 Each UI client has its own Views and selections. Authorization controls access
 to the session and its operations, including server files and native commands.
 
-See [[runtime-native|native application]] and [[runtime-terminal|terminal access]].
+See [[runtime|runtime modes]], [[runtime-native|native application]] and [[runtime-terminal|terminal access]].

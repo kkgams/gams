@@ -7,6 +7,10 @@ status: reference
 
 Use the terminal for automation, CI and interactive plugin calls.
 
+```sh
+gams --runtime terminal
+```
+
 ## Choose input and session
 
 | Input | Use for | Behavior |
@@ -46,4 +50,4 @@ Example: open a SQL connection → prepare a statement → query using both hand
 Release only resources you own. Disconnecting must not release resources owned
 by other clients.
 
-See [[runtime-native|native application]] and [[runtime-web-server|web server]].
+See [[runtime|runtime modes]], [[runtime-native|native application]] and [[runtime-web-server|web server]].

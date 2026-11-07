@@ -39,24 +39,8 @@ lists all pages; use the filter to find a topic.
 
 ## Runtime
 
-Choose where plugins execute and how you interact with the Project.
-
-| Mode | Use for | Plugin execution |
-| --- | --- | --- |
-| [[runtime-native|Native application]] | Local editing through desktop Views and UI Services. | Local Host |
-| [[runtime-web-server|Web server]] | Browser-based editing with server-side processing. | Server |
-| [[runtime-terminal|Terminal (CLI / REPL)]] | Single calls, piped automation and interactive sessions. | Terminal-owned session or attached Host |
-
-| Term | Meaning |
-| --- | --- |
-| Runtime Session | Loaded WASM plugins, their state and resource handles. |
-| UI client | Desktop or browser interface containing Views and UI Services. A session can have multiple UI clients. |
-| UI context | Relevant clients, Views, selections and supported actions. Actions target one View, a group, or all Views within an explicit scope. |
-| RPC | Connects terminals and external tools to an existing session for discovery, calls, results and execution events. |
-
-Discover an operation to inspect its arguments and results before calling it.
-Plugin operations execute in the session; UI operations execute in the selected
-UI client.
+See [[runtime|Runtime]] to choose an execution mode, find its startup flag and
+connect clients to a session.
 
 ## Host and Project Units
 
