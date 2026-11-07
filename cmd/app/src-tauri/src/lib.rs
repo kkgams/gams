@@ -3,6 +3,7 @@ mod download;
 mod options;
 mod project;
 mod repl;
+mod rpc;
 mod runtime;
 
 use std::path::{Path, PathBuf};
@@ -253,9 +254,6 @@ fn try_run() -> anyhow::Result<()> {
     if options.runtime == options::Runtime::Server {
         anyhow::bail!("WebServer execution is not implemented");
     }
-    if options.rpc {
-        anyhow::bail!("Native RPC access is not implemented");
-    }
     if options.runtime == options::Runtime::Native {
         return run_native(options);
     }
@@ -332,11 +330,13 @@ fn run_repl(options: &options::Options, root: PathBuf) -> anyhow::Result<()> {
 }
 
 fn run_native(options: options::Options) -> anyhow::Result<()> {
+    let rpc_server = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let startup_rpc_server = rpc_server.clone();
     let builder = tauri::Builder::default();
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_macos_fps::init());
 
-    builder
+    let app = builder
         .setup(move |app| {
             let Some(root) = runtime_root(true, &options.config, options.project_dir.as_deref())?
             else {
@@ -363,12 +363,13 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
                 None => app.path().app_cache_dir()?.join("wasmtime-components"),
             };
             runtime.set_compiled_component_cache_dir(cache_dir)?;
+            let commands = commands::Commands {
+                runtime: runtime.clone(),
+                root: root.clone(),
+                config_file: options.config.clone(),
+            };
             assert!(
-                app.manage(commands::Commands {
-                    runtime: runtime.clone(),
-                    root: root.clone(),
-                    config_file: options.config.clone()
-                }),
+                app.manage(commands.clone()),
                 "GAMS commands must not already be registered"
             );
             assert!(
@@ -385,6 +386,13 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
                 .inner_size(1000.0, 700.0)
                 .devtools(options.devtools)
                 .build()?;
+            if options.rpc {
+                let server = tauri::async_runtime::block_on(rpc::Server::start(commands))?;
+                eprintln!("GAMS RPC: {}", server.endpoint);
+                *startup_rpc_server
+                    .lock()
+                    .expect("RPC startup lock poisoned") = Some(server);
+            }
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -401,7 +409,19 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
             runtime_call_view_response,
             runtime_clear_compiled_component_cache,
         ])
-        .run(tauri::generate_context!())?;
+        .build(tauri::generate_context!())?;
+    app.run(move |_, event| {
+        // Tauri can exit the process directly: cleanup must run in its Exit
+        // callback, not in code after the native event loop.
+        if matches!(event, tauri::RunEvent::Exit) {
+            drop(
+                rpc_server
+                    .lock()
+                    .expect("RPC shutdown lock poisoned")
+                    .take(),
+            );
+        }
+    });
     Ok(())
 }
 

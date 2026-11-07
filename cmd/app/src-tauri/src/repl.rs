@@ -54,6 +54,13 @@ pub fn parse(line: &str) -> Result<Call, String> {
     })
 }
 
+pub fn response(result: Result<Value, String>) -> Value {
+    match result {
+        Ok(value) => serde_json::json!({ "ok": value }),
+        Err(message) => serde_json::json!({ "error": { "message": message } }),
+    }
+}
+
 /// Flush one compact JSON response per nonempty physical input line until EOF.
 /// Request errors continue the session; I/O errors end it. The caller owns state.
 pub fn run(
@@ -71,10 +78,7 @@ pub fn run(
             continue;
         }
         let result = parse(&line).and_then(|call| invoke(&call.target, call.args));
-        let response = match result {
-            Ok(value) => serde_json::json!({ "ok": value }),
-            Err(message) => serde_json::json!({ "error": { "message": message } }),
-        };
+        let response = response(result);
         serde_json::to_writer(&mut writer, &response)?;
         writer.write_all(b"\n")?;
         writer.flush()?;

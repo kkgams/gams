@@ -110,7 +110,6 @@ fn unsupported_features_and_removed_subcommands_fail_before_opening_a_window() {
         vec!["--runtime", "repl", "--target", "anything"],
         vec!["--runtime", "terminal"],
         vec!["--runtime", "server"],
-        vec!["--runtime", "native", "--rpc"],
     ] {
         let output = gams(root.path())
             .args(&args)
