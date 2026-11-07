@@ -5,49 +5,45 @@ status: reference
 
 # Terminal (CLI / REPL)
 
-Use the terminal for automation, CI and interactive plugin calls.
+Run Project tools without opening a graphical interface.
 
 ```sh
 gams --runtime terminal
 ```
 
-## Choose input and session
+## Choose how to work
 
-| Input | Use for | Behavior |
-| --- | --- | --- |
-| Single call | Shell commands and CI steps | Execute one operation and return its result. |
-| Piped requests | Multi-step scripts and CI jobs | Read structured requests from stdin; write responses to stdout. |
-| Interactive REPL | Exploration and dependent calls | Discover tools, inspect results and reuse values. |
-
-| Session | Behavior | Lifetime |
-| --- | --- | --- |
-| Start your own | Load WASM plugins and dependencies; no GUI required. | Ends with terminal execution unless explicitly kept running. |
-| Attach | Share a native, server or terminal session's plugins, state and UI operations. | Disconnecting leaves the session running. |
-
-Protocol input/output is separate from plugin streams, logs and prompts.
-Failures are machine-readable; process exit status identifies failed execution.
-
-## Chain calls
-
-1. Discover the operation and its arguments.
-2. Invoke it and inspect the result.
-3. Reuse returned values or resource handles in subsequent calls.
-4. Release resources when finished.
-
-Example: open a SQL connection → prepare a statement → query using both handles
-→ inspect rows → release the statement and connection.
-
-## Session rules
-
-| Situation | Behavior |
+| Input | Use for |
 | --- | --- |
-| An authorized client attaches | It shares the running session. |
-| A call needs an unavailable UI | The call reports the missing requirement. |
-| A handle belongs to another session | It cannot be used here. |
-| Session termination or plugin reload invalidates a handle | Further use reports an invalid handle. |
-| A single-shot process exits | Its ended session cannot be attached to. |
+| Single call | Run one tool from a shell command or CI step. |
+| Piped requests | Send a sequence of requests through stdin and read results from stdout. |
+| Interactive REPL | Explore tools, inspect results and build the next call from an earlier result. |
 
-Release only resources you own. Disconnecting must not release resources owned
-by other clients.
+Start your own workspace for independent processing. Connect to an open desktop,
+server or terminal workspace through RPC when you want to work with its existing
+data or control its Views.
 
-See [[runtime|runtime modes]], [[runtime-native|native application]] and [[runtime-web-server|web server]].
+## Run a sequence
+
+1. Choose a tool and read its argument help.
+2. Supply the arguments and run it.
+3. Inspect the result; reuse returned values in the next call.
+4. Close any connections or documents you opened when finished.
+
+For example: open a database, prepare a query, fetch rows, then close the
+statement and database connection.
+
+## Handle errors and exit
+
+| Situation | What to do |
+| --- | --- |
+| A tool requires an open View | Connect to a workspace containing that View. |
+| A returned reference is no longer valid | Open the object again; references cannot be reused after their workspace closes or its plugins reload. |
+| A call fails in CI | Read the structured error and check the process exit status. |
+| You finish with an attached workspace | Disconnect; the workspace stays open. |
+
+Keep dependent calls in the same workspace. A completed single-shot command
+cannot accept further calls; use piped input or the REPL to continue working.
+
+See [[runtime|runtime modes]], [[runtime-native|native application]] and
+[[runtime-web-server|web server]].

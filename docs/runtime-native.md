@@ -5,39 +5,31 @@ status: reference
 
 # Native application
 
-Use the native application to edit a Project locally and connect external tools
-to the same workspace.
+Edit a Project on your computer using its configured Views and tools.
+
+## Open a Project
+
+From the directory containing your `gams.json`, run:
 
 ```sh
 gams --runtime native
 ```
 
-| Part | Runs in |
+| Task | What to do |
 | --- | --- |
-| WASM plugins and session state | Local Host |
-| Views and UI Services | Desktop window |
-| Attached terminal or agent | External process, connected through RPC |
+| Edit content | Open the appropriate View and use its tools. |
+| Apply an action to a selection | Choose the View containing that selection. |
+| Work across Views | Choose a group, or explicitly select all Views you want to affect. |
+| Automate editing | Authorize your terminal or agent to connect to the open workspace through RPC. |
 
-## Open a Project
+## Use external tools
 
-1. Open GAMS with the Project directory containing `gams.json`.
-2. Work through the Project's configured Views and UI Services.
-3. To automate the workspace, authorize an RPC connection to its Runtime Session.
+1. Choose the open workspace to control.
+2. Inspect its available tools, Views and selections.
+3. Choose the action, supply its arguments and confirm the intended Views.
+4. Run it and check the result. Follow progress and notifications in the workspace.
 
-## Control the workspace
+Disconnecting a terminal or agent leaves your desktop workspace open.
 
-| Task | Action |
-| --- | --- |
-| Find callable operations | Discover the session's tools and argument descriptions. |
-| Inspect the interface | Read UI context for visible Views, selections and supported actions. |
-| Act on a selection | Resolve the target from context or select specific Views. |
-| Act across Views | Target a group or all Views within an explicit scope. |
-| Show a notification or popup | Call the registered UI Service in the intended UI client. |
-| Follow execution | Read the call's results and progress events. |
-
-Attached callers share the application's plugin state. Reuse returned resource
-handles in that session and release them when finished. Disconnecting an external
-caller leaves the desktop session running.
-
-See [[runtime|runtime modes]], [[host-runtime|Project configuration]], [[runtime-terminal|terminal access]]
-and [[runtime-web-server|web server]].
+See [[runtime|runtime modes]], [[host-runtime|Project configuration]] and
+[[runtime-terminal|terminal access]].
