@@ -26,6 +26,24 @@ config file, Unit storage directory or plugin cache.
 | Work across Views | Choose a group, or explicitly select all Views you want to affect. |
 | Automate editing | Authorize your terminal or agent to connect to the open workspace through [[runtime-rpc|RPC]]. |
 
+## Arguments and environment
+
+Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
+
+| Argument | Environment variable | Values / default | Description |
+| --- | --- | --- | --- |
+| `--devtools` | `GAMS_DEVTOOLS` | `true`, `false`; default: `false`. The bare flag means `true`. | Enable the Native window's developer tools to inspect and debug the interface. |
+
+These commands both enable developer tools:
+
+```sh
+gams --runtime native --devtools
+GAMS_RUNTIME=native GAMS_DEVTOOLS=true gams
+```
+
+Use `--devtools=false` to disable them even when `GAMS_DEVTOOLS=true` is set.
+This option is available only in Native.
+
 ## Use external tools
 
 1. Choose the open workspace to control.

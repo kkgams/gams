@@ -40,7 +40,8 @@ gams --runtime native --project-dir /path/to/project --config gams.dev.json
 GAMS_RUNTIME=native GAMS_APP_CWD=/path/to/project GAMS_CONFIG=gams.dev.json gams
 ```
 
-See [[runtime-web-server|WebServer]] for listening options and
+See [[runtime-native|Native]] for developer tools,
+[[runtime-web-server|WebServer]] for listening options and
 [[runtime-terminal|REPL/CLI]] for plugin and tool-call options.
 [[runtime-web|Web]] opens directly in the browser and uses no process arguments
 or shell environment variables.
