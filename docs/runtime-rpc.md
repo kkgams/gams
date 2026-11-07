@@ -14,7 +14,7 @@ connection option, not another runtime.
 | --- | --- |
 | [[runtime-native|Native]] | Start with `--rpc` or `GAMS_RPC=true`, then authorize your local tool. Access is disabled by default and limited to this computer. |
 | [[runtime-web-server|WebServer]] | Connect through the server's existing address and authorize access. No RPC enable flag is needed. |
-| [[runtime-terminal|REPL/CLI]] | Send requests through stdin and read responses from stdout. No RPC enable flag is needed. |
+| [[runtime-terminal|REPL]] | Send requests through stdin and read responses from stdout. No RPC enable flag is needed. |
 
 For remote access, use WebServer.
 
@@ -38,7 +38,7 @@ fs/fs::read-text README.md
 
 Use your own script or agent for loops, transformations and other advanced tasks.
 
-Disconnecting from Native or WebServer leaves the workspace open. For REPL/CLI,
+Disconnecting from Native or WebServer leaves the workspace open. For REPL,
 keep stdin open while sending calls; closing the input ends terminal execution.
 
 See [[runtime|Runtime options]].

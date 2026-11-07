@@ -4,7 +4,7 @@
 - [[runtime|Runtime]]
   - [[runtime-native|Native]]
   - [[runtime-web-server|WebServer]]
-  - [[runtime-terminal|REPL/CLI]]
+  - [[runtime-terminal|REPL]]
   - [[runtime-web|Web]]
   - [[runtime-rpc|RPC]]
 

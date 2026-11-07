@@ -1,9 +1,9 @@
 ---
-title: REPL/CLI
+title: REPL
 status: reference
 ---
 
-# REPL/CLI
+# REPL
 
 Run Project tools without opening a graphical interface.
 
@@ -13,39 +13,27 @@ gams --runtime terminal
 
 ## Arguments and environment
 
-Use the [[runtime#arguments-and-environment|shared runtime options]] plus:
+Use the [[runtime#arguments-and-environment|shared runtime options]] to select
+the Project and startup settings. You can also start the REPL with
+`GAMS_RUNTIME=terminal gams`.
 
-| Argument | Environment variable | Values / default | Description |
-| --- | --- | --- | --- |
-| `--plug` | `GAMS_PLUGINS` | Repeatable file path; environment: JSON array of paths; default: none | Load plugin files. Include the plugins they depend on. |
-| `--target` | `GAMS_TARGET` | Tool name, such as `fs/fs::read-text`; default: none | Run one tool and exit. |
-| `--args` | `GAMS_ARGS` | JSON array; default: `[]` | Supply the tool's arguments in order. |
-| `--args-file` | `GAMS_ARGS_FILE` | File path; default: none | Read the JSON argument array from a file. Takes priority over inline arguments. |
-
-Repeated `--plug` arguments replace the environment's plugin list rather than
-adding to it. Without a target, interactive input opens the REPL; piped input
-accepts a sequence of requests.
-
-These commands perform the same call:
-
-```sh
-gams --runtime terminal --plug plugins/plugin.fs.wasm \
-  --target fs/fs::read-text --args '["README.md"]'
-
-GAMS_RUNTIME=terminal GAMS_PLUGINS='["plugins/plugin.fs.wasm"]' \
-  GAMS_TARGET=fs/fs::read-text GAMS_ARGS='["README.md"]' gams
-```
+Send operations and their arguments through stdin, not startup flags.
 
 ## Choose how to work
 
 | Input | Use for |
 | --- | --- |
-| Single call | Run one tool from a shell command or CI step. |
-| Piped requests | Send a sequence of requests through stdin and read results from stdout. |
+| Piped requests | Send one or more calls through stdin and read results from stdout. |
 | Interactive REPL | Explore tools, inspect results and build the next call from an earlier result. |
 
 To automate a terminal workspace, send requests through stdin and read responses
 from stdout. Keep its input open for dependent calls; no RPC enable flag is needed.
+
+For example, send one call from a script:
+
+```sh
+printf '%s\n' 'fs/fs::read-text README.md' | gams --runtime terminal
+```
 
 To work with an open Native or WebServer workspace instead, use its
 [[runtime-rpc|RPC connection]].
@@ -92,11 +80,11 @@ statement and database connection.
 | --- | --- |
 | A tool requires an open View | Connect to a workspace containing that View. |
 | A returned reference is no longer valid | Open the object again; references cannot be reused after their workspace closes or its plugins reload. |
-| A call fails in CI | Read the structured error and check the process exit status. |
+| A call fails in CI | Read the error response for that call. |
 | You finish with an attached Native or WebServer workspace | Disconnect; the workspace stays open. |
 
-Keep dependent calls in the same workspace. A completed single-shot command
-cannot accept further calls; use piped input or the REPL to continue working.
+Keep stdin open for dependent calls in the same workspace. Closing the input
+ends the REPL.
 
 See [[runtime|runtime modes]], [[runtime-native|native application]] and
 [[runtime-web-server|web server]].

@@ -11,13 +11,13 @@ Choose how you want to use GAMS.
 | --- | --- | --- |
 | [[runtime-native|Native]] | `gams --runtime native` | Edit a Project on your computer. |
 | [[runtime-web-server|WebServer]] | `gams --runtime server` | Make a Project available through a browser. |
-| [[runtime-terminal|REPL/CLI]] | `gams --runtime terminal` | Run tools interactively, from scripts or in CI. |
+| [[runtime-terminal|REPL]] | `gams --runtime terminal` | Run tools interactively, from scripts or in CI. |
 | [[runtime-web|Web]] | Open GAMS in your browser. | Edit a Project without a desktop app or GAMS backend server. |
-| [[runtime-rpc|RPC]] | Use Native's opt-in local connection, WebServer's existing address or REPL/CLI stdin/stdout. | Make calls from external tools or agents. |
+| [[runtime-rpc|RPC]] | Use Native's opt-in local connection, WebServer's existing address or REPL stdin/stdout. | Make calls from external tools or agents. |
 
 ## Arguments and environment
 
-These options apply to Native, WebServer and REPL/CLI. Each setting accepts
+These options apply to Native, WebServer and REPL. Each setting accepts
 an argument or its matching environment variable.
 
 | Argument | Environment variable | Values / default | Description |
@@ -42,6 +42,6 @@ GAMS_RUNTIME=native GAMS_APP_CWD=/path/to/project GAMS_CONFIG=gams.dev.json gams
 
 See [[runtime-native|Native]] for developer tools and local RPC access,
 [[runtime-web-server|WebServer]] for listening options and
-[[runtime-terminal|REPL/CLI]] for plugin and tool-call options.
+[[runtime-terminal|REPL]] for stdin calls.
 [[runtime-web|Web]] opens directly in the browser and uses no process arguments
 or shell environment variables.
