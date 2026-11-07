@@ -45,7 +45,7 @@ IPv4 interfaces. Remote access still requires authorization.
 | --- | --- |
 | Work with Project files | Use paths available on the server. |
 | Use a file from your computer | Upload it before processing it with Project tools. |
-| Automate the workspace | Authorize a terminal or agent to connect to that workspace through RPC. |
+| Automate the workspace | Authorize a terminal or agent to connect to that workspace through [[runtime-rpc|RPC]]. |
 | Control a browser View | Choose the browser workspace and the View or group of Views to control. |
 | Run an action | Supply its arguments, check the selected Views and inspect the result. |
 

@@ -6,6 +6,7 @@
   - [[runtime-web-server|WebServer]]
   - [[runtime-terminal|REPL/CLI]]
   - [[runtime-web|Web]]
+  - [[runtime-rpc|RPC]]
 
 ## Host and Project Units
 

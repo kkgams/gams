@@ -24,7 +24,7 @@ config file, Unit storage directory or plugin cache.
 | Edit content | Open the appropriate View and use its tools. |
 | Apply an action to a selection | Choose the View containing that selection. |
 | Work across Views | Choose a group, or explicitly select all Views you want to affect. |
-| Automate editing | Authorize your terminal or agent to connect to the open workspace through RPC. |
+| Automate editing | Authorize your terminal or agent to connect to the open workspace through [[runtime-rpc|RPC]]. |
 
 ## Use external tools
 

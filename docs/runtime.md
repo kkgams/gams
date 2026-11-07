@@ -7,12 +7,13 @@ status: reference
 
 Choose how you want to use GAMS.
 
-| Mode | Start | Use for |
+| Option | Start or connect | Use for |
 | --- | --- | --- |
 | [[runtime-native|Native]] | `gams --runtime native` | Edit a Project on your computer. |
 | [[runtime-web-server|WebServer]] | `gams --runtime server` | Make a Project available through a browser. |
 | [[runtime-terminal|REPL/CLI]] | `gams --runtime terminal` | Run tools interactively, from scripts or in CI. |
 | [[runtime-web|Web]] | Open GAMS in your browser. | Edit a Project without a desktop app or GAMS backend server. |
+| [[runtime-rpc|RPC]] | Connect to a running Native, WebServer or REPL/CLI workspace. | Use external tools or agents with an already-open workspace. |
 
 ## Arguments and environment
 

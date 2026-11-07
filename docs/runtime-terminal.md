@@ -45,7 +45,7 @@ GAMS_RUNTIME=terminal GAMS_PLUGINS='["plugins/plugin.fs.wasm"]' \
 | Interactive REPL | Explore tools, inspect results and build the next call from an earlier result. |
 
 Start your own workspace for independent processing. Connect to an open desktop,
-server or terminal workspace through RPC when you want to work with its existing
+server or terminal workspace through [[runtime-rpc|RPC]] when you want to work with its existing
 data or control its Views.
 
 ## Make a call
