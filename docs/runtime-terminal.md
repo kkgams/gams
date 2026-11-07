@@ -56,6 +56,18 @@ Enter the operation name followed by its arguments:
 fs/fs::read-text README.md
 ```
 
+| Argument form | Example | Use for |
+| --- | --- | --- |
+| Bare text | `README.md` | Simple text without spaces. |
+| Quoted string | `"project notes/README.md"` | Text containing spaces; use JSON string escaping for quotes and backslashes. |
+| JSON array or object | `[1, "two"]`, `{"message": "Project saved"}` | Structured values; each complete array or object is one argument. |
+
+```text
+fs/fs::read-text "project notes/README.md"
+```
+
+Do not add another layer of quotes around a JSON array or object.
+
 Read the result or error, then send the next call. Use the same call format
 interactively or through stdin.
 
