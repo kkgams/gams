@@ -21,6 +21,21 @@ release runner is Ubuntu 24.04; the archive is not an AppImage or a promise of
 compatibility with every distribution. Windows ARM and macOS Intel release
 packages are not enabled.
 
+## REPL
+
+Start a persistent request/response session without opening a window:
+
+```sh
+gams --runtime terminal --project-dir /path/to/project
+```
+
+Enter `gams/host::help` to list built-in commands. Load plugins with
+`gams/host::load-plugins ["plugins/plugin.fs.wasm"]`, then call their exported
+operations. Send one call per line; read one JSON response per call. The same
+format works interactively or through stdin.
+
+See [REPL usage](docs/runtime-terminal.md) and [GAMS commands](docs/runtime-commands.md).
+
 ## Development
 
 Install Nix and direnv, hook direnv into your shell, then run `direnv allow` in

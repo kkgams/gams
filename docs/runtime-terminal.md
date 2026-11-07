@@ -11,6 +11,12 @@ Run Project tools without opening a graphical interface.
 gams --runtime terminal
 ```
 
+In Windows Command Prompt, keep the terminal attached with:
+
+```bat
+start "" /wait gams.exe --runtime terminal
+```
+
 ## Arguments and environment
 
 Use the [[runtime#arguments-and-environment|shared runtime options]] to select
@@ -40,6 +46,9 @@ To work with an open Native or WebServer workspace instead, use its
 
 ## Make a call
 
+Start with `gams/host::help` to list [[runtime-commands|GAMS commands]]. Load any
+plugins you need with `gams/host::load-plugins`.
+
 Enter the operation name followed by its arguments:
 
 ```text
@@ -51,6 +60,7 @@ fs/fs::read-text README.md
 | Bare text | `README.md` | Simple text without spaces. |
 | Quoted string | `"project notes/README.md"` | Text containing spaces; use JSON string escaping for quotes and backslashes. |
 | JSON array or object | `[1, "two"]`, `{"message": "Project saved"}` | Structured values; each complete array or object is one argument. |
+| JSON number, boolean or null | `42`, `true`, `null` | Typed values; quote them when you mean text, for example `"42"`. |
 
 ```text
 fs/fs::read-text "project notes/README.md"
@@ -58,8 +68,15 @@ fs/fs::read-text "project notes/README.md"
 
 Do not add another layer of quotes around a JSON array or object.
 
-Read the result or error, then send the next call. Use the same call format
-interactively or through stdin.
+Send one complete call per line. Keep JSON arrays and objects on that line;
+use JSON escapes for newlines inside strings. Blank lines are ignored.
+
+Each call returns one JSON line: `{"ok": <result>}` on success or
+`{"error": {"message": "..."}}` on an input or execution error. The operation's
+result is returned unchanged, including any plugin-specific `ok`/`err` values.
+Errors do not end the REPL; correct the call and continue.
+
+Stdout contains only responses; plugin output and diagnostics use stderr.
 
 The call protocol has no variables, expressions or control flow. Use your own
 script or agent to combine results, transform data or repeat calls.

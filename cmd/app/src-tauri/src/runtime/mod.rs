@@ -44,6 +44,7 @@ struct RuntimeInner {
     funcs: BTreeMap<String, ExportedFunc>,
     linked_interfaces: BTreeSet<String>,
     compiled_component_cache_dir: PathBuf,
+    isolated_stdio: bool,
 }
 
 #[derive(Clone)]
@@ -280,12 +281,21 @@ impl ViewBridge {
 
 impl Runtime {
     pub fn new_at(cwd: PathBuf, preopens: Vec<FsPreopen>) -> Result<Self> {
+        Self::new_with_stdio(cwd, preopens, false)
+    }
+
+    pub fn new_for_repl(cwd: PathBuf, preopens: Vec<FsPreopen>) -> Result<Self> {
+        Self::new_with_stdio(cwd, preopens, true)
+    }
+
+    fn new_with_stdio(cwd: PathBuf, preopens: Vec<FsPreopen>, isolated_stdio: bool) -> Result<Self> {
         let view_bridge = ViewBridge::new();
         Ok(Self {
             inner: Arc::new(Mutex::new(RuntimeInner::new(
                 cwd,
                 preopens,
                 view_bridge.clone(),
+                isolated_stdio,
             )?)),
             view_bridge,
         })
@@ -331,20 +341,34 @@ impl Runtime {
             .inner
             .lock()
             .map_err(|_| "runtime lock poisoned".to_string())?;
-        if inner.compiled_component_cache_dir.exists() {
-            fs::remove_dir_all(&inner.compiled_component_cache_dir).map_err(|error| {
-                format!(
-                    "failed to remove compiled component cache {}: {error}",
-                    inner.compiled_component_cache_dir.display()
-                )
-            })?;
+        let directory = inner.compiled_component_cache_dir.join(compiled_component_cache_format_dir());
+        let metadata = match fs::symlink_metadata(&directory) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(format!("failed to inspect plugin cache: {error}")),
+        };
+        if !metadata.is_dir() || metadata.file_type().is_symlink() {
+            return Err("compiled plugin cache must be a real directory, not a symlink".into());
         }
-        fs::create_dir_all(&inner.compiled_component_cache_dir).map_err(|error| {
-            format!(
-                "failed to recreate compiled component cache {}: {error}",
-                inner.compiled_component_cache_dir.display()
-            )
-        })
+        let mut files = Vec::new();
+        for entry in fs::read_dir(&directory).map_err(|error| error.to_string())? {
+            let entry = entry.map_err(|error| error.to_string())?;
+            let name = entry.file_name();
+            let Some(name) = name.to_str() else { continue };
+            let Some((hash, filename)) = name.split_once('-') else { continue };
+            if hash.len() != 16 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+                || !(filename.ends_with(".cwasm") || filename.ends_with(".cwasm.tmp")) {
+                continue;
+            }
+            if !entry.file_type().map_err(|error| error.to_string())?.is_file() {
+                return Err(format!("refusing non-file plugin cache entry: {}", entry.path().display()));
+            }
+            files.push(entry.path());
+        }
+        for file in files {
+            fs::remove_file(file).map_err(|error| error.to_string())?;
+        }
+        Ok(())
     }
 
     pub fn mark_call_view_ready(&self) -> Result<(), String> {
@@ -466,7 +490,7 @@ impl Runtime {
 }
 
 impl RuntimeInner {
-    fn new(cwd: PathBuf, preopens: Vec<FsPreopen>, view_bridge: ViewBridge) -> Result<Self> {
+    fn new(cwd: PathBuf, preopens: Vec<FsPreopen>, view_bridge: ViewBridge, isolated_stdio: bool) -> Result<Self> {
         let mut config = Config::new();
         config.wasm_component_model(true);
         config.wasm_exceptions(true);
@@ -479,7 +503,13 @@ impl RuntimeInner {
         add_gams_runtime_import(&mut linker, "gams:runtime/runtime@1.0.0")?;
         add_gams_shell_import(&mut linker, "gams:shell/shell@1.0.0")?;
         let mut wasi_builder = WasiCtx::builder();
-        wasi_builder.inherit_stdio().inherit_args();
+        if isolated_stdio {
+            // stdin/stdout belong exclusively to the request/response protocol.
+            // Guests get EOF on stdin and send both output streams to stderr.
+            wasi_builder.stdout(wasmtime_wasi::cli::stderr()).inherit_stderr();
+        } else {
+            wasi_builder.inherit_stdio().inherit_args();
+        }
         let preopens = canonicalize_preopens(preopens)?;
         for preopen in &preopens {
             wasi_builder
@@ -530,6 +560,7 @@ impl RuntimeInner {
                 "gams:shell/shell@1.0.0".to_string(),
             ]),
             compiled_component_cache_dir: default_compiled_component_cache_dir(&cwd),
+            isolated_stdio,
         })
     }
 
@@ -689,7 +720,7 @@ impl RuntimeInner {
 
         let view_bridge = self.store.data().view_bridge.clone();
         let compiled_component_cache_dir = self.compiled_component_cache_dir.clone();
-        let mut rebuilt = RuntimeInner::new(root, self.preopens.clone(), view_bridge)?;
+        let mut rebuilt = RuntimeInner::new(root, self.preopens.clone(), view_bridge, self.isolated_stdio)?;
         rebuilt.compiled_component_cache_dir = compiled_component_cache_dir;
         let handles = rebuilt.add_plugins(
             all_paths
@@ -2092,9 +2123,10 @@ fn resolve_component_path(root: &Path, preopens: &[FsPreopen], path: &str) -> Re
 #[cfg(test)]
 mod tests {
     use super::{
-        compiled_component_cache_path, parse_interface_id, parse_version, version_satisfies,
-        FsPreopen, Runtime,
+        compiled_component_cache_format_dir, compiled_component_cache_path, parse_interface_id,
+        parse_version, version_satisfies, FsPreopen, Runtime,
     };
+    use std::fs;
     use std::path::{Path, PathBuf};
 
     fn test_preopens(root: &Path) -> Vec<FsPreopen> {
@@ -2322,6 +2354,47 @@ mod tests {
                 })
                 .collect(),
         )
+    }
+
+    #[test]
+    fn repl_guests_cannot_consume_protocol_input() {
+        use wasmtime_wasi::cli::WasiCliView;
+        use wasmtime_wasi::p2::bindings::{cli::stdin, sync::io::streams::HostInputStream};
+        let root = tempfile::tempdir().unwrap();
+        let runtime = Runtime::new_for_repl(root.path().into(), vec![]).unwrap();
+        let mut inner = runtime.inner.lock().unwrap();
+        let state = inner.store.data_mut();
+        let stream = stdin::Host::get_stdin(&mut state.cli()).unwrap();
+        let result = HostInputStream::read(&mut state.resource_table, stream, 1);
+        assert!(matches!(result, Err(wasmtime_wasi::p2::StreamError::Closed)));
+    }
+
+    #[test]
+    fn cache_clear_preserves_unrelated_files_and_refuses_directory_symlinks() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = root.path().join("cache");
+        let format = cache.join(compiled_component_cache_format_dir());
+        fs::create_dir_all(&format).unwrap();
+        fs::write(cache.join("keep.txt"), b"user data").unwrap();
+        fs::write(format.join("keep.txt"), b"user data").unwrap();
+        let compiled = format.join("0123456789abcdef-example.wasm.cwasm");
+        fs::write(&compiled, b"recreatable cache").unwrap();
+        let runtime = Runtime::new_for_repl(root.path().into(), vec![]).unwrap();
+        runtime.set_compiled_component_cache_dir(cache.clone()).unwrap();
+        runtime.clear_compiled_component_cache().unwrap();
+        assert!(!compiled.exists());
+        assert!(cache.join("keep.txt").exists());
+        assert!(format.join("keep.txt").exists());
+        #[cfg(unix)] {
+            fs::remove_file(format.join("keep.txt")).unwrap();
+            fs::remove_dir(&format).unwrap();
+            let outside = tempfile::tempdir().unwrap();
+            let protected = outside.path().join("0123456789abcdef-example.wasm.cwasm");
+            fs::write(&protected, b"outside data").unwrap();
+            std::os::unix::fs::symlink(outside.path(), &format).unwrap();
+            assert!(runtime.clear_compiled_component_cache().is_err());
+            assert!(protected.exists());
+        }
     }
 
     #[test]

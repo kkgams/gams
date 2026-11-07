@@ -16,8 +16,9 @@ GAMS_CONFIG=gams.dev.json make run GAMS_APP_CWD=/path/to/project
 When unset, it defaults to `gams.json`. Empty values and paths are rejected.
 The selected file must contain a JSON object; missing or invalid files fail
 without falling back to another config. The folder picker, Project Save, and
-CLI `init` use the selected filename too. Project-relative Unit paths and
-`GAMS_APP_CWD` are unchanged; `init` never overwrites an existing file.
+`gams/host::project-init` use the selected filename too. Project-relative Unit
+paths and `GAMS_APP_CWD` are unchanged; Project initialization never overwrites
+an existing file.
 
 ## Project bootstrap and Unit storage
 
@@ -39,8 +40,9 @@ the Host distribution; see the repository NOTICE.
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The
 selected directory is canonicalized and preopened for runtime/filesystem access;
-there is no local fallback when the override is set. CLI commands, including
-`init`, do not require this GUI bootstrap or an existing config.
+there is no local fallback when the override is set. The [[runtime-terminal|REPL]]
+does not require GUI bootstrap or an existing config. Use
+[[runtime-commands|GAMS commands]] to initialize a Project and load plugins.
 
 See `project-unit-installation.md` for the remaining installation design.
 

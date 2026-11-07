@@ -1,12 +1,12 @@
+mod commands;
 mod download;
+mod options;
 mod project;
+mod repl;
 mod runtime;
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-use tauri_plugin_cli::CliExt;
-use tauri_plugin_cli::{ArgData, Matches};
 
 #[tauri::command]
 fn runtime_console(level: String, message: String) -> Result<(), String> {
@@ -64,10 +64,14 @@ async fn runtime_add_plugins(
 async fn runtime_invoke(
     target: String,
     args: serde_json::Value,
-    runtime: tauri::State<'_, runtime::Runtime>,
+    commands: tauri::State<'_, commands::Commands>,
 ) -> Result<serde_json::Value, String> {
-    let runtime = runtime.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || runtime.invoke(&target, args))
+    let commands = commands.inner().clone();
+    let args = args
+        .as_array()
+        .ok_or("runtime arguments must be an array")?
+        .clone();
+    tauri::async_runtime::spawn_blocking(move || commands.invoke(&target, args))
         .await
         .map_err(|error| format!("runtime invoke task failed: {error}"))?
 }
@@ -145,17 +149,21 @@ fn choose_project_folder(config_file: &str) -> anyhow::Result<Option<PathBuf>> {
                 if path.join(config_file).is_file() {
                     return Ok(Some(path.canonicalize()?));
                 }
-                message = format!("That folder has no {config_file}. Select a GAMS Project folder.");
+                message =
+                    format!("That folder has no {config_file}. Select a GAMS Project folder.");
             }
             response => anyhow::bail!("Project folder dialog failed: {response}"),
         }
     }
 }
 
-fn runtime_root(gui: bool, config_file: &str) -> anyhow::Result<Option<PathBuf>> {
-    if let Some(value) = std::env::var_os("GAMS_APP_CWD") {
-        anyhow::ensure!(!value.is_empty(), "GAMS_APP_CWD must not be empty");
-        return Ok(Some(PathBuf::from(value).canonicalize()?));
+fn runtime_root(
+    gui: bool,
+    config_file: &str,
+    override_dir: Option<&Path>,
+) -> anyhow::Result<Option<PathBuf>> {
+    if let Some(path) = override_dir {
+        return Ok(Some(path.canonicalize()?));
     }
     let cwd = std::env::current_dir()?;
     if needs_project_picker(gui, &cwd, config_file) {
@@ -164,170 +172,11 @@ fn runtime_root(gui: bool, config_file: &str) -> anyhow::Result<Option<PathBuf>>
             return choose_project_folder(config_file);
         }
         #[cfg(not(target_os = "macos"))]
-        anyhow::bail!("Set GAMS_APP_CWD to a Project folder containing {config_file}");
+        anyhow::bail!(
+            "Set --project-dir or GAMS_APP_CWD to a Project folder containing {config_file}"
+        );
     }
     Ok(Some(cwd.canonicalize()?))
-}
-
-fn cli_arg_string(args: &HashMap<String, ArgData>, name: &str) -> anyhow::Result<Option<String>> {
-    let Some(arg) = args.get(name) else {
-        return Ok(None);
-    };
-    match &arg.value {
-        serde_json::Value::Null => Ok(None),
-        serde_json::Value::String(value) => Ok(Some(value.clone())),
-        other => anyhow::bail!("CLI argument `{name}` must be a string, got {other}"),
-    }
-}
-
-fn cli_arg_strings(args: &HashMap<String, ArgData>, name: &str) -> anyhow::Result<Vec<String>> {
-    let Some(arg) = args.get(name) else {
-        return Ok(Vec::new());
-    };
-    match &arg.value {
-        serde_json::Value::Null => Ok(Vec::new()),
-        serde_json::Value::String(value) => Ok(vec![value.clone()]),
-        serde_json::Value::Array(values) => values
-            .iter()
-            .map(|value| match value {
-                serde_json::Value::String(value) => Ok(value.clone()),
-                other => anyhow::bail!("CLI argument `{name}` values must be strings, got {other}"),
-            })
-            .collect(),
-        other => anyhow::bail!("CLI argument `{name}` must be a string array, got {other}"),
-    }
-}
-
-fn is_wasi_http_proxy_export(export: &str) -> bool {
-    export.starts_with("wasi:http/incoming-handler")
-        || export.starts_with("wasi:http/handler")
-        || export.starts_with("wasi:http/proxy")
-}
-
-fn run_cli_command(
-    root: &Path,
-    runtime: &runtime::Runtime,
-    matches: &Matches,
-) -> anyhow::Result<bool> {
-    let Some(subcommand) = &matches.subcommand else {
-        return Ok(false);
-    };
-
-    match subcommand.name.as_str() {
-        "add" => {
-            let Some(add_subcommand) = &subcommand.matches.subcommand else {
-                anyhow::bail!("`add` requires one of: plugin, theme, view");
-            };
-            match add_subcommand.name.as_str() {
-                "plugin" => {
-                    let path = cli_arg_string(&add_subcommand.matches.args, "path")?
-                        .ok_or_else(|| anyhow::anyhow!("`add plugin` requires a plugin path"))?;
-                    let cache_path = runtime
-                        .cache_component(PathBuf::from(path))
-                        .map_err(|error| anyhow::anyhow!(error))?;
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&serde_json::json!({
-                            "cached": cache_path,
-                        }))?
-                    );
-                }
-                "theme" => println!("`add theme` is not implemented yet"),
-                "view" => println!("`add view` is not implemented yet"),
-                other => anyhow::bail!("unknown `add` subcommand `{other}`"),
-            }
-        }
-        "clean" => {
-            runtime
-                .clear_compiled_component_cache()
-                .map_err(|error| anyhow::anyhow!(error))?;
-            println!("compiled component cache cleared");
-        }
-        "serve" => {
-            let addr = cli_arg_string(&subcommand.matches.args, "addr")?
-                .unwrap_or_else(|| "127.0.0.1:8080".to_string());
-            let plugin_paths = cli_arg_strings(&subcommand.matches.args, "plug")?;
-            if plugin_paths.is_empty() {
-                anyhow::bail!("`serve` requires at least one --plug component");
-            }
-            let handles = runtime
-                .add_component_files(plugin_paths.into_iter().map(PathBuf::from).collect())
-                .map_err(|error| anyhow::anyhow!(error))?;
-            let http_handlers = handles
-                .iter()
-                .filter(|handle| {
-                    handle
-                        .exports
-                        .iter()
-                        .any(|export| is_wasi_http_proxy_export(export))
-                })
-                .collect::<Vec<_>>();
-            match http_handlers.as_slice() {
-                [] => anyhow::bail!(
-                    "`serve` loaded components successfully, but none export wasi:http/proxy"
-                ),
-                [handler] => {
-                    println!(
-                        "`serve` validated component graph. HTTP handler: {}. Next step: start HTTP server on {addr} and route requests to its wasi:http/proxy export.",
-                        handler.path
-                    );
-                }
-                handlers => {
-                    let paths = handlers
-                        .iter()
-                        .map(|handler| handler.path.as_str())
-                        .collect::<Vec<_>>();
-                    anyhow::bail!(
-                        "`serve` expected exactly one wasi:http/proxy exporter, found {}: {}",
-                        paths.len(),
-                        paths.join(", ")
-                    );
-                }
-            }
-        }
-        "init" => {
-            let path = root.join(project::config_file(std::env::var_os("GAMS_CONFIG").as_deref())?);
-            let file = std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&path)
-                .map_err(|error| anyhow::anyhow!("failed to create {}: {error}", path.display()))?;
-            serde_json::to_writer_pretty(file, &serde_json::json!({}))?;
-            println!("created {}", path.display());
-        }
-        "run" => {
-            let plugin_paths = cli_arg_strings(&subcommand.matches.args, "plug")?;
-            if !plugin_paths.is_empty() {
-                runtime
-                    .add_component_files(plugin_paths.into_iter().map(PathBuf::from).collect())
-                    .map_err(|error| anyhow::anyhow!(error))?;
-            }
-            let Some(target) = cli_arg_string(&subcommand.matches.args, "target")? else {
-                println!(
-                    "`run` needs a target; use `run --plug path/to/plugin.wasm target '[args]'`"
-                );
-                return Ok(true);
-            };
-            let args = if let Some(path) = cli_arg_string(&subcommand.matches.args, "args-file")? {
-                let file = std::fs::File::open(&path)
-                    .map_err(|error| anyhow::anyhow!("failed to open args file {path}: {error}"))?;
-                serde_json::from_reader(file)
-                    .map_err(|error| anyhow::anyhow!("failed to parse args file {path}: {error}"))?
-            } else {
-                cli_arg_string(&subcommand.matches.args, "args")?
-                    .map(|raw| serde_json::from_str(&raw))
-                    .transpose()?
-                    .unwrap_or_else(|| serde_json::json!([]))
-            };
-            let value = runtime
-                .invoke(&target, args)
-                .map_err(|error| anyhow::anyhow!(error))?;
-            println!("{}", serde_json::to_string_pretty(&value)?);
-        }
-        other => anyhow::bail!("unknown CLI subcommand `{other}`"),
-    }
-
-    Ok(true)
 }
 
 fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
@@ -359,60 +208,173 @@ fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
     Ok(preopens)
 }
 
+const STARTUP_HELP: &str = "GAMS startup options (argument / environment variable)
+  --runtime native|server|terminal   GAMS_RUNTIME (default: native)
+  --project-dir PATH                GAMS_APP_CWD
+  --config FILENAME                 GAMS_CONFIG (default: gams.json)
+  --modules-dir ABSOLUTE_PATH       GAMS_MODULES_DIR
+  --plugin-cache-dir PATH           GAMS_WASMTIME_CACHE_DIR
+  --devtools[=true|false]           GAMS_DEVTOOLS (Native only; default: false)
+  --rpc[=true|false]                GAMS_RPC (Native only; default: false)
+  --listen HOST:PORT                GAMS_LISTEN_ADDR (WebServer only)
+  --help
+
+REPL: gams --runtime terminal
+Send gams/host::help on stdin to list GAMS commands.
+";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_cli::init());
+    if let Err(error) = try_run() {
+        if let Err(console_error) = attach_parent_console() {
+            eprintln!("error attaching console: {console_error}");
+        }
+        eprintln!("error: {error:#}");
+        std::process::exit(1);
+    }
+}
+
+fn try_run() -> anyhow::Result<()> {
+    let args = std::env::args_os()
+        .skip(1)
+        .map(|value| {
+            value
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("startup arguments must be valid UTF-8"))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let options =
+        options::Options::parse(args, |key| std::env::var_os(key)).map_err(anyhow::Error::msg)?;
+    let Some(options) = options else {
+        attach_parent_console()?;
+        println!("{STARTUP_HELP}");
+        return Ok(());
+    };
+    if options.runtime == options::Runtime::Server {
+        anyhow::bail!("WebServer execution is not implemented");
+    }
+    if options.rpc {
+        anyhow::bail!("Native RPC access is not implemented");
+    }
+    if options.runtime == options::Runtime::Native {
+        return run_native(options);
+    }
+    attach_parent_console()?;
+    let root = runtime_root(false, &options.config, options.project_dir.as_deref())?
+        .ok_or_else(|| anyhow::anyhow!("REPL Project directory is missing"))?;
+    run_repl(&options, root)
+}
+
+fn attach_parent_console() -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn AttachConsole(process_id: u32) -> i32;
+        }
+        // SAFETY: ATTACH_PARENT_PROCESS has no pointer arguments. This attaches
+        // to an existing console only; Native never allocates a console window.
+        if unsafe { AttachConsole(u32::MAX) } == 0 {
+            let error = std::io::Error::last_os_error();
+            match error.raw_os_error() {
+                // Already attached, or parent has no console (e.g. a pipe-owning agent).
+                Some(5 | 6 | 87) => {}
+                _ => return Err(error),
+            }
+        }
+    }
+    Ok(())
+}
+
+fn run_repl(options: &options::Options, root: PathBuf) -> anyhow::Result<()> {
+    let mut preopens = preopens_for_root(&root)?;
+    if let Some(path) = &options.modules_dir {
+        std::fs::create_dir_all(path)?;
+        let path = path.canonicalize()?;
+        preopens.push(runtime::FsPreopen {
+            guest_path: path.to_string_lossy().into_owned(),
+            host_path: path,
+        });
+    }
+    let runtime = runtime::Runtime::new_for_repl(root.clone(), preopens)?;
+    let cache_dir = match &options.plugin_cache_dir {
+        Some(path) => path.clone(),
+        None => {
+            let config: tauri::Config = serde_json::from_str(include_str!("../tauri.conf.json"))?;
+            dirs::cache_dir()
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "GAMS application cache directory is unavailable; set --plugin-cache-dir"
+                    )
+                })?
+                .join(config.identifier)
+                .join("wasmtime-components")
+        }
+    };
+    runtime
+        .set_compiled_component_cache_dir(cache_dir)
+        .map_err(anyhow::Error::msg)?;
+    let commands = commands::Commands {
+        runtime,
+        root,
+        config_file: options.config.clone(),
+    };
+    use std::io::IsTerminal;
+    if std::io::stdin().is_terminal() {
+        eprintln!("GAMS REPL. Enter gams/host::help to list commands; close stdin to exit.");
+    }
+    repl::run(
+        std::io::stdin().lock(),
+        std::io::stdout().lock(),
+        |target, args| commands.invoke(target, args),
+    )?;
+    Ok(())
+}
+
+fn run_native(options: options::Options) -> anyhow::Result<()> {
+    let builder = tauri::Builder::default();
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_macos_fps::init());
 
     builder
         .setup(move |app| {
-            let matches = app.cli().matches().map_err(|error| error.to_string())?;
-            let config_file = project::config_file(std::env::var_os("GAMS_CONFIG").as_deref())?;
-            let Some(root) = runtime_root(matches.subcommand.is_none(), &config_file)
-                .map_err(|error| error.to_string())?
+            let Some(root) = runtime_root(true, &options.config, options.project_dir.as_deref())?
             else {
-                // Canceling the native Project chooser is a normal user action.
-                std::process::exit(0);
+                std::process::exit(0); // Normal native Project-picker cancellation.
             };
-            // CLI commands (notably `init`) must not require an existing config.
-            let mut preopens = preopens_for_root(&root).map_err(|error| error.to_string())?;
-            if matches.subcommand.is_none() {
-                let shared_modules = std::env::var_os("GAMS_MODULES_DIR");
-                let project = project::Project::load(&root, shared_modules.as_deref(), &config_file)
-                    .map_err(|error| format!("{error:#}"))?;
-                preopens.push(runtime::FsPreopen {
-                    host_path: project.modules_dir.clone(),
-                    guest_path: project.modules_dir.to_string_lossy().into_owned(),
-                });
-                app.manage(project);
-            }
-            let runtime = runtime::Runtime::new_at(root.clone(), preopens)
-                .map_err(|error| error.to_string())?;
+            let mut preopens = preopens_for_root(&root)?;
+            let project = project::Project::load(
+                &root,
+                options
+                    .modules_dir
+                    .as_deref()
+                    .map(std::path::Path::as_os_str),
+                &options.config,
+            )?;
+            preopens.push(runtime::FsPreopen {
+                host_path: project.modules_dir.clone(),
+                guest_path: project.modules_dir.to_string_lossy().into_owned(),
+            });
+            app.manage(project);
+            let runtime = runtime::Runtime::new_at(root.clone(), preopens)?;
             runtime.attach_app_handle(app.handle().clone())?;
+            let cache_dir = match &options.plugin_cache_dir {
+                Some(path) => path.clone(),
+                None => app.path().app_cache_dir()?.join("wasmtime-components"),
+            };
+            runtime.set_compiled_component_cache_dir(cache_dir)?;
+            assert!(
+                app.manage(commands::Commands {
+                    runtime: runtime.clone(),
+                    root: root.clone(),
+                    config_file: options.config.clone()
+                }),
+                "GAMS commands must not already be registered"
+            );
             assert!(
                 app.manage(runtime),
                 "GAMS runtime must not already be registered"
             );
-            let runtime = app.state::<runtime::Runtime>();
-            let cache_dir = match std::env::var_os("GAMS_WASMTIME_CACHE_DIR") {
-                Some(path) => PathBuf::from(path),
-                None => app
-                    .path()
-                    .app_cache_dir()
-                    .map_err(|error| error.to_string())?
-                    .join("wasmtime-components"),
-            };
-            runtime.set_compiled_component_cache_dir(cache_dir)?;
-
-            match run_cli_command(&root, &runtime, &matches) {
-                Ok(true) => std::process::exit(0),
-                Ok(false) => {}
-                Err(error) => {
-                    eprintln!("error: {error:#}");
-                    std::process::exit(1);
-                }
-            }
 
             let window =
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
@@ -421,8 +383,8 @@ pub fn run() {
             window
                 .title("GAMS")
                 .inner_size(1000.0, 700.0)
+                .devtools(options.devtools)
                 .build()?;
-
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -439,8 +401,8 @@ pub fn run() {
             runtime_call_view_response,
             runtime_clear_compiled_component_cache,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .run(tauri::generate_context!())?;
+    Ok(())
 }
 
 #[cfg(test)]

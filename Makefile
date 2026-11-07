@@ -18,6 +18,7 @@ TAURI_VERSION_ARGS = $(if $(strip $(RELEASE_VERSION)),--config '$(TAURI_VERSION_
 TAURI_APP_DIR := cmd/app
 TAURI_SRC_DIR := $(TAURI_APP_DIR)/src-tauri
 TAURI_TARGET_DIR ?= $(if $(value CARGO_TARGET_DIR),$(abspath $(value CARGO_TARGET_DIR)),$(abspath $(BUILD_DIR)/app/target))
+RUST_TEST_STAMP := $(abspath $(BUILD_DIR)/app/rust-tests.stamp)
 # Recursive: docs/promo/font commands never need Rust installed.
 TARGET ?= $(shell rustc -vV 2>/dev/null | awk '/^host:/ {print $$2}')
 GAMS_CONFIG ?= gams.json
@@ -62,7 +63,16 @@ test: app-icons
 	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_*.py'
 	$(MAKE) test-rust
 
+# Integration tests build a process executable in Cargo's output directory.
+# Invalidate the native build even if a test fails, so packaging restores the
+# Tauri build configuration/version instead of shipping the test-built binary.
+$(RUST_TEST_STAMP): | $(BUILD_DIR)/tmp
+	mkdir -p "$(@D)"
+	touch "$@"
+
 test-rust: app-icons
+	mkdir -p "$(dir $(RUST_TEST_STAMP))"
+	trap 'touch "$(RUST_TEST_STAMP)" || exit $$?' EXIT
 	$(COMPILER_ENV)
 	cd "$(TAURI_SRC_DIR)"
 	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo test --locked $(RUST_TEST_ARGS)
@@ -98,7 +108,7 @@ $(NATIVE_OPTIONS): force-native-options | $(BUILD_DIR)/tmp
 
 build: $(NATIVE_BINARY)
 
-$(NATIVE_BINARY): $(NATIVE_INPUTS) $(BUILD_DIR)/app/icons/icon.icns $(NATIVE_OPTIONS) Makefile | $(BUILD_DIR)/tmp
+$(NATIVE_BINARY): $(NATIVE_INPUTS) $(BUILD_DIR)/app/icons/icon.icns $(NATIVE_OPTIONS) $(RUST_TEST_STAMP) Makefile | $(BUILD_DIR)/tmp
 	if [[ "$(TARGET)" == *windows* ]]; then unset CC CXX; else $(COMPILER_ENV); fi
 	cd "$(TAURI_SRC_DIR)"
 	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri build --no-bundle --target "$(TARGET)" $(TAURI_VERSION_ARGS)

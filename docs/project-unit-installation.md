@@ -106,7 +106,8 @@ Rust creates and canonicalizes the selected directory and preopens it at its
 absolute path for runtime/filesystem access. JS receives that path as
 `runtime.modulesDir` alongside native-read `runtime.config` after
 `await runtime.ready`. No implicit fallback and no separate mode variable.
-CLI operations remain unchanged; native Project bootstrap is currently GUI-only.
+Use the [[runtime-terminal|REPL]] and [[runtime-commands|GAMS commands]] to load
+plugin files without opening the Project's interface.
 
 Shared storage is not a global dependency declaration. Each Project declares its
 own Units. In v1, key installed directories by a hash of the canonical source

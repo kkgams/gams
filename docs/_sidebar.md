@@ -5,6 +5,7 @@
   - [[runtime-native|Native]]
   - [[runtime-web-server|WebServer]]
   - [[runtime-terminal|REPL]]
+    - [[runtime-commands|GAMS commands]]
   - [[runtime-web|Web]]
   - [[runtime-rpc|RPC]]
 
