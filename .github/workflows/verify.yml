@@ -43,3 +43,31 @@ jobs:
       - name: Test native Linux Rust Host
         if: runner.os == 'Linux'
         run: make test-rust RUST_TEST_ARGS="--release --target $TARGET"
+      - name: Diagnose Windows loader failure
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $test = Get-ChildItem "$env:CARGO_TARGET_DIR/$env:TARGET/release/deps/gams_lib-*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (!$test) { throw 'Compiled test executable not found' }
+          New-Item -ItemType Directory -Force build.nosync/windows-loader | Out-Null
+          Copy-Item $test.FullName build.nosync/windows-loader/
+          & dumpbin.exe /imports $test.FullName | Out-File build.nosync/windows-loader/imports.txt
+          & mt.exe "-inputresource:$($test.FullName);#1" -out:build.nosync/windows-loader/manifest.xml
+          Write-Output "[DEBUG-v3-win] MANIFEST-EXTRACTION-EXIT $LASTEXITCODE"
+          python scripts/diagnose-windows-imports.py $test.FullName
+          foreach ($name in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+            $path = Join-Path "$env:SystemRoot/System32" $name
+            if (Test-Path -LiteralPath $path) {
+              $file = Get-Item -LiteralPath $path
+              Write-Output "[DEBUG-v3-win] VERSION $($file.FullName) $($file.VersionInfo.FileVersion)"
+            } else {
+              Write-Output "[DEBUG-v3-win] MISSING-FILE $path"
+            }
+          }
+      - name: Save Windows loader evidence
+        if: failure() && runner.os == 'Windows'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: windows-loader-failure
+          path: build.nosync/windows-loader/
+          if-no-files-found: warn
