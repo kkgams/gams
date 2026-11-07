@@ -209,7 +209,7 @@ fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
 }
 
 const STARTUP_HELP: &str = "GAMS startup options (argument / environment variable)
-  --runtime native|server|terminal   GAMS_RUNTIME (default: native)
+  --runtime native|server|repl   GAMS_RUNTIME (default: native)
   --project-dir PATH                GAMS_APP_CWD
   --config FILENAME                 GAMS_CONFIG (default: gams.json)
   --modules-dir ABSOLUTE_PATH       GAMS_MODULES_DIR
@@ -219,7 +219,7 @@ const STARTUP_HELP: &str = "GAMS startup options (argument / environment variabl
   --listen HOST:PORT                GAMS_LISTEN_ADDR (WebServer only)
   --help
 
-REPL: gams --runtime terminal
+REPL: gams --runtime repl
 Send gams/host::help on stdin to list GAMS commands.
 ";
 

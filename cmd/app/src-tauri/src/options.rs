@@ -6,7 +6,7 @@ use std::path::PathBuf;
 pub enum Runtime {
     Native,
     Server,
-    Terminal,
+    Repl,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,10 +77,10 @@ impl Options {
         let runtime = match selected("--runtime", "GAMS_RUNTIME")?.as_deref() {
             None | Some("native") => Runtime::Native,
             Some("server") => Runtime::Server,
-            Some("terminal") => Runtime::Terminal,
+            Some("repl") => Runtime::Repl,
             Some(value) => {
                 return Err(format!(
-                    "invalid runtime {value:?}; expected native, server or terminal"
+                    "invalid runtime {value:?}; expected native, server or repl"
                 ))
             }
         };
@@ -220,7 +220,7 @@ mod tests {
         for (name, runtime) in [
             ("native", Runtime::Native),
             ("server", Runtime::Server),
-            ("terminal", Runtime::Terminal),
+            ("repl", Runtime::Repl),
         ] {
             assert_eq!(options(&["--runtime", name], &[]).runtime, runtime);
             assert_eq!(
@@ -342,7 +342,7 @@ mod tests {
     }
     #[test]
     fn rejects_native_features_elsewhere_but_allows_explicit_false() {
-        for runtime in ["server", "terminal"] {
+        for runtime in ["server", "repl"] {
             let selector = format!("--runtime={runtime}");
             for (arg, env) in [("--devtools", "GAMS_DEVTOOLS"), ("--rpc", "GAMS_RPC")] {
                 assert!(parse(&[&selector, arg], &[]).is_err());
@@ -389,7 +389,7 @@ mod tests {
         for arg in [
             "native",
             "server",
-            "terminal",
+            "repl",
             "run",
             "cli",
             "--plug",
@@ -404,7 +404,7 @@ mod tests {
         ] {
             assert!(parse(&[arg], &[]).is_err(), "{arg}");
         }
-        for value in ["", "web", "rpc", "repl", "Native", " native "] {
+        for value in ["", "web", "rpc", "terminal", "Native", " native "] {
             assert!(parse(&["--runtime", value], &[]).is_err(), "{value:?}");
             assert!(parse(&[], &[("GAMS_RUNTIME", value)]).is_err(), "{value:?}");
         }
@@ -524,7 +524,7 @@ mod tests {
     }
     #[test]
     fn rejects_explicit_listen_outside_server() {
-        for runtime in ["native", "terminal"] {
+        for runtime in ["native", "repl"] {
             let selector = format!("--runtime={runtime}");
             assert!(parse(&[&selector, "--listen=localhost:8080"], &[]).is_err());
             assert!(parse(&[&selector], &[("GAMS_LISTEN_ADDR", "localhost:8080")]).is_err());

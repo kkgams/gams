@@ -38,7 +38,7 @@ fn headless_process_keeps_wasm_state_and_recovers_from_bad_requests() {
     )
     .unwrap();
     let mut child = gams(root.path())
-        .args(["--runtime", "terminal"])
+        .args(["--runtime", "repl"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -81,7 +81,7 @@ fn arguments_override_environment_and_eof_closes_the_process() {
     let output = gams(root.path())
         .env("GAMS_RUNTIME", "invalid")
         .env("GAMS_CONFIG", "../bad.json")
-        .args(["--runtime", "terminal", "--config", "gams.json"])
+        .args(["--runtime", "repl", "--config", "gams.json"])
         .stdin(Stdio::null())
         .output()
         .unwrap();
@@ -92,7 +92,7 @@ fn arguments_override_environment_and_eof_closes_the_process() {
     );
     assert!(output.stdout.is_empty());
     let output = gams(root.path())
-        .env("GAMS_RUNTIME", "terminal")
+        .env("GAMS_RUNTIME", "repl")
         .stdin(Stdio::null())
         .output()
         .unwrap();
@@ -107,7 +107,8 @@ fn unsupported_features_and_removed_subcommands_fail_before_opening_a_window() {
         vec!["init"],
         vec!["serve"],
         vec!["add", "plugin", "file.wasm"],
-        vec!["--runtime", "terminal", "--target", "anything"],
+        vec!["--runtime", "repl", "--target", "anything"],
+        vec!["--runtime", "terminal"],
         vec!["--runtime", "server"],
         vec!["--runtime", "native", "--rpc"],
     ] {

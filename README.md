@@ -26,7 +26,7 @@ packages are not enabled.
 Start a persistent request/response session without opening a window:
 
 ```sh
-gams --runtime terminal --project-dir /path/to/project
+gams --runtime repl --project-dir /path/to/project
 ```
 
 Enter `gams/host::help` to list built-in commands. Load plugins with

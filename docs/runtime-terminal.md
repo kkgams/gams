@@ -8,20 +8,20 @@ status: reference
 Run Project tools without opening a graphical interface.
 
 ```sh
-gams --runtime terminal
+gams --runtime repl
 ```
 
 In Windows Command Prompt, keep the terminal attached with:
 
 ```bat
-start "" /wait gams.exe --runtime terminal
+start "" /wait gams.exe --runtime repl
 ```
 
 ## Arguments and environment
 
 Use the [[runtime#arguments-and-environment|shared runtime options]] to select
 the Project and startup settings. You can also start the REPL with
-`GAMS_RUNTIME=terminal gams`.
+`GAMS_RUNTIME=repl gams`.
 
 Send operations and their arguments through stdin, not startup flags.
 
@@ -38,7 +38,7 @@ from stdout. Keep its input open for dependent calls; no RPC enable flag is need
 For example, send one call from a script:
 
 ```sh
-printf '%s\n' 'fs/fs::read-text README.md' | gams --runtime terminal
+printf '%s\n' 'fs/fs::read-text README.md' | gams --runtime repl
 ```
 
 To work with an open Native or WebServer workspace instead, use its
