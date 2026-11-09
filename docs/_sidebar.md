@@ -9,12 +9,9 @@
   - [[runtime-rpc|RPC]]
 - [[runtime-commands|GAMS commands]]
 
-## Plugins
+## Units
 
 - [[plugin-font|plugin.font]]
-
-## Views
-
 - [[view-files|view.files]]
 - [[view-ng|view.ng]]
 
