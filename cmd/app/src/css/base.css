@@ -1356,6 +1356,12 @@
     view-popup::part(header) {
         display: flex;
         align-items: center;
+        border: var(--header-border);
+    }
+
+    view-popup::part(close) {
+        margin-inline-start: auto;
+        flex-shrink: 0;
     }
 
     view-popup::part(body) {
