@@ -11,6 +11,7 @@
 
 ## Units
 
+- [[plugin-lua|plugin.lua]]
 - [[plugin-font|plugin.font]]
 - [[view-files|view.files]]
 - [[view-ng|view.ng]]
