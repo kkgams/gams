@@ -1318,6 +1318,21 @@
     view--handle {
         z-index: var(--z-index-handle);
         width: var(--resize-handle-size);
+        container-type: size;
+        cursor: col-resize;
+    }
+
+    view--handle::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        cursor: inherit;
+    }
+
+    @container (min-aspect-ratio: 1) {
+        view--handle::before {
+            cursor: row-resize;
+        }
     }
 
     .layout-try-rect {
