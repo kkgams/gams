@@ -1319,6 +1319,16 @@
         z-index: var(--z-index-handle);
     }
 
+    .layout-try-rect {
+        position: absolute;
+        border: 2px solid var(--accent);
+        background: color-mix(in oklab, var(--accent) 20%, transparent);
+        border-radius: var(--radius-md);
+        pointer-events: none;
+        z-index: 20;
+        display: none;
+    }
+
     /* backdrop + centering layer */
     view-popup {
         position: fixed;
