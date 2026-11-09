@@ -1284,6 +1284,14 @@
     view--corner {
         z-index: var(--z-index-corner);
         position: absolute;
+        width: var(--resize-handle-size);
+        height: var(--resize-handle-size);
+        cursor: nwse-resize;
+    }
+
+    view--corner.ne,
+    view--corner.sw {
+        cursor: nesw-resize;
     }
 
     view--corner:nth-of-type(1),
