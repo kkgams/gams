@@ -7,4 +7,6 @@ subwikis:
     url: https://kkgams.github.io/plugin.font/
   view-files:
     url: https://kkgams.github.io/view.files/
+  view-ng:
+    url: https://kkgams.github.io/view.ng/
 ---

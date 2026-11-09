@@ -16,6 +16,7 @@
 ## Views
 
 - [[view-files|view.files]]
+- [[view-ng|view.ng]]
 
 ## Host and Project Units
 
