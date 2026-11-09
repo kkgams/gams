@@ -1060,7 +1060,7 @@
         color: var(--intent-soft-fg);
     }
 
-    [aria-selected="true"]:not([aria-disabled="true"]):hover {
+    [aria-selected="true"]:not(:disabled, [aria-disabled="true"]):hover {
         background: var(--intent-hover-bg);
         color: var(--intent-fg);
     }
