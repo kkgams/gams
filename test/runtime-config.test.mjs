@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 
 const source = await readFile(new URL("../cmd/app/src/core/runtime.js", import.meta.url), "utf8")
+const nativeSource = await readFile(new URL("../cmd/app/src/core/runtime/native.js", import.meta.url), "utf8")
 let moduleId = 0
 
 async function loadRuntime(project, handleCommand) {
@@ -25,9 +26,16 @@ async function loadRuntime(project, handleCommand) {
       },
     },
   }
-  const module = await import(`data:text/javascript;base64,${Buffer.from(source + `\n// test ${moduleId++}`).toString("base64")}`)
+  const nativeUrl = `data:text/javascript;base64,${Buffer.from(nativeSource + `\n// native ${moduleId++}`).toString("base64")}`
+  const runtimeSource = source.replace('"./runtime/native.js"', JSON.stringify(nativeUrl))
+  const module = await import(`data:text/javascript;base64,${Buffer.from(runtimeSource + `\n// test ${moduleId++}`).toString("base64")}`)
   return { runtime: module.runtime, calls }
 }
+
+test("shared runtime delegates Tauri access to the native module", () => {
+  assert.doesNotMatch(source, /__TAURI__/)
+  assert.match(source, /from "\.\/runtime\/native\.js"/)
+})
 
 test("ready exposes native config and modules path without a filesystem plugin", async () => {
   const config = { plugins: ["plugins/fs.comp.wasm"], ui: {} }
@@ -58,6 +66,7 @@ test("runtime downloads bytes with progress and loads a typed-array slice", asyn
   const { runtime } = await loadRuntime({ config: {}, configFile: "gams.json", modulesDir: "/project/gams_modules" }, (command, args) => {
     if (command === "runtime_download") {
       assert.equal(args.url, "http://127.0.0.1:8765/fs.wasm")
+      assert.ok(args.onProgress instanceof globalThis.__TAURI__.core.Channel)
       args.onProgress.onmessage({ downloaded: bytes.length, total: bytes.length })
       return bytes.buffer
     }

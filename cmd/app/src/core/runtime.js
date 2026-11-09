@@ -1,18 +1,4 @@
-const invokeCommand = globalThis.__TAURI__.core.invoke
-let tauriListen = null
-
-async function listenEvent(event, callback) {
-  if (tauriListen) return await tauriListen(event, callback)
-
-  if (!globalThis.__TAURI__?.event?.listen) {
-    throw new Error(
-      "Tauri event API is unavailable; cmd/app requires app.withGlobalTauri = true",
-    )
-  }
-
-  tauriListen = globalThis.__TAURI__.event.listen
-  return await tauriListen(event, callback)
-}
+import { invokeCommand, listenEvent, createProgressChannel } from "./runtime/native.js"
 
 function assertString(value, name) {
   if (typeof value !== "string" || value.length === 0)
@@ -109,8 +95,7 @@ export class Runtime {
 
   async download(url, onProgress = () => {}) {
     assertString(url, "runtime.download URL")
-    const progress = new globalThis.__TAURI__.core.Channel()
-    progress.onmessage = onProgress
+    const progress = createProgressChannel(onProgress)
     const bytes = await invokeCommand("runtime_download", { url, onProgress: progress })
     return new Uint8Array(bytes)
   }

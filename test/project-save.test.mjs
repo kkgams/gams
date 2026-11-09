@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 
 const runtimeSource = await readFile(new URL("../cmd/app/src/core/runtime.js", import.meta.url), "utf8")
+const nativeSource = await readFile(new URL("../cmd/app/src/core/runtime/native.js", import.meta.url), "utf8")
 const menuSource = await readFile(new URL("../cmd/app/src/core/menu.js", import.meta.url), "utf8")
 const viewSource = await readFile(new URL("../cmd/app/src/util/view-plugin.js", import.meta.url), "utf8")
 let moduleId = 0
@@ -30,7 +31,8 @@ async function setup(fail = () => null, configFile = "gams.json") {
     } },
     event: { async listen() { return () => {} } },
   }
-  const { runtime, unwrap } = await importSource(runtimeSource)
+  const nativeUrl = `data:text/javascript;base64,${Buffer.from(nativeSource + `\n// native ${moduleId++}`).toString("base64")}`
+  const { runtime, unwrap } = await importSource(runtimeSource.replace('"./runtime/native.js"', JSON.stringify(nativeUrl)))
   await runtime.ready
   return { runtime, unwrap, config, files, writes }
 }
