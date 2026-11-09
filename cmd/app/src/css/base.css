@@ -1317,6 +1317,7 @@
     /* handles */
     view--handle {
         z-index: var(--z-index-handle);
+        width: var(--resize-handle-size);
     }
 
     .layout-try-rect {
