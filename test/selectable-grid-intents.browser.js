@@ -6,27 +6,34 @@ export function checkSelectableGridIntents() {
         if (!condition) throw new Error(message)
         results.push(message)
     }
-    const appearance = cell => {
-        const style = getComputedStyle(cell)
+    const appearance = element => {
+        const style = getComputedStyle(element)
         return [style.backgroundColor, style.color].join("|")
     }
-    const expected = (cell, background, foreground) => {
+    const expected = (element, background, foreground = "inherit") => {
         const probe = document.createElement("span")
         probe.style.background = `var(${background})`
-        probe.style.color = `var(${foreground})`
-        cell.append(probe)
+        probe.style.color = foreground.startsWith("--") ? `var(${foreground})` : foreground
+        element.append(probe)
         const value = appearance(probe)
         probe.remove()
         return value
     }
-    // Exercise the real hover selector without requiring pointer automation.
-    // Only replace the pseudo-class during these synchronous checks; restore it
-    // even on failure. Disabled guards and the actual declarations stay intact.
-    const base = [...document.styleSheets].find(sheet => sheet.href?.endsWith("/css/base.css"))
-    const intent = [...base.cssRules].find(rule => rule.name === "intent")
-    const hover = [...intent.cssRules].find(rule => rule.selectorText?.includes('td[role="gridcell"]') && rule.selectorText.includes(":hover"))
-    const selector = hover.selectorText
-    hover.selectorText = selector.replace(":hover", "[data-test-hover]")
+    const the98 = new URLSearchParams(location.search).get("theme")?.endsWith("/the98.css")
+    const selectedAppearance = element => the98
+        ? expected(element, "--dialog-blue", "white")
+        : expected(element, "--intent-soft-bg", "--intent-soft-fg")
+
+    // Exercise the real hover selectors without requiring pointer automation.
+    // Restore them even on failure; keep disabled guards and declarations intact.
+    const sheet = [...document.styleSheets].find(sheet => sheet.href?.endsWith("/css/base.css"))
+    const base = [...sheet.cssRules].find(rule => rule.name === "base")
+    const theme = [...sheet.cssRules].find(rule => rule.name === "theme")
+    const selectedHover = [...base.cssRules].find(rule => rule.selectorText?.startsWith('[aria-selected="true"]') && rule.selectorText.includes(":hover"))
+    const unselectedHover = [...theme.cssRules].find(rule => rule.selectorText?.includes('td[role="gridcell"]') && rule.selectorText.includes(":hover"))
+    check(Boolean(selectedHover && unselectedHover), "selected and unselected hover rules exist in their expected layers")
+    const hoverRules = [selectedHover, unselectedHover].map(rule => [rule, rule.selectorText])
+    for (const [rule, selector] of hoverRules) rule.selectorText = selector.replace(":hover", "[data-test-hover]")
     try {
         for (const separate of [false, true]) {
             for (const intent of ["accent", "success", "warning", "danger", "info"]) {
@@ -49,11 +56,13 @@ export function checkSelectableGridIntents() {
                     cell.setAttribute("aria-disabled", String(disabled))
                     for (const selected of [false, true]) {
                         cell.setAttribute("aria-selected", String(selected))
-                        const tokens = selected ? ["--intent-bg", "--intent-fg"] : ["--intent-soft-bg", "--intent-soft-fg"]
-                        check(appearance(cell) === expected(cell, ...tokens), `${name}: selected=${selected} disabled=${disabled} token pair`)
+                        const resting = selected ? selectedAppearance(cell) : neutral
+                        check(appearance(cell) === resting, `${name}: selected=${selected} disabled=${disabled} resting appearance`)
                         cell.dataset.testHover = ""
-                        const hoverTokens = !selected && !disabled ? ["--intent-hover-bg", "--intent-fg"] : tokens
-                        check(appearance(cell) === expected(cell, ...hoverTokens), `${name}: selected=${selected} disabled=${disabled} hover token pair`)
+                        const hovered = disabled ? resting : selected
+                            ? the98 ? resting : expected(cell, "--intent-hover-bg", "--intent-fg")
+                            : expected(cell, "--surface-hover")
+                        check(appearance(cell) === hovered, `${name}: selected=${selected} disabled=${disabled} hover appearance`)
                         delete cell.dataset.testHover
                         const opacity = getComputedStyle(cell).opacity
                         const cursor = getComputedStyle(cell).cursor
@@ -71,10 +80,32 @@ export function checkSelectableGridIntents() {
                 check(focus.outlineStyle !== "none" && parseFloat(focus.outlineWidth) > 0, `${name}: focus outline retained`)
                 cell.className = ""
                 check(appearance(cell) === neutral, `${name}: removing intent restores neutral appearance`)
+
+                // Selection is global: ordinary table rows receive the same defaults.
+                table.removeAttribute("role")
+                cell.removeAttribute("aria-selected")
+                const row = table.rows[0]
+                row.className = intent
+                row.setAttribute("aria-selected", "true")
+                check(appearance(row) === selectedAppearance(row), `${name}: row selection respects theme overrides`)
             }
         }
+        const button = document.createElement("button")
+        button.style.transition = "none"
+        button.textContent = "Selected action"
+        button.setAttribute("aria-selected", "true")
+        document.querySelector("main").append(button)
+        for (const disabled of [false, true]) {
+            button.disabled = disabled
+            const resting = appearance(button)
+            button.dataset.testHover = ""
+            const hovered = disabled || the98 ? resting : expected(button, "--intent-hover-bg", "--intent-fg")
+            check(appearance(button) === hovered, `selected button: native disabled=${disabled} hover appearance`)
+            delete button.dataset.testHover
+        }
+        button.remove()
     } finally {
-        hover.selectorText = selector
+        for (const [rule, selector] of hoverRules) rule.selectorText = selector
     }
     return { passed: results.length, results }
 }
