@@ -112,34 +112,6 @@
         --intent: var(--info);
     }
 
-    /* Explicit cell intents outrank theme fills (including separate-layout
-       surfaces), without changing neutral/static cells, focus or disabled cues. */
-    table[role="grid"]
-        > tbody
-        > tr
-        > td[role="gridcell"][aria-selected]:is(.accent, .success, .warning, .danger, .info) {
-        background: var(--intent-soft-bg);
-        color: var(--intent-soft-fg);
-    }
-
-    table[role="grid"]
-        > tbody
-        > tr
-        > td[role="gridcell"][aria-selected="true"]:is(.accent, .success, .warning, .danger, .info) {
-        background: var(--intent-bg);
-        color: var(--intent-fg);
-    }
-
-    table[role="grid"]
-        > tbody
-        > tr
-        > td[role="gridcell"][aria-selected="false"]:is(.accent, .success, .warning, .danger, .info):not(
-            [aria-disabled="true"]
-        ):hover {
-        background: var(--intent-hover-bg);
-        color: var(--intent-fg);
-    }
-
     .elevated {
         background: var(--surface-elevated);
         box-shadow: var(--shadow-elevated);
@@ -1077,6 +1049,22 @@
         pointer-events: none;
     }
 
+    /* Selection state defaults; themes may override their appearance. */
+    [aria-selected] {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    [aria-selected="true"] {
+        background: var(--intent-soft-bg);
+        color: var(--intent-soft-fg);
+    }
+
+    [aria-selected="true"]:not([aria-disabled="true"]):hover {
+        background: var(--intent-hover-bg);
+        color: var(--intent-fg);
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
      TABLES
      ═══════════════════════════════════════════════════════════════════════════ */
@@ -1213,13 +1201,6 @@
         white-space: normal;
         overflow: visible;
         text-overflow: clip;
-    }
-
-    /* Appearance fallback also supports older themes. Updated themes override
-       these selectors; existing row-selection styling is intentionally separate. */
-    table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="true"] {
-        background: var(--accent);
-        color: var(--ink);
     }
 
     table[role="grid"] > tbody > tr > td[role="gridcell"][aria-selected="false"]:not([aria-disabled="true"]):hover {
