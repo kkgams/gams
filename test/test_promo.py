@@ -34,6 +34,18 @@ class PageLinks(HTMLParser):
 
 
 class PromoContentTests(unittest.TestCase):
+    def test_hero_thumbnails_link_to_four_full_size_workspaces(self):
+        html = (ROOT / "promo/index.html").read_text()
+        figure = re.search(r'<figure class="hero-workspaces".*?</figure>', html, re.S).group(0)
+        links = re.findall(r'<a class="hero-workspace" href="([^"]+)"[^>]*><img src="([^"]+)"[^>]*alt="([^"]+)"', figure)
+        self.assertEqual(len(links), 4)
+        self.assertEqual(len({href for href, _, _ in links}), 4)
+        for href, thumbnail, alt in links:
+            self.assertEqual(Path(href).stem, Path(thumbnail).stem)
+            self.assertTrue((ROOT / "promo" / href).is_file())
+            self.assertTrue((ROOT / "promo" / thumbnail).is_file())
+            self.assertTrue(alt)
+
     def test_fonts_are_self_hosted_with_their_licenses(self):
         for name, filename, copyright_notice in [
             ("Outfit", "outfit-latin.woff2", "Copyright 2021 The Outfit Project Authors"),

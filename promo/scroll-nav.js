@@ -6,6 +6,8 @@ export function createScrollNav({ root = document.querySelector('main'), selecto
   const abort = new AbortController();
   const on = (target, type, fn, options = {}) => target.addEventListener(type, fn, { ...options, signal: abort.signal });
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const heroWordmark = root.querySelector('.hero-wordmark');
+  if (!heroWordmark) throw new Error('Scroll navigation needs a hero wordmark.');
   const bar = document.createElement('div');
   bar.className = 'scroll-ruler';
   Object.entries({ role: 'scrollbar', tabindex: '0', 'aria-controls': root.id, 'aria-orientation': 'vertical', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-label': 'Page position' }).forEach(([k, v]) => bar.setAttribute(k, v));
@@ -78,6 +80,7 @@ export function createScrollNav({ root = document.querySelector('main'), selecto
   readout.append(scale, indicator);
   document.body.append(bar, overlay, thumb, readout);
   let frame = 0, measuring = true, documentHeight = 0, width = 0, height = 0;
+  let heroOrigin;
   let pointerY = null, drag = null, jumpFrame = 0;
   function cancelTrackJump() {
     cancelAnimationFrame(jumpFrame);
@@ -115,6 +118,8 @@ export function createScrollNav({ root = document.querySelector('main'), selecto
     if (measuring) {
       width = innerWidth; height = innerHeight;
       documentHeight = document.documentElement.scrollHeight;
+      const wordmark = heroWordmark.getBoundingClientRect();
+      heroOrigin = { x: wordmark.left + wordmark.width / 2, y: wordmark.top + scrollY + wordmark.height / 2, size: parseFloat(getComputedStyle(heroWordmark).fontSize) };
       for (const item of sections) {
         context.font = getComputedStyle(item.letters[0]).font;
         item.top = item.section.getBoundingClientRect().top + scrollY;
@@ -139,8 +144,9 @@ export function createScrollNav({ root = document.querySelector('main'), selecto
     }
     let activeIndex = 0;
     sections.forEach((item, index) => { if (item.top <= scrollY + 160) activeIndex = index; });
+    if (g.range > 0 && g.progress === 1) activeIndex = sections.length - 1;
     sections.forEach((item, index) => {
-      const options = { index, count: sections.length, top: item.top - scrollY, nextTop: (sections[index + 1]?.top ?? documentHeight + height) - scrollY, width, height, textWidth: item.textWidth, reduced: reduced.matches };
+      const options = { index, count: sections.length, top: item.top - scrollY, nextTop: (sections[index + 1]?.top ?? documentHeight + height) - scrollY, width, height, textWidth: item.textWidth, reduced: reduced.matches, heroOrigin, remainingScroll: Math.max(0, g.range - scrollY) };
       item.link.toggleAttribute('data-active', index === activeIndex);
       if (item.interactive && index === activeIndex) item.link.setAttribute('aria-current', 'location');
       else item.link.removeAttribute('aria-current');

@@ -49,13 +49,30 @@
   </header>
   <main id="main" tabindex="-1">
     <section id="hero" data-scroll-label="GAMS" data-scroll-static class="hero">
-      <div class="hero-wordmark" aria-hidden="true">GAMS</div>
       <div class="hero-content">
+        <div class="hero-wordmark" aria-hidden="true">GAMS</div>
         <p class="eyebrow">GAME ASSETS MANAGEMENT SYSTEM</p>
         <h1>Your game.<br>Your <em>editor.</em></h1>
-        <p class="intro">Tools that speak your game's language.<br>A workspace that feels like part of its world.<br>Available for macOS, Linux, and Windows.</p>
-        <a class="button" href="#download">GET STARTED</a>
+        <p class="intro">Build a game-editing workspace from Views, plugins, and themes. Shape your tools around your game’s systems and visual identity.</p>
+        <div class="hero-actions">
+          <a class="button" href="#download">DOWNLOAD GAMS</a>
+          <a class="text-link" href="#projects">EXPLORE WORKSPACES <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="hero-platform">macOS · Linux · Windows <span>FREE &amp; OPEN SOURCE</span></p>
       </div>
+      <figure class="hero-workspaces" aria-label="Game-editing workspaces">
+        <div class="hero-wall">
+          <div class="hero-column"><div class="hero-sequence">
+            <a class="hero-workspace" href="images/projects/fantasy-rpg.png" data-title="Fantasy RPG" aria-label="Preview Fantasy RPG workspace"><img src="images/hero/fantasy-rpg.jpg" width="800" height="523" fetchpriority="high" decoding="async" alt="Fantasy workspace with parchment panels and character equipment."></a>
+            <a class="hero-workspace" href="images/projects/bullet-heaven.png" data-title="Bullet Heaven" aria-label="Preview Bullet Heaven workspace"><img src="images/hero/bullet-heaven.jpg" width="800" height="533" decoding="async" alt="Bullet-heaven workspace with encounter logic and enemy waves."></a>
+          </div></div>
+          <div class="hero-column"><div class="hero-sequence">
+            <a class="hero-workspace" href="images/projects/combat-racing.png" data-title="Combat Racing" aria-label="Preview Combat Racing workspace"><img src="images/hero/combat-racing.jpg" width="800" height="523" decoding="async" alt="Racing workspace with vehicle tuning and a track editor."></a>
+            <a class="hero-workspace" href="images/projects/cyberpunk-action.png" data-title="Cyberpunk Action" aria-label="Preview Cyberpunk Action workspace"><img src="images/hero/cyberpunk-action.jpg" width="800" height="533" decoding="async" alt="Cyberpunk workspace with mission logic and character augmentations."></a>
+          </div></div>
+        </div>
+      </figure>
+      <div class="hero-shade" aria-hidden="true"></div>
       <div class="hero-footer"><span>GAMS / <span class="hero-footer-detail">BUILT AROUND </span>YOUR GAME</span><span>PLUGINS · VIEWS · THEMES</span></div>
     </section>
     <section id="projects" data-scroll-label="PROJECTS">
@@ -466,6 +483,18 @@
       <div class="footer-meta"><span>GAMS · FREE &amp; OPEN SOURCE</span><a href="docs/">DOCUMENTATION</a><span>YOUR WORKSPACE. YOUR RULES.</span></div>
     </div>
   </footer>
+  <dialog class="hero-preview" aria-label="Workspace preview">
+    <button class="hero-preview-close" type="button" aria-label="Close workspace preview">Close · Esc</button>
+    <figure>
+      <div class="hero-preview-frame">
+        <button class="hero-preview-prev" type="button" aria-label="Previous workspace">←</button>
+        <img class="hero-preview-image" alt="">
+        <button class="hero-preview-next" type="button" aria-label="Next workspace">→</button>
+      </div>
+      <figcaption><strong class="hero-preview-title"></strong><span class="hero-preview-count"></span><a class="hero-preview-link" href="images/projects/fantasy-rpg.png" target="_blank" rel="noopener">Open full-size image ↗</a></figcaption>
+    </figure>
+  </dialog>
+  <script type="module" src="hero-workspaces.js"></script>
   <script type="module" src="site-nav.js"></script>
   <script type="module">import { createScrollNav } from './scroll-nav.js'; createScrollNav();</script>
 </body>

@@ -27,7 +27,7 @@ export function rulerGeometry(scroll, height, documentHeight, padding = 60) {
 }
 
 // Four continuous poses: future stack → vertical → active → past stack.
-function labelMotion({ index, count, top, nextTop, width, height, textWidth }) {
+function labelMotion({ index, count, top, nextTop, width, height, textWidth, remainingScroll }) {
     const compact = width < 700
     const small = compact ? 11 : 14
     const large = compact ? 20 : 34
@@ -48,12 +48,18 @@ function labelMotion({ index, count, top, nextTop, width, height, textWidth }) {
     }
     const active = { x: width - edge - (textWidth * large) / 34 / 2, y: activeY, angle: 0, size: large, opacity: 1 }
     const past = { ...future, y: topY }
+    const last = index === count - 1
+    const shrinkDistance = 170
+    const activeProgress = clamp((activeY + 220 - top) / 220)
+    // The last section may never reach activeY, and has no next section.
+    // Finish its active pose before shrinking into the list at the page end.
+    const finalActiveProgress = last ? clamp((220 + shrinkDistance - remainingScroll) / 220) : 0
     return {
         poses: [future, vertical, active, past],
         progress: [
             clamp((height - 140 - top) / 200),
-            clamp((activeY + 220 - top) / 220),
-            clamp((activeY + 170 + shrinkLead - nextTop) / 170),
+            Math.max(activeProgress, finalActiveProgress),
+            last ? clamp((shrinkDistance - remainingScroll) / shrinkDistance) : clamp((activeY + 170 + shrinkLead - nextTop) / 170),
         ],
     }
 }
@@ -94,9 +100,9 @@ export function heroLetterPoses(options, widths, scroll) {
     const origin = positionedLetters(
         {
             // The overlay is fixed, so convert the document position to viewport space.
-            x: options.width / 2,
-            y: options.height * 0.36 - scroll,
-            size: Math.min(110, options.width / 9),
+            x: options.heroOrigin.x,
+            y: options.heroOrigin.y - scroll,
+            size: options.heroOrigin.size,
             angle: 0,
             opacity: 1,
         },

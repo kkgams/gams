@@ -31,6 +31,32 @@ test('promo letters stagger independently, with discrete reduced-motion poses', 
   assert.deepEqual(heroLetterPoses(hero, widths, 100), positionedLetters(labelPose(hero), widths));
 });
 
+test('hero letters start at the measured wordmark and finish at the ruler', () => {
+  const hero = { ...options, index: 0, heroOrigin: { x: 180, y: 160, size: 32 } };
+  assert.deepEqual(heroLetterPoses(hero, widths, 0), positionedLetters({ x: 180, y: 160, size: 32, angle: 0, opacity: 1 }, widths));
+  assert.deepEqual(heroLetterPoses(hero, widths, 500), positionedLetters(labelPose(hero), widths));
+  for (const scroll of [0, 100, 250, 499, 500]) {
+    for (const pose of heroLetterPoses(hero, widths, scroll)) assert.ok(Object.values(pose).every(Number.isFinite));
+  }
+});
+
+test('last promo label finishes in the compact list even when its section cannot reach the top', () => {
+  const lastWidths = Array(11).fill(22);
+  for (const height of [900, 1337, 1800]) for (const reduced of [false, true]) {
+    const last = { index: 6, count: 7, width: 1440, height, textWidth: 242, top: height - 1062, nextTop: height * 2, remainingScroll: 0, reduced };
+    const letters = letterPoses(last, lastWidths);
+    assert.ok(letters.every(pose => pose.angle === 0 && pose.size === 14 && pose.y === 196 && Math.abs(pose.opacity - 0.45) < 1e-12));
+    assert.deepEqual(letters, positionedLetters(labelPose(last), lastWidths));
+    const sample = remainingScroll => letterPoses({ ...last, top: last.top + remainingScroll, nextTop: last.nextTop + remainingScroll, remainingScroll }, lastWidths);
+    const distances = [500, 390, 300, 170, 100, 1, 0];
+    assert.deepEqual([...distances].reverse().map(sample).reverse(), distances.map(sample));
+    if (!reduced) {
+      assert.ok(sample(170).every(pose => pose.angle === 0 && pose.size === 34));
+      assert.ok(sample(1).every((pose, i) => Math.abs(pose.x - letters[i].x) < 0.01 && Math.abs(pose.y - letters[i].y) < 0.01));
+    }
+  }
+});
+
 test('promo label paths remain finite and reversible on narrow viewports', () => {
   for (const width of [320, 375, 700, 1440]) for (const height of [320, 812, 1000]) {
     const positions = Array.from({ length: 100 }, (_, i) => 1200 - i * 20);
