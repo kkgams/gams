@@ -7,6 +7,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const makefile = await readFile(join(root, 'Makefile'), 'utf8');
+const wikiVersion = makefile.match(/^WIKI_VERSION \?= (v\d+\.\d+\.\d+)$/m)[1];
+const wikiMakefile = `build.nosync/wiki-${wikiVersion}.mk`;
 
 async function fixture(run) {
   const directory = await mkdtemp(join(tmpdir(), 'gams-docs-'));
@@ -21,7 +24,7 @@ async function fixture(run) {
     await mkdir(join(directory, 'cmd/app/src/fonts'), { recursive: true });
     await copyFile(join(root, 'cmd/app/src/fonts/game-icons.woff2'), join(directory, 'cmd/app/src/fonts/game-icons.woff2'));
     await mkdir(join(directory, 'build.nosync'), { recursive: true });
-    await writeFile(join(directory, 'build.nosync/wiki-v1.4.0.mk'),
+    await writeFile(join(directory, wikiMakefile),
       '.PHONY: serve validate build\nserve validate build:\n\t@printf "UPSTREAM:%s|%s|%s|%s|%s\\n" "$@" "$(WIKI_SOURCE)" "$(PORT)" "$(WIKI_ENGINE)" "$(WIKI_VERSION)"\n');
     const make = (...args) => spawnSync('make', [...args, 'HOST_CC=cc', 'HOST_CXX=c++'], { cwd: directory, encoding: 'utf8' });
     await run({ directory, make });
@@ -36,7 +39,7 @@ test('docs targets delegate to cached upstream Makefile with staged docs and por
       const result = make(target, 'PORT=3333');
       assert.equal(result.status, 0, result.stderr);
       assert.doesNotMatch(result.stderr, /Circular/);
-      assert.ok(result.stdout.includes(`UPSTREAM:${upstream}|${join(await realpath(directory), 'build.nosync/docs-source')}|3333|build.nosync/wiki-v1.4.0|v1.4.0`), result.stdout);
+      assert.ok(result.stdout.includes(`UPSTREAM:${upstream}|${join(await realpath(directory), 'build.nosync/docs-source')}|3333|build.nosync/wiki-${wikiVersion}|${wikiVersion}`), result.stdout);
       assert.doesNotMatch(result.stdout, /Downloading|curl|serve-docs\.py|docs-wiki/);
       assert.deepEqual(await readFile(join(directory, 'build.nosync/docs-source/assets/game-icons.woff2')),
         await readFile(join(root, 'cmd/app/src/fonts/game-icons.woff2')));
@@ -64,7 +67,7 @@ test('site assembly nests the wiki, resolves aliases, and preserves output on fa
   await fixture(async ({ directory, make }) => {
     await mkdir(join(directory, 'promo'));
     await writeFile(join(directory, 'promo/index.html'), '<a href="docs/">Docs</a>');
-    await writeFile(join(directory, 'build.nosync/wiki-v1.4.0.mk'),
+    await writeFile(join(directory, wikiMakefile),
       'build:\n\t@test "$(FAIL_BUILD)" != yes\n\t@mkdir -p "$(WIKI_OUTPUT)/content"\n\t@printf wiki > "$(WIKI_OUTPUT)/index.html"\n\t@printf page > "$(WIKI_OUTPUT)/content/original.md"\n\t@ln -s original.md "$(WIKI_OUTPUT)/content/alias.md"\n');
     let result = make('promo');
     assert.equal(result.status, 0, result.stderr);
@@ -86,7 +89,7 @@ test('custom engines must exist and are not overwritten', async () => {
     await writeFile(join(directory, 'custom/scripts/serve.mjs'), '// custom');
     let result = make('serve-docs', 'WIKI_ENGINE=custom');
     assert.equal(result.status, 0, result.stderr);
-    assert.ok(result.stdout.includes('|custom|v1.4.0'), result.stdout);
+    assert.ok(result.stdout.includes(`|custom|${wikiVersion}`), result.stdout);
     assert.equal(await readFile(join(directory, 'custom/scripts/serve.mjs'), 'utf8'), '// custom');
     result = make('serve-docs', 'WIKI_ENGINE=missing');
     assert.notEqual(result.status, 0);
@@ -102,9 +105,23 @@ test('docs CSS uses the locally copied font and enables name ligatures', async (
   assert.match(css, /\.prose \.game-icons/);
 });
 
-test('sidebar uses existing native wiki routes with reference frontmatter', async () => {
+test('sidebar routes resolve to local reference pages or configured external subwikis', async () => {
   const sidebar = await readFile(join(root, 'docs/_sidebar.md'), 'utf8');
-  for (const [, route] of sidebar.matchAll(/\[\[([^|\]]+)/g)) {
-    assert.match(await readFile(join(root, 'docs', `${route}.md`), 'utf8'), /^---\ntitle: .+\nstatus: reference\n---/);
+  const config = await readFile(join(root, 'docs/_config.md'), 'utf8');
+  const subwikis = new Map([...config.matchAll(/^  ([\w-]+):\n    url: (\S+)$/gm)]
+    .map(([, route, url]) => [route, url]));
+  const routes = [...sidebar.matchAll(/\[\[([^|\]]+)/g)].map(([, route]) => route);
+  for (const route of routes) {
+    if (subwikis.has(route)) {
+      const url = new URL(subwikis.get(route));
+      assert.equal(url.protocol, 'https:');
+      assert.equal(url.hostname, 'kkgams.github.io');
+      assert.notEqual(url.pathname, '/');
+    } else {
+      assert.match(await readFile(join(root, 'docs', `${route}.md`), 'utf8'), /^---\ntitle: .+\nstatus: reference\n---/);
+    }
+  }
+  for (const route of subwikis.keys()) {
+    assert.ok(routes.includes(route), `External subwiki missing from sidebar: ${route}`);
   }
 });
