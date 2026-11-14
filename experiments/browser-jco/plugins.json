@@ -1,0 +1,34 @@
+[
+  {
+    "repository": "kkgams/plugin.random",
+    "tag": "v0.2.2",
+    "files": [
+      {
+        "name": "LICENSES.zip",
+        "sha256": "9e24b712113d645da20ec8276ee27b64978bb6139e148f75c9335928d02b7793"
+      },
+      {
+        "name": "plugin.random.wasm",
+        "sha256": "c5fbe9caf75ea7189daf091b2b586a454413335f19ee2c4fb309e56f44446a80"
+      }
+    ]
+  },
+  {
+    "repository": "kkgams/plugin.fs",
+    "tag": "v0.2.3",
+    "files": [
+      {
+        "name": "LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "name": "NOTICE",
+        "sha256": "2d3ac85f8a3df5ff3a0e6e6c7da706d0ff4f18697fa68dc4a0b3ceaf3e05203c"
+      },
+      {
+        "name": "plugin.fs.wasm",
+        "sha256": "b7f2ea05beac359cfd7d15c2b198edb66e0437fffdf00e9e4d0250cfb226fc98"
+      }
+    ]
+  }
+]

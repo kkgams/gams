@@ -40,6 +40,7 @@ def build():
         f"--alias:@bytecodealliance/jco/component={deps['jco']}/dist/browser.js",
         f"--alias:@bytecodealliance/jco-transpile/component={deps['jco-transpile']}/dist/component.js",
         f"--alias:@bytecodealliance/preview2-shim/instantiation={shim}/dist/common/instantiation.js",
+        f"--alias:@bytecodealliance/preview2-shim/filesystem={shim}/dist/browser/filesystem.js",
         f"--alias:@bytecodealliance/preview2-shim={shim}/dist/browser/index.js",
     ]
     subprocess.run([
@@ -64,6 +65,24 @@ def build():
     shutil.copy2(SOURCE / 'index.html', SITE / 'index.html')
     components = SITE / 'components'
     components.mkdir(exist_ok=True)
+    # Unmodified published components and their original license assets.
+    for plugin in json.loads((SOURCE / 'plugins.json').read_text()):
+        unit = plugin['repository'].split('/')[-1]
+        notices = vendor / 'licenses' / unit
+        notices.mkdir(parents=True, exist_ok=True)
+        for asset in plugin['files']:
+            url = f"https://github.com/{plugin['repository']}/releases/download/{plugin['tag']}/{asset['name']}"
+            cached = BUILD / 'releases' / unit / asset['name']
+            if not cached.exists():
+                cached.parent.mkdir(parents=True, exist_ok=True)
+                with urllib.request.urlopen(url) as response:
+                    cached.write_bytes(response.read())
+            if hashlib.sha256(cached.read_bytes()).hexdigest() != asset['sha256']:
+                raise ValueError(f'Integrity mismatch: {cached}')
+            destination = components if asset['name'].endswith('.wasm') else notices
+            shutil.copy2(cached, destination / asset['name'])
+        subprocess.run(['wasm-tools', 'validate', str(components / f'{unit}.wasm')], check=True)
+    shutil.copy2(SOURCE / 'plugins.json', SITE / 'plugins.json')
     for wat in (SOURCE / 'components').glob('*.wat'):
         output = components / f'{wat.stem}.wasm'
         if not output.exists() or wat.stat().st_mtime > output.stat().st_mtime:

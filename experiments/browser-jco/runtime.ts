@@ -15,11 +15,8 @@ export function assertComponent(bytes: Uint8Array): void {
 // Generated output stays in this worker. Nothing is served or written to disk.
 export async function instantiateComponent(
   output: TranspiledComponent,
-  grantLogging: boolean,
-  log: (value: number) => void,
+  allowed: ReadonlyMap<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const allowed = new Map<string, unknown>();
-  if (grantLogging) allowed.set('gams:experiment/logging', { log });
   const imports = Object.create(null);
   for (const name of output.imports) {
     if (!allowed.has(name)) throw new Error(`Missing or denied WIT import: ${name}`);

@@ -1,4 +1,6 @@
 import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime';
+import { createCapabilityImports } from './capabilities';
+import { runRandomChecks, runFilesystemChecks } from './plugin-checks';
 
 let transpiled: TranspiledComponent | undefined;
 let instance: Record<string, unknown> | undefined;
@@ -36,17 +38,32 @@ self.onmessage = async ({ data: { id, operation, args } }) => {
       case 'instantiate': {
         instance = undefined;
         if (!transpiled) throw new Error('Transpile a component first.');
-        instance = await instantiateComponent(transpiled, args.grantLogging, value => {
+        const imports = createCapabilityImports({ logging: args.grantLogging, filesystem: args.grantFilesystem }, value => {
           postMessage({ event: 'host-log', value });
         });
+        instance = await instantiateComponent(transpiled, imports);
         result = { exports: Object.keys(instance) };
         break;
       }
       case 'call': {
         if (!instance) throw new Error('Instantiate a component first.');
-        const fn = Object.hasOwn(instance, args.name) ? instance[args.name] : undefined;
+        const owner = args.interface === undefined ? instance : instance[args.interface];
+        if (!owner || typeof owner !== 'object' || (args.interface !== undefined && !Object.hasOwn(instance, args.interface))) {
+          throw new Error(`No exported interface: ${args.interface}`);
+        }
+        const fn = Object.hasOwn(owner, args.name) ? owner[args.name] : undefined;
         if (typeof fn !== 'function') throw new Error(`No callable export: ${args.name}`);
         result = await fn(...args.values);
+        break;
+      }
+      case 'check-random': {
+        if (!instance) throw new Error('Instantiate a component first.');
+        result = runRandomChecks(instance);
+        break;
+      }
+      case 'check-filesystem': {
+        if (!instance) throw new Error('Instantiate a component first.');
+        result = runFilesystemChecks(instance);
         break;
       }
       case 'benchmark': {

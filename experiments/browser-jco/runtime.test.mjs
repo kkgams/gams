@@ -16,9 +16,9 @@ test('bound uploaded component bytes before invoking Jco', () => {
 });
 test('deny logging unless granted, and deny every other interface even with logging grant', async () => {
   for (const [name, granted] of [['gams:experiment/logging', false], ['wasi:filesystem/types', true], ['toString', true]]) {
-    await assert.rejects(instantiateComponent({ imports: [name], files: [], exports: [] }, granted, () => {}), /Missing or denied WIT import/);
+    await assert.rejects(instantiateComponent({ imports: [name], files: [], exports: [] }, granted ? new Map([['gams:experiment/logging', { log() {} }]]) : new Map()), /Missing or denied WIT import/);
   }
 });
 test('do not mask missing bindings after accepting an allowed interface', async () => {
-  await assert.rejects(instantiateComponent({ imports: ['gams:experiment/logging'], files: [], exports: [] }, true, () => {}), /did not produce component.js/);
+  await assert.rejects(instantiateComponent({ imports: ['gams:experiment/logging'], files: [], exports: [] }, new Map([['gams:experiment/logging', { log() {} }]])), /did not produce component.js/);
 });

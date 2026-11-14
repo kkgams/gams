@@ -10,11 +10,13 @@ const files = element('files');
 const results = element('results');
 const logs = element('logs');
 const grant = element<HTMLInputElement>('grant');
+const filesystemGrant = element<HTMLInputElement>('grant-fs');
 const buttons = [...document.querySelectorAll<HTMLButtonElement>('button[data-operation]')];
 let bytes: Uint8Array | undefined;
 let ready = false;
 let busy = false;
 let stage = 'empty';
+let exportedNames = new Set<string>();
 let worker: Worker;
 let sequence = 0;
 let hostLogCount = 0;
@@ -25,11 +27,16 @@ function showMetrics() { metrics.textContent = JSON.stringify(measurements, null
 function update() {
   for (const button of buttons) {
     const op = button.dataset.operation;
-    button.disabled = busy || !ready || (op === 'transpile' ? !bytes : op === 'instantiate' ? stage !== 'transpiled' && stage !== 'instantiated' : stage !== 'instantiated');
+    const wrongExports = op === 'check-random' ? !exportedNames.has('gams:random/seeded-random@1.0.0')
+      : op === 'check-filesystem' ? !exportedNames.has('gams:fs/fs@1.2.0')
+      : op === 'call' ? !exportedNames.has('add') || !exportedNames.has('greet')
+      : op === 'benchmark' ? !exportedNames.has('add') : false;
+    button.disabled = busy || !ready || wrongExports || (op === 'transpile' ? !bytes : op === 'instantiate' ? stage !== 'transpiled' && stage !== 'instantiated' : stage !== 'instantiated');
   }
   element<HTMLButtonElement>('load').disabled = busy;
   element<HTMLInputElement>('upload').disabled = busy;
   grant.disabled = busy;
+  filesystemGrant.disabled = busy;
 }
 function reset() {
   if (worker) worker.terminate();
@@ -40,11 +47,13 @@ function reset() {
   pending.clear();
   ready = false;
   stage = bytes ? 'loaded' : 'empty';
+  exportedNames.clear();
   files.textContent = '';
   results.textContent = '';
   logs.textContent = '';
   hostLogCount = 0;
   grant.checked = false;
+  filesystemGrant.checked = false;
   diagnostics.textContent = '';
   for (const key of Object.keys(measurements)) delete measurements[key];
   showMetrics();
@@ -121,7 +130,7 @@ element<HTMLInputElement>('upload').onchange = event => action(async () => {
   const start = performance.now();
   await load(new Uint8Array(await selected[0].arrayBuffer()), selected[0].name, performance.now() - start);
 });
-grant.onchange = () => {
+grant.onchange = filesystemGrant.onchange = () => {
   // Reinstantiation is required for any capability change.
   if (stage === 'instantiated') stage = 'transpiled';
   update();
@@ -135,10 +144,11 @@ for (const button of buttons) button.onclick = () => action(async () => {
     measurements.transpilationMs = response.durationMs;
     measurements.generatedBytes = response.result.files.reduce((sum: number, file: any) => sum + file.bytes, 0);
     files.textContent = JSON.stringify(response.result, null, 2);
+    exportedNames = new Set(response.result.exports.map(([name]: [string, string]) => name));
     stage = 'transpiled'; status.textContent = 'Transpilation complete.';
   } else if (operation === 'instantiate') {
     stage = 'transpiled';
-    const response = await request('instantiate', { grantLogging: grant.checked });
+    const response = await request('instantiate', { grantLogging: grant.checked, grantFilesystem: filesystemGrant.checked });
     measurements.instantiationMs = response.durationMs;
     delete measurements.firstAddMs;
     delete measurements.greetMs;
@@ -151,6 +161,11 @@ for (const button of buttons) button.onclick = () => action(async () => {
     measurements.greetMs = greet.durationMs;
     results.textContent = JSON.stringify({ add: add.result, greet: greet.result }, null, 2);
     status.textContent = 'Exports executed in browser.';
+  } else if (operation === 'check-random' || operation === 'check-filesystem') {
+    const response = await request(operation);
+    measurements.pluginChecksMs = response.durationMs;
+    results.textContent = JSON.stringify(response.result, null, 2);
+    status.textContent = 'Plugin checks passed in browser.';
   } else if (operation === 'benchmark') {
     const response = await request('benchmark');
     measurements.repeatedExecution = { ...response.result, meanMs: response.result.totalMs / response.result.count };
@@ -163,6 +178,6 @@ element('compatibility').textContent = JSON.stringify({
   webAssembly: typeof WebAssembly !== 'undefined', moduleWorker: typeof Worker !== 'undefined',
   blobModules: typeof URL.createObjectURL === 'function', crossOriginIsolated,
   jspi: typeof (WebAssembly as any).Suspending === 'function',
-  note: 'Heap diagnostic excludes worker/Wasm memory. No WASI capabilities granted to uploaded components.',
+  note: 'Heap excludes worker/Wasm memory. Optional filesystem grant: disposable /project only; no native disk or network.',
 }, null, 2);
 reset();

@@ -6,10 +6,10 @@ const require = createRequire(import.meta.url);
 
 async function openUi(t) {
   const elements = Object.fromEntries([
-    'status', 'diagnostics', 'metrics', 'files', 'results', 'logs', 'grant',
+    'status', 'diagnostics', 'metrics', 'files', 'results', 'logs', 'grant', 'grant-fs',
     'load', 'upload', 'reset', 'sample', 'loaded', 'compatibility',
   ].map(id => [id, { textContent: '', checked: false, disabled: false, value: 'host' }]));
-  const buttons = Object.fromEntries(['transpile', 'instantiate', 'call', 'benchmark']
+  const buttons = Object.fromEntries(['transpile', 'instantiate', 'call', 'benchmark', 'check-random', 'check-filesystem']
     .map(operation => [operation, { dataset: { operation }, disabled: false }]));
   const workers = [];
   class Worker {
@@ -46,16 +46,20 @@ async function openUi(t) {
 test('new component load and explicit reset clear the previous logging grant', async t => {
   const { elements, worker, ready } = await openUi(t);
   elements.grant.checked = true;
+  elements['grant-fs'].checked = true;
   const previous = worker();
   await elements.load.onclick();
   assert.equal(previous.terminated, true);
   assert.equal(elements.grant.checked, false, 'new components must require a fresh grant');
+  assert.equal(elements['grant-fs'].checked, false, 'new components must require a fresh filesystem grant');
   ready();
   elements.grant.checked = true;
+  elements['grant-fs'].checked = true;
   const loaded = worker();
   elements.reset.onclick();
   assert.equal(loaded.terminated, true);
   assert.equal(elements.grant.checked, false, 'reset must revoke the grant');
+  assert.equal(elements['grant-fs'].checked, false, 'reset must revoke the filesystem grant');
 });
 
 test('pending instantiation disables grant changes until completion, then revocation blocks calls', async t => {
@@ -63,7 +67,7 @@ test('pending instantiation disables grant changes until completion, then revoca
   await elements.load.onclick();
   ready();
   const transpiling = buttons.transpile.onclick();
-  worker().emit({ id: worker().messages.at(-1).id, durationMs: 1, result: { files: [] } });
+  worker().emit({ id: worker().messages.at(-1).id, durationMs: 1, result: { files: [], exports: [['add', 'function'], ['greet', 'function']] } });
   await transpiling;
   elements.grant.checked = true;
   elements.grant.onchange();
@@ -72,6 +76,7 @@ test('pending instantiation disables grant changes until completion, then revoca
   assert.equal(request.operation, 'instantiate');
   assert.equal(request.args.grantLogging, true);
   assert.equal(elements.grant.disabled, true, 'cannot revoke while a granted instance is pending');
+  assert.equal(elements['grant-fs'].disabled, true, 'filesystem grant cannot race instantiation');
   assert.equal(buttons.call.disabled, true);
   worker().emit({ id: request.id, durationMs: 1, result: { exports: ['add', 'greet'] } });
   await instantiating;
@@ -80,5 +85,31 @@ test('pending instantiation disables grant changes until completion, then revoca
   elements.grant.checked = false;
   elements.grant.onchange();
   assert.equal(buttons.call.disabled, true, 'revocation requires reinstantiation before calls');
+  assert.equal(buttons.instantiate.disabled, false);
+});
+
+
+test('filesystem exports enable only their matching checks and require reinstantiation after grant change', async t => {
+  const { elements, buttons, worker, ready } = await openUi(t);
+  await elements.load.onclick();
+  ready();
+  const transpiling = buttons.transpile.onclick();
+  worker().emit({ id: worker().messages.at(-1).id, durationMs: 1,
+    result: { files: [], exports: [['gams:fs/fs@1.2.0', 'instance']] } });
+  await transpiling;
+  assert.equal(buttons['check-filesystem'].disabled, true);
+  elements['grant-fs'].checked = true;
+  elements['grant-fs'].onchange();
+  const instantiating = buttons.instantiate.onclick();
+  const request = worker().messages.at(-1);
+  assert.equal(request.args.grantFilesystem, true);
+  assert.equal(request.args.grantLogging, false);
+  worker().emit({ id: request.id, durationMs: 1, result: { exports: ['gams:fs/fs@1.2.0'] } });
+  await instantiating;
+  assert.equal(buttons['check-filesystem'].disabled, false);
+  for (const operation of ['call', 'benchmark', 'check-random']) assert.equal(buttons[operation].disabled, true);
+  elements['grant-fs'].checked = false;
+  elements['grant-fs'].onchange();
+  assert.equal(buttons['check-filesystem'].disabled, true);
   assert.equal(buttons.instantiate.disabled, false);
 });
