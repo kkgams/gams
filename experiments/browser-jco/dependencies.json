@@ -1,0 +1,20 @@
+[
+  {
+    "name": "@bytecodealliance/jco",
+    "version": "1.42.0",
+    "url": "https://registry.npmjs.org/@bytecodealliance/jco/-/jco-1.42.0.tgz",
+    "integrity": "sha512-kQZ+Y4Gcc5XIXP+sKNAya+ZvOQxO0l5QFLlpmx5KUwlpeAaNK0+81mjx24Iq5evQac5MA0U/2YxMaI+xGSDacA=="
+  },
+  {
+    "name": "@bytecodealliance/jco-transpile",
+    "version": "0.24.0",
+    "url": "https://registry.npmjs.org/@bytecodealliance/jco-transpile/-/jco-transpile-0.24.0.tgz",
+    "integrity": "sha512-ISCXvZc+TOX07L+V9WhO7tg8zv1zj9Ll48tT0tKZTUo5O5Cxwn2tCSAMvDtA6Ni6V0baosB3XCaBVFkLNpuBSA=="
+  },
+  {
+    "name": "@bytecodealliance/preview2-shim",
+    "version": "0.31.1",
+    "url": "https://registry.npmjs.org/@bytecodealliance/preview2-shim/-/preview2-shim-0.31.1.tgz",
+    "integrity": "sha512-uDVB/IhExDW70TquqVx2l2Q5uwwpH7r5M2ltYccux+0YxXBm4TvqyNHTyYxcoLBsoAar28o7uZSj7GOKVx9uvA=="
+  }
+]

@@ -1,0 +1,11 @@
+package gams:experiment;
+
+interface logging {
+    log: func(value: s32);
+}
+
+world host {
+    import logging;
+    export add: func(a: s32, b: s32) -> s32;
+    export greet: func(name: string) -> string;
+}

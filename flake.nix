@@ -25,7 +25,7 @@
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          hostTools = with pkgs; [ rustc cargo cargo-tauri cargo-about pkg-config (gameIconsPython pkgs) nodejs_24 cacert gnumake ];
+          hostTools = with pkgs; [ rustc cargo cargo-tauri cargo-about pkg-config (gameIconsPython pkgs) nodejs_24 cacert gnumake esbuild wasm-tools ];
           platformLibraries = with pkgs; lib.optionals stdenv.isDarwin [ libiconv ]
             ++ lib.optionals stdenv.isLinux [ glib gtk3 webkitgtk_4_1 libsoup_3 openssl ];
         in {

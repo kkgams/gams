@@ -86,6 +86,9 @@ under `build.nosync/`. Tauri itself also emits capability schemas at its fixed
 removes only its known generated schema files, preserving unrelated files. `clean` preserves authored assets/configuration, unrelated
 files and downloaded Project Units in `gams_modules/`. Those Units may include user-managed local content.
 
+The isolated [browser Component Model experiment](experiments/browser-jco/README.md)
+transpiles and executes uploaded components using Jco entirely in a browser worker.
+
 ## CI
 
 Matching numeric `vX.Y.Z` tag pushes build the three native packages and publish
