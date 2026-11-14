@@ -26,15 +26,15 @@ The existing GAMS frontend is static JavaScript without Vite or a frontend packa
 
 - **A1 — Standalone:** Load the standalone example, transpile, instantiate, then call exports. Expect `30` and `"Hello, GAMS!"`. Repeat execution measures 1,000 calls inside the worker.
 - **A2 — Host import:** Load the host-logging example, transpile, and try instantiating without the grant. Expect `Missing or denied WIT import: gams:experiment/logging`. Grant logging, instantiate again, and call exports. Expect `Browser host log(30)`.
-- **A3 — Upload:** Select a local component `.wasm`, transpile, inspect imports/exports and generated sizes, then instantiate. Only explicitly granted logging or in-memory filesystem interfaces are available; other imports are denied. Execution buttons cover the toy functions and the two real plugins, not an arbitrary WIT function editor.
-- **A4 — Stop:** Terminate/reset discards the worker, Jco, output and instance. A new load also resets them and clears capability grants. Each operation has a 30-second termination deadline; uploads have a 16 MiB limit. These are experiment safeguards, not production resource quotas.
+- **A3 — Upload:** Select a local component `.wasm`, transpile, inspect imports/exports and generated sizes, then instantiate. Only explicitly granted logging or filesystem interfaces are available; other imports are denied. Execution buttons cover the toy functions and the two real plugins, not an arbitrary WIT function editor.
+- **A4 — Stop:** **Checkpoint and restart worker** waits for guest shutdown and storage disposal before terminating. Loading another component does the same and clears grants. A failed shutdown retains the worker. A 30-second timeout blocks further normal actions without automatically terminating; the separate **Force stop** button can discard in-flight changes, which may be lost or partially persisted. Uploads have a 16 MiB limit. These are experiment safeguards, not production resource quotas.
 
 `components/*.wat` are authored Component Model assembly, not pre-transpiled JS. `wasm-tools parse` encodes them into valid component binaries; `validate` and `component targets` verify their structure and WIT world. This avoids a language SDK for a tiny deterministic test. Both implement canonical UTF-8 string lifting/lowering, allocation, memory growth and post-return reclamation. The second world imports `logging.log(value: s32)`; `add` logs its result.
 
 ## Real released plugins
 
 - **A7 — Random:** Select `plugin.random v0.2.2`, load, transpile, instantiate with **no grants**, then click **Check random seed replay**. Its binary has no imports. The checks set/reset seed `123n`, compare two 16-byte sequences, verify generation `0 → 2 → 3`, and read a `u64`. Full versioned interface exports and camelCase methods are called directly; worker RPC also accepts an `interface` key for namespaced invocation. `u64` values remain BigInt across the ABI and are displayed as decimal strings without precision loss.
-- **A8 — Filesystem:** Select `plugin.fs v0.2.3`, load/transpile and first try instantiating without grants: it must fail. Enable **Grant disposable /project filesystem**, instantiate, then click **Check filesystem operations and boundaries**. Fourteen checks cover UTF-8/binary reads and writes, directory creation/listing, byte-size stat, rename/deletion, missing paths, traversal and outside-preopen rejection, cleanup and an unchanged root listing. Checks refuse to overwrite an existing check directory.
+- **A8 — Filesystem:** Select `plugin.fs v0.2.3`, load/transpile and first try instantiating without grants: it must fail. Enable **Grant /project filesystem**, leave **Storage** on **Disposable memory**, instantiate, then click **Check filesystem operations and boundaries**. Fourteen checks cover UTF-8/binary reads and writes, directory creation/listing, byte-size stat, rename/deletion, missing paths, traversal and outside-preopen rejection, cleanup and an unchanged root listing. Checks refuse to overwrite an existing check directory.
 
 Both plugins are served as their original released component bytes, including embedded notices. They are not rebuilt, patched, or pre-transpiled. Their license assets are served under `vendor/licenses/plugin.random/` and `vendor/licenses/plugin.fs/`.
 
@@ -47,7 +47,7 @@ Real plugin.fs component → Jco canonical bindings / resource handles
                         → a fresh, explicitly granted /project directory
 ```
 
-`createFilesystem()` creates isolated namespaces, not the shim's global preopens used by Jco's compiler. No native filesystem, OPFS, IndexedDB or network capability is granted. Each instantiation starts with a new empty tree; loading/reset clears both grant checkboxes. Grant changes disable execution until reinstantiation and cannot race a pending operation. This is an ephemeral backend, not persistent Project storage or complete GAMS integration.
+`createFilesystem()` creates isolated namespaces, not the shim's global preopens used by Jco's compiler. Memory mode starts each instantiation with a new empty tree; OPFS mode reloads its dedicated persistent directory. Neither grants native disk, IndexedDB or network access. Loading/restarting clears grants and returns the selector to memory mode without deleting OPFS data. Grant or backend changes disable execution until reinstantiation and cannot race a pending operation. Neither mode is complete GAMS integration.
 
 The released fs binary imports WASI filesystem **0.2.6** and wall-clock's datetime **type**, although its source world starts from 0.2.0. With the pinned Jco, generated imports are exactly `wasi:filesystem/preopens` and `wasi:filesystem/types`: unversioned keys. The type-only wall-clock import disappears; no clock capability is needed. The host allowlist supplies only these generated filesystem keys when granted. This proves the resource/borrow paths actually exercised by this plugin, not every WASI/resource feature.
 
@@ -67,7 +67,45 @@ Both plugins passed in Chrome 145 on macOS with the same Jco/backend/shim pins a
 
 Seed `123` produced bytes `[43,65,222,98,212,155,220,180,124,183,111,240,233,60,2,250]` on both runs, then `15857969311440292840` from `getRandomU64()`. Filesystem text `Hello, 世界! 🌍\n` round-tripped with stat size `20n`; missing paths returned `no-entry`, traversal returned `not-permitted`, and outside-preopen access returned `path is not under a WASI preopen`. Timestamp fields are zero in this memory backend.
 
-`nix develop --command make -C experiments/browser-jco clean build test` passed from the GAMS root, redownloading pinned assets and running 16 native tests. Additional real-worker RPC checks verified denied instantiation without a filesystem grant, namespaced write/read, rejection of inherited `toString`, and loss of a marker file after reinstantiation. Native mock-based tests only check assertion/dispatch/error handling; the success evidence above comes from executing the actual plugin components in Chrome. Other browsers, persistent storage and other GAMS plugins remain unverified.
+The released-plugin milestone passed `nix develop --command make -C experiments/browser-jco clean build test` from the GAMS root, redownloading pinned assets and running its then-current 16 native tests. Additional real-worker RPC checks verified denied instantiation without a filesystem grant, namespaced write/read, rejection of inherited `toString`, and loss of a marker file after reinstantiation. Native mock-based tests only check assertion/dispatch/error handling; the success evidence above comes from executing the actual plugin components in Chrome. Other browsers and other GAMS plugins remain unverified; the additional OPFS validation is below.
+
+## Persistent OPFS mode
+
+OPFS uses the same unchanged released `plugin.fs` and WASI imports. Only the backing adapter changes to pinned `OpfsFilesystemAdapter` / `loadOpfsCapability`. This is a synchronous **memory mirror with asynchronous persistence**, not a `FileSystemSyncAccessHandle` implementation. The entire directory is loaded into memory and reconciled back to storage, including removal of entries absent from the mirror.
+
+- **A9 — Open:** Load/transpile `plugin.fs`, check **Grant /project filesystem**, select **Persistent OPFS experiment**, then instantiate. The only backing directory is `gams-browser-jco-experiment-v1` under this origin's OPFS root, exposed as `/project`. No picked folder or origin root is granted.
+- **A10 — Persist:** Click **Write fixture**. Success means the UTF-8/binary fixture was checked and its persistence checkpoint completed. Restart the worker or reload the page; grant OPFS again and click **Verify fixture**. Write refuses an existing fixture rather than overwriting it.
+- **A11 — Rename:** Click **Rename fixture**, reopen in a new worker/page, and verify the renamed layout and contents.
+- **A12 — Delete:** Click **Delete fixture**, reopen, then **Verify deletion**. Deletion validates known fixture names/content before removing only its files/directory. It does not clear the whole backing directory.
+
+Every successful worker operation awaits a checkpoint before replying; **Flush filesystem** also explicitly requests one. Normal reinstantiate, retranspile, load and restart stop the guest, await storage disposal and release the writer lock first. The worker serializes requests so async checkpoints cannot overlap lifecycle changes. Adapter automatic-flush failures are observed and retained: a later success must not conceal an earlier unreported persistence failure. On such a failure, normal close fails without claiming success; inspect diagnostics before explicitly forcing a stop. Do not close/reload during an operation. Browser unload cannot await a shutdown protocol.
+
+The shim reserves `.__wasi_symlinks__.json` for metadata and would otherwise hide/delete an ordinary guest file with that name despite a successful flush. An OPFS-only descriptor guard rejects that path segment with WIT `not-permitted` before any mutation, including child paths and rename/link destinations. It binds descriptor methods to their original receivers and unwraps cross-descriptor arguments, preserving resource/private-field behavior. The plugin binary and shim source are unchanged.
+
+A real exclusive Web Lock is held for the entire OPFS session, not the upstream adapter's optional best-effort file locking. A second cooperating worker/tab is rejected while the first is open. Web Locks and OPFS must be available; memory mode remains independent. No COOP/COEP, SharedArrayBuffer, JSPI or extra I/O worker is required by this mirror-based mode.
+
+### OPFS verification and limitations
+
+Real Chrome 145 tests passed with cross-origin isolation **disabled**:
+
+| Test | Observed result |
+| --- | --- |
+| UTF-8 text + six binary bytes | Read back through plugin.fs and independently from OPFS file handles after checkpoint. |
+| Graceful worker restart | Fixture preserved; grants cleared; explicit regrant reopened it. |
+| Page reload | Original contents and byte sizes preserved. |
+| Rename → reload | New name/content preserved; original name absent. |
+| Delete → reload | Exact WIT `no-entry` for the fixture directory. |
+| Existing filesystem suite | All 14 checks passed with OPFS, including traversal/outside-preopen rejection. |
+| Directory boundary | A separately created sibling file under the origin root was unchanged, then removed by its creating test. |
+| Concurrent writer | Second OPFS session denied; independent memory session still passed its checks. |
+| Injected `createWritable` failure | Write and shutdown returned the quota-style failure, not success; no unhandled rejection; explicit termination released the session. |
+| Reserved shim filename | Root/nested writes and rename-to-sidecar returned `not-permitted`; the original ordinary file stayed unchanged. |
+
+A local cached run observed OPFS instantiation at 32.3 ms and fixture write/checkpoint at 26.6 ms (4.9 ms checkpoint portion). These are observations, not throughput benchmarks. The 38 native Node tests cover fixture assertions, refusal to delete unfamiliar content, reserved-name guards/private-field forwarding, and UI close/failure/timeout behavior; they do not substitute for browser persistence tests.
+
+- **R4 — Mirror scope:** Use only this isolated experiment directory. Whole-tree rewriting is unsuitable for arbitrary user folders, large asset trees or uncoordinated external writers. The Web Lock coordinates this experiment's cooperating sessions, not every possible writer.
+- **R5 — Persistence semantics:** Checkpoints acknowledge completion of the browser write/close APIs, not filesystem transactions, rollback snapshots, crash consistency or physical-media fsync. A forced stop can leave partial changes. Browser quota, eviction, site-data clearing and private browsing still affect storage; persistent-storage permission is not requested here.
+- **R6 — Origin and cleanup:** Storage belongs to the exact browser origin, including port. Keep `127.0.0.1:8093` to reopen these fixtures; changing host/port creates a different store. `make clean` removes checkout build output only and does not delete browser data. The fixture buttons are the bounded test cleanup; no whole-origin delete operation is provided.
 
 ## Architecture
 
@@ -86,7 +124,9 @@ Component bytes ──────────┤
 | `ui.ts` | Load/upload, worker RPC, status, diagnostics and measurements. |
 | `transpiler-worker.ts` | Initialize Jco; transpile, instantiate and invoke; retain output in memory. |
 | `runtime.ts` | Check component header/size and instantiate with an explicit import map. |
-| `capabilities.ts` | Construct only granted logging and isolated in-memory filesystem imports. |
+| `capabilities.ts` | Construct granted imports, memory/OPFS sessions, checkpoints, disposal and exclusive writer locks. |
+| `opfs-checks.ts` | Bounded persistent fixture lifecycle through the real plugin.fs exports. |
+| `opfs-paths.ts` | Reject guest paths conflicting with the shim's reserved metadata filename. |
 | `plugin-checks.ts` | Invoke real plugin interfaces and assert results/boundaries. |
 | `plugins.json` | Pin released plugin binaries and original license assets by tag/SHA-256. |
 | `components/` | Two source components and their WIT worlds. |
@@ -121,7 +161,7 @@ The worker separately awaits the lower-level `$init` to measure initialization b
 
 ### F2 — Compiler assets and bundling need explicit handling
 
-Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside a **678,166-byte** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
+Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside an **approximately 688 KB** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
 
 esbuild aliases only the public browser entry and its browser dependency subset. It preserves `import.meta.url`; the worker and four core modules are placed together under `site/vendor/` so `../vendor/<asset>` resolves correctly. No generated JavaScript is rewritten. The conditional Node `node:fs/promises` branch remains external and is never executed in a browser. Do not import the Node-oriented Jco root/default CLI implementation or pull in its native minifier/compiler dependencies.
 
@@ -137,7 +177,7 @@ Required APIs: WebAssembly compilation/instantiation, module workers, dynamic ES
 
 ### F4 — Browser WASI is not native WASI
 
-The **compiler** gets Jco's standard browser WASI shims for its internal operation. The **loaded component** gets no automatic WASI shim: only explicitly granted logging and/or the isolated in-memory filesystem interfaces. Filesystem paths, sockets or network imports do not become available just because Jco recognizes them.
+The **compiler** gets Jco's standard browser WASI shims for its internal operation. The **loaded component** gets no automatic WASI shim: only explicitly granted logging and/or isolated filesystem interfaces backed by memory or OPFS. Filesystem paths, sockets or network imports do not become available just because Jco recognizes them.
 
 Upstream browser shims cover subsets of CLI/streams, clocks, random, configured virtual filesystems and Fetch HTTP; raw TCP/UDP, independent DNS, arbitrary HTTP listening and synchronous blocking require different adapters or are unavailable. See the [capability table](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/preview2-shim/README.md#L13-L64).
 
@@ -178,7 +218,7 @@ The final standalone test loaded bytes/initialized Jco, then **stopped the stati
 - **R2 — Missing Host facilities:** GAMS filesystem/configuration, resources, plugin interfaces and async services need real browser adapters and compatibility tests. Native Wasmtime behavior, operating-system access and plugin.js/plugin.lua compatibility are not established by this experiment.
 - **R3 — Security/lifecycle:** Keep grants explicit and scoped to each instance; the default import set remains empty. Workers allow termination, not hard Wasm memory limits or a separate-origin security sandbox. Production needs isolation, quotas, trap/disposal handling, dependency integrity/CSP policy and hostile-component testing.
 - **A5 — Optional cache:** IndexedDB can store the generated filename/byte tuples and import/export metadata. Key by SHA-256(component bytes), exact Jco/backend versions and generation options; validate cached provenance, invalidate on any change, and fall back to fresh transpilation. Do not persist Blob URLs. No cache is implemented or benchmarked here.
-- **A6 — Future capabilities:** Add named WIT interfaces with per-instance grants: bounded diagnostics; scoped state handles; storage namespaces; allowlisted Fetch operations; controlled service calls; and explicit component-to-component routing. Asynchronous browser services need a deliberate async/JSPI or message-protocol contract, not implicit permission or synchronous OS emulation. Logging and an ephemeral filesystem are implemented; persistent storage and other host services are not.
+- **A6 — Future capabilities:** Add named WIT interfaces with per-instance grants: bounded diagnostics; scoped state handles; storage namespaces; allowlisted Fetch operations; controlled service calls; and explicit component-to-component routing. Asynchronous browser services need a deliberate async/JSPI or message-protocol contract, not implicit permission or synchronous OS emulation. Logging, disposable memory and isolated mirror-based OPFS persistence are implemented; other host services and browser-runtime storage configuration contracts are not.
 
 **Conclusion:** Browser-native dynamic components are demonstrated, not merely plausible. A production GAMS browser application is realistic, but requires host adapters, workload compatibility, caching, resource controls and cross-browser validation—not just replacing Wasmtime with this loader.
 

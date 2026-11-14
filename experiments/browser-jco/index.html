@@ -20,13 +20,15 @@
 <button id="load">Load example</button>
 <label>Local component <input id="upload" type="file" accept=".wasm"></label>
 <p id="loaded">No component loaded.</p>
-<button id="reset">Terminate / reset worker</button>
+<button id="reset">Checkpoint and restart worker</button>
+<button id="force">Force stop (may lose in-flight writes)</button>
 </section>
 <section>
 <h2>2. Transpile and instantiate</h2>
 <button data-operation="transpile" disabled>Transpile in browser</button>
 <label><input type="checkbox" id="grant">Grant gams:experiment/logging</label>
-<label><input type="checkbox" id="grant-fs">Grant disposable /project filesystem</label>
+<label><input type="checkbox" id="grant-fs">Grant /project filesystem</label>
+<label>Storage <select id="fs-mode"><option value="memory">Disposable memory</option><option value="opfs">Persistent OPFS experiment</option></select></label>
 <button data-operation="instantiate" disabled>Instantiate</button>
 <p id="status" role="status" aria-live="polite"></p>
 <pre id="files"></pre>
@@ -37,7 +39,16 @@
 <button data-operation="benchmark" disabled>Repeat add 1,000 times</button>
 <button data-operation="check-random" disabled>Check random seed replay</button>
 <button data-operation="check-filesystem" disabled>Check filesystem operations and boundaries</button>
-<p>Plugin checks call the real component. Filesystem data exists only in worker memory and is cleared on reinstantiation/reset.</p>
+<p>Plugin checks call the real component. Memory mode is disposable. OPFS is isolated to this origin's <code>gams-browser-jco-experiment-v1</code> directory, and survives restarts. Every successful operation awaits a persistence checkpoint.</p>
+<button data-operation="flush" disabled>Flush filesystem</button>
+<p id="storage" role="status"></p>
+<h2>OPFS persistence fixture</h2>
+<button data-operation="persistence-write" disabled>Write fixture</button>
+<button data-operation="persistence-read" disabled>Verify fixture</button>
+<button data-operation="persistence-rename" disabled>Rename fixture</button>
+<button data-operation="persistence-delete" disabled>Delete fixture</button>
+<button data-operation="persistence-absent" disabled>Verify deletion</button>
+<p>Write, checkpoint/restart or reload this page, then load plugin.fs and grant OPFS again. Verify the fixture, rename, reopen, verify, delete, reopen, and verify deletion. These buttons modify only the reserved test fixture, not the whole storage directory. Do not close/reload during an operation; abrupt termination can lose unacknowledged writes.</p>
 <pre id="results"></pre><pre id="logs"></pre>
 </section>
 <section><h2>Measurements (milliseconds unless noted)</h2><pre id="metrics"></pre></section>

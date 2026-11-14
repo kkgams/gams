@@ -1,9 +1,23 @@
 import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime';
-import { createCapabilityImports } from './capabilities';
+import { createCapabilitySession, type CapabilitySession } from './capabilities';
+import { runPersistenceCheck } from './opfs-checks';
 import { runRandomChecks, runFilesystemChecks } from './plugin-checks';
 
 let transpiled: TranspiledComponent | undefined;
 let instance: Record<string, unknown> | undefined;
+let capabilities: CapabilitySession | undefined;
+async function closeSession() {
+  if (instance) {
+    const util = instance._util as { whenIdle(): Promise<void>; stop(): void };
+    await util.whenIdle();
+    util.stop();
+    instance = undefined;
+  }
+  if (capabilities) {
+    await capabilities.dispose();
+    capabilities = undefined;
+  }
+}
 const start = performance.now();
 const initialized = (async () => {
   const api = await import('@bytecodealliance/jco/component');
@@ -14,13 +28,16 @@ const initialized = (async () => {
 initialized.then(() => postMessage({ event: 'ready', initializationMs: performance.now() - start }))
   .catch(error => postMessage({ event: 'fatal', error: String(error) }));
 
-self.onmessage = async ({ data: { id, operation, args } }) => {
+// Async OPFS setup/checkpoints must not overlap reinstantiate or shutdown.
+let queue = Promise.resolve();
+self.onmessage = ({ data }) => { queue = queue.then(() => handle(data)); };
+async function handle({ id, operation, args }) {
   const started = performance.now();
   try {
     let result: unknown;
     switch (operation) {
       case 'transpile': {
-        instance = undefined;
+        await closeSession();
         transpiled = undefined;
         const bytes = new Uint8Array(args.bytes);
         assertComponent(bytes);
@@ -36,12 +53,12 @@ self.onmessage = async ({ data: { id, operation, args } }) => {
         break;
       }
       case 'instantiate': {
-        instance = undefined;
+        await closeSession();
         if (!transpiled) throw new Error('Transpile a component first.');
-        const imports = createCapabilityImports({ logging: args.grantLogging, filesystem: args.grantFilesystem }, value => {
-          postMessage({ event: 'host-log', value });
-        });
-        instance = await instantiateComponent(transpiled, imports);
+        capabilities = await createCapabilitySession({
+          logging: args.grantLogging, filesystem: args.grantFilesystem, filesystemMode: args.filesystemMode,
+        }, value => { postMessage({ event: 'host-log', value }); });
+        instance = await instantiateComponent(transpiled, capabilities.imports);
         result = { exports: Object.keys(instance) };
         break;
       }
@@ -66,6 +83,22 @@ self.onmessage = async ({ data: { id, operation, args } }) => {
         result = runFilesystemChecks(instance);
         break;
       }
+      case 'flush': {
+        if (!capabilities || capabilities.storage === 'none') throw new Error('No filesystem granted.');
+        result = { checkpoint: 'complete' };
+        break;
+      }
+      case 'shutdown': {
+        await closeSession();
+        transpiled = undefined;
+        result = { closed: true };
+        break;
+      }
+      case 'persistence': {
+        if (!instance || !capabilities || capabilities.storage !== 'opfs') throw new Error('Instantiate plugin.fs with an OPFS grant first.');
+        result = runPersistenceCheck(instance, args.action);
+        break;
+      }
       case 'benchmark': {
         if (!instance || typeof instance.add !== 'function') throw new Error('Expected add export.');
         const count = 1000;
@@ -76,8 +109,13 @@ self.onmessage = async ({ data: { id, operation, args } }) => {
       }
       default: throw new Error(`Unknown operation: ${operation}`);
     }
-    postMessage({ id, result, durationMs: performance.now() - started });
+    // A successful reply acknowledges persistence, not just a memory mutation.
+    // The shim's automatic background flush alone is not this guarantee.
+    const checkpointStart = performance.now();
+    if (capabilities) await capabilities.flush();
+    postMessage({ id, result, storage: capabilities ? capabilities.storage : 'none',
+      checkpointMs: performance.now() - checkpointStart, durationMs: performance.now() - started });
   } catch (error) {
     postMessage({ id, error: String(error), durationMs: performance.now() - started });
   }
-};
+}
