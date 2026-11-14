@@ -79,6 +79,8 @@ subwikis:
     url: https://kkgams.github.io/view.project-tools/
   view-sql:
     url: https://kkgams.github.io/view.sql/
+  view-synth:
+    url: https://kkgams.github.io/view.synth/
   view-tilemap:
     url: https://kkgams.github.io/view.tilemap/
   view-track:

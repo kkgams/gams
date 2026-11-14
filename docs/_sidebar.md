@@ -49,6 +49,7 @@
 - [[view-nine|view.nine]]
 - [[view-project-tools|view.project-tools]]
 - [[view-sql|view.sql]]
+- [[view-synth|view.synth]]
 - [[view-tilemap|view.tilemap]]
 - [[view-track|view.track]]
 - [[view-tree|view.tree]]
