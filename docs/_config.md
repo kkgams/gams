@@ -15,6 +15,8 @@ subwikis:
     url: https://kkgams.github.io/plugin.fs/
   plugin-image:
     url: https://kkgams.github.io/plugin.image/
+  plugin-js:
+    url: https://kkgams.github.io/plugin.js/
   plugin-layout:
     url: https://kkgams.github.io/plugin.layout/
   plugin-layout2:

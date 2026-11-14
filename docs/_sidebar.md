@@ -17,6 +17,7 @@
 - [[plugin-font|plugin.font]]
 - [[plugin-fs|plugin.fs]]
 - [[plugin-image|plugin.image]]
+- [[plugin-js|plugin.js]]
 - [[plugin-layout|plugin.layout]]
 - [[plugin-layout2|plugin.layout2]]
 - [[plugin-lua|plugin.lua]]
