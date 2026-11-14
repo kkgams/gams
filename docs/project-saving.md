@@ -76,7 +76,9 @@ reject-on-failure behavior and console logging without requiring UI feedback.
 ## Config publication
 
 After all hooks succeed, the Host serializes the **current** `runtime.config` as
-pretty JSON with a trailing newline. It writes a uniquely named sibling
+pretty JSON with a trailing newline. This flattens any `$ref` references resolved
+during loading: the active config receives the expanded values, and included
+files are not modified. It writes a uniquely named sibling
 `.<config-filename>.<uuid>.tmp` through `fs/fs::write-text`, then replaces the
 active config file (`GAMS_CONFIG`, default `gams.json`)
 through `fs/fs::rename`. Both paths are relative to the active native Project

@@ -3,6 +3,8 @@ use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+mod refs;
+
 const MODULES_FOLDER: &str = "gams_modules";
 
 #[derive(Clone, Serialize)]
@@ -30,11 +32,7 @@ pub fn config_file(value: Option<&OsStr>) -> Result<String> {
 impl Project {
     pub fn load(root: &Path, shared_modules: Option<&OsStr>, config_file: &str) -> Result<Self> {
         let config_path = root.join(config_file);
-        let config: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(&config_path)
-                .with_context(|| format!("failed to read {}", config_path.display()))?,
-        )
-        .with_context(|| format!("invalid JSON in {}", config_path.display()))?;
+        let config = refs::load(&config_path)?;
         anyhow::ensure!(
             config.is_object(),
             "{} must contain an object",
@@ -93,6 +91,108 @@ mod tests {
         let project = Project::load(root.path(), None, "dev.json").unwrap();
         assert_eq!(project.config, serde_json::json!({"dev": true}));
         assert_eq!(project.config_file, "dev.json");
+    }
+
+    #[test]
+    fn resolves_files_pointers_and_nested_file_relative_references() {
+        let root = project_root();
+        std::fs::create_dir(root.path().join("config")).unwrap();
+        std::fs::write(
+            root.path().join("gams.json"),
+            r##"{
+            "database": {"$ref": "config/settings.json#/database"},
+            "copy": {"$ref": "#/database"},
+            "values": [{"$ref": "config/values.json"}],
+            "escaped": {"$ref": "config/settings.json#/a~1b/~0key/0"},
+            "emptyKey": {"$ref": "config/settings.json#/"}
+        }"##,
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("config/settings.json"),
+            r##"{
+            "database": {"$ref": "values.json#/0"},
+            "a/b": {"~key": [42]},
+            "": true
+        }"##,
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("config/values.json"),
+            r#"[{"path":"data.sqlite"}, null, false, 3, "text"]"#,
+        )
+        .unwrap();
+        let project = Project::load(root.path(), None, "gams.json").unwrap();
+        assert_eq!(
+            project.config,
+            serde_json::json!({
+            "database": {"path": "data.sqlite"},
+            "copy": {"path": "data.sqlite"},
+            "values": [[{"path": "data.sqlite"}, null, false, 3, "text"]],
+            "escaped": 42,
+            "emptyKey": true
+            })
+        );
+    }
+
+    #[test]
+    fn replaces_root_reference_before_validating_config_shape() {
+        let root = project_root();
+        std::fs::write(root.path().join("gams.json"), r#"{"$ref":"other.json#"}"#).unwrap();
+        std::fs::write(root.path().join("other.json"), r#"{"plugins":[]}"#).unwrap();
+        assert_eq!(
+            Project::load(root.path(), None, "gams.json").unwrap().config,
+            serde_json::json!({"plugins": []})
+        );
+        std::fs::write(root.path().join("other.json"), "[]").unwrap();
+        assert!(Project::load(root.path(), None, "gams.json").is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_references_before_creating_modules() {
+        for (config, message) in [
+            (r#"{"x":{"$ref":3}}"#, "$ref must be a string"),
+            (r#"{"x":{"$ref":""}}"#, "$ref must not be empty"),
+            (
+                r##"{"x":{"$ref":"#/target","override":true},"target":{}}"##,
+                "sibling properties",
+            ),
+            (r##"{"x":{"$ref":"#missing"}}"##, "starting with /"),
+            (r##"{"x":{"$ref":"#/~2"}}"##, "invalid JSON Pointer escape"),
+            (r##"{"x":{"$ref":"#/~"}}"##, "invalid JSON Pointer escape"),
+            (r##"{"x":{"$ref":"#/missing"}}"##, "JSON Pointer not found"),
+            (
+                r##"{"x":{"$ref":"#/array/01"},"array":[1,2]}"##,
+                "JSON Pointer not found",
+            ),
+            (r#"{"x":{"$ref":"missing.json"}}"#, "failed to locate"),
+            (r#"{"x":{"$ref":"invalid.json"}}"#, "invalid JSON"),
+        ] {
+            let root = project_root();
+            std::fs::write(root.path().join("gams.json"), config).unwrap();
+            std::fs::write(root.path().join("invalid.json"), "{").unwrap();
+            let error = Project::load(root.path(), None, "gams.json").err().unwrap();
+            assert!(format!("{error:#}").contains(message), "{error:#}");
+            assert!(!root.path().join(MODULES_FOLDER).exists());
+        }
+    }
+
+    #[test]
+    fn rejects_direct_indirect_and_cross_file_cycles() {
+        for config in [
+            r##"{"$ref":"#"}"##,
+            r##"{"x":{"$ref":"#/x"}}"##,
+            r##"{"x":{"$ref":"#/y"},"y":{"$ref":"#/x"}}"##,
+            r##"{"x":{"$ref":"#"}}"##,
+            r#"{"$ref":"other.json"}"#,
+        ] {
+            let root = project_root();
+            std::fs::write(root.path().join("gams.json"), config).unwrap();
+            std::fs::write(root.path().join("other.json"), r#"{"$ref":"./gams.json"}"#).unwrap();
+            let error = Project::load(root.path(), None, "gams.json").err().unwrap();
+            assert!(format!("{error:#}").contains("circular $ref"), "{error:#}");
+            assert!(!root.path().join(MODULES_FOLDER).exists());
+        }
     }
 
     fn project_root() -> tempfile::TempDir {

@@ -20,6 +20,35 @@ without falling back to another config. The folder picker, Project Save, and
 paths and `GAMS_APP_CWD` are unchanged; Project initialization never overwrites
 an existing file.
 
+## Splitting configuration with `$ref`
+
+A `$ref` object is replaced by the referenced JSON value before the Host uses
+configuration. The resolved top-level value must still be an object.
+
+```json
+{
+  "database": { "$ref": "config/database.json" },
+  "ui": { "$ref": "config/ui.json#/desktop" },
+  "databaseCopy": { "$ref": "#/database" }
+}
+```
+
+| Rule | Behavior |
+| --- | --- |
+| Whole file | `{"$ref":"config/database.json"}` includes that file's JSON value. |
+| File and pointer | `{"$ref":"config/ui.json#/desktop"}` selects `/desktop` from that file. |
+| Current file | `{"$ref":"#/database"}` selects `/database` from the file containing the reference. `#` selects its root. |
+| Relative files | Paths resolve relative to the file containing `$ref`, including nested references. These are local filesystem paths, not download URLs. |
+| JSON Pointer | Slash-separated keys and array indexes; `~1` means `/`, `~0` means `~`. `/` selects an empty key. |
+| Replacement | Objects, arrays, strings, numbers, booleans and `null` can be included. References inside included values are resolved too. |
+| Siblings | `$ref` must be the object's only property. No merging or overrides. |
+| Errors | Empty/non-string references, missing files or pointers, invalid JSON/pointers and circular references fail loading. Reusing a reference is allowed. |
+
+Only `$ref` file paths gain file-relative resolution. Other configuration values,
+such as local Unit paths, retain their existing Project-relative meaning.
+**Project Save flattens references** into the active config file; it does not update
+included files. See [[project-saving|Project Save]].
+
 ## Project bootstrap and Unit storage
 
 After `await runtime.ready`, frontend code can read native-loaded `gams.json`
