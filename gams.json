@@ -1,10 +1,10 @@
 {
   "plugins": [
     {
-      "$file": "https://github.com/kkgams/plugin.fs/releases/download/v0.2.0/plugin.fs.wasm"
+      "$file": "https://github.com/kkgams/plugin.fs/releases/download/v0.2.3/plugin.fs.wasm"
     },
     {
-      "$file": "https://github.com/kkgams/plugin.layout/releases/download/v0.2.0/plugin.layout.wasm"
+      "$file": "https://github.com/kkgams/plugin.layout/releases/download/v0.2.3/plugin.layout.wasm"
     }
   ],
   "ui": {
@@ -14,7 +14,7 @@
       "ui-context": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.context/releases/download/v0.2.0/ui-service.context-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.context/releases/download/v0.2.3/ui-service.context.zip",
             "entry": "ui-plugins/context.js"
           }
         }
@@ -22,7 +22,7 @@
       "ui-keys": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.keys/releases/download/v0.2.0/ui-service.keys-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.keys/releases/download/v0.2.2/ui-service.keys.zip",
             "entry": "ui-plugins/keys.js"
           }
         }
@@ -30,7 +30,7 @@
       "ui-toast": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.toast/releases/download/v0.2.0/ui-service.toast-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.toast/releases/download/v0.2.2/ui-service.toast.zip",
             "entry": "ui-plugins/toast.js"
           }
         }
@@ -38,7 +38,7 @@
       "ui-popup": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.popup/releases/download/v0.2.0/ui-service.popup-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.popup/releases/download/v0.2.2/ui-service.popup.zip",
             "entry": "ui-plugins/popup.js"
           }
         }
@@ -46,7 +46,7 @@
       "ui-tooltip": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.tooltip/releases/download/v0.2.0/ui-service.tooltip-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.tooltip/releases/download/v0.2.2/ui-service.tooltip.zip",
             "entry": "ui-plugins/tooltip.js"
           }
         }
@@ -54,7 +54,7 @@
       "ui-layout": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/ui-service.layout/releases/download/v0.2.0/ui-service.layout-0.2.0.zip",
+            "url": "https://github.com/kkgams/ui-service.layout/releases/download/v0.2.2/ui-service.layout.zip",
             "entry": "ui-plugins/layout.js"
           }
         },
@@ -67,7 +67,7 @@
       "view-files": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.0/view.files-1.0.0.zip",
+            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.1/view.files.zip",
             "entry": "views/view-files.js"
           }
         },
@@ -83,7 +83,7 @@
       "files-rename": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.0/view.files-1.0.0.zip",
+            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.1/view.files.zip",
             "entry": "views/files-rename.js"
           }
         },
@@ -93,7 +93,7 @@
       "files-default": {
         "url": {
           "$file": {
-            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.0/view.files-1.0.0.zip",
+            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.1/view.files.zip",
             "entry": "views/files-default.js"
           }
         },
