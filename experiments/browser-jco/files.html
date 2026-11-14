@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:">
+<title>GAMS — real Files View over OPFS</title>
+<link rel="stylesheet" href="/css/reset.css">
+<link rel="stylesheet" href="/css/base.css">
+<link id="theme-stylesheet" data-theme-stylesheet rel="stylesheet" href="/units/theme.gams/themes/the98.css">
+<style>
+  body { display: flex; flex-direction: column; height: 100vh; gap: 8px; padding: 12px; }
+  #files-heading { flex: none; }
+  #files-heading h1 { font-size: 18px; }
+  #files-surface { position: relative; flex: 1; min-height: 350px; }
+  #files-status, #files-errors { white-space: pre-wrap; }
+  #files-errors { color: var(--danger); }
+  #files-diagnostics { flex: none; max-height: 180px; overflow: auto; }
+  #files-log { white-space: pre-wrap; }
+</style>
+<article class="prose" id="files-heading">
+<h1>Real Files View over browser WASI / OPFS</h1>
+<p>Unchanged released <code>view.files</code>, popup/toast/context/layout Units and theme, using the canonical Host Runtime and helpers. This fixed experimental shell is not the complete GAMS browser application. <a href="/">Component diagnostics experiment</a>.</p>
+<p>Opening grants <code>/project</code> in the dedicated OPFS directory <code>gams-browser-jco-experiment-v1</code>. View paths are Project-relative. Create files/folders (use a trailing slash for folders), upload/download, inspect metadata and delete through the real View. Completed operations await storage checkpoints. Do not close/reload during an operation.</p>
+</article>
+<div role="buttongroup" aria-label="Browser filesystem session">
+<button id="files-open">Open Files View — grant persistent /project</button>
+<button id="files-close" disabled>Checkpoint and close</button>
+<button id="files-force" disabled>Force stop (may lose in-flight changes)</button>
+</div>
+<output id="files-status" role="status" aria-live="polite">Closed. No filesystem access is granted until Open is clicked.</output>
+<output id="files-errors" role="alert"></output>
+<main id="files-surface" aria-label="Files workspace"></main>
+<details id="files-diagnostics"><summary>Runtime diagnostics / filesystem traffic</summary><pre id="files-log"></pre></details>
+<script type="module" src="/files-host.js"></script>
+</html>

@@ -1,0 +1,44 @@
+[
+  {
+    "repository": "kkgams/view.files",
+    "tag": "v1.0.1",
+    "archive": "view.files.zip",
+    "sha256": "75623a42849321d23135eef6262a585c77c3bd8c2c76db89ecbda35a2167d034",
+    "checksumsSha256": "4376bd3a69b349767c2239eda6ac5530b12acf841deccae1684cdee1de780692"
+  },
+  {
+    "repository": "kkgams/ui-service.popup",
+    "tag": "v0.2.2",
+    "archive": "ui-service.popup.zip",
+    "sha256": "d225e4dd28130250e3ba39965fc56c112e4427fc38c52866a02664ef9e011421",
+    "checksumsSha256": "dfbd9b0718c570868e289c9342bfac5692b28cde2dd5eedb955c341b16f21092"
+  },
+  {
+    "repository": "kkgams/ui-service.toast",
+    "tag": "v0.2.2",
+    "archive": "ui-service.toast.zip",
+    "sha256": "49f1f00c125316d429db351d5c6e057ccd5aa2cc71985d6ac27013cb24daa3eb",
+    "checksumsSha256": "0605797b5c0233b651f446f9a6a487d659a1f3cf456bd6683432badcedcd3a3a"
+  },
+  {
+    "repository": "kkgams/ui-service.context",
+    "tag": "v0.2.3",
+    "archive": "ui-service.context.zip",
+    "sha256": "ee9948167afb9746e276fe9827ea8edc6f4cc0672be575fa3d8c5d137bc303a4",
+    "checksumsSha256": "2c11833a67e8098b69946837b5b2691e999c1564b13ef3c79fd6094280b4f581"
+  },
+  {
+    "repository": "kkgams/ui-service.layout",
+    "tag": "v0.2.2",
+    "archive": "ui-service.layout.zip",
+    "sha256": "f4733f7cfaec8a7e26e1bef0697ce670ea56e03ccee66442d588adc65ebb31d9",
+    "checksumsSha256": "337e4d20bf0754aa588c99fb4985f740327315aa69451f860e5b010a11b5b57e"
+  },
+  {
+    "repository": "kkgams/theme.gams",
+    "tag": "v1.0.2",
+    "archive": "theme.gams.zip",
+    "sha256": "a30f6b9ac5530e7f6844a2e641a892349d9120cea2ab675f5bcf8abef6feaf59",
+    "checksumsSha256": "4e1b71c14290a9eca3f6d1bb60f766316d684fb4ecb8bc4debef0120c66ac672"
+  }
+]

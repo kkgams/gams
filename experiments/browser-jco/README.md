@@ -8,10 +8,11 @@ From the GAMS repository root:
 
 ```sh
 nix develop --command make -C experiments/browser-jco serve
-# Open http://127.0.0.1:8093 (override with PORT=8094)
+# Component diagnostics: http://127.0.0.1:8093
+# Real Files View: http://127.0.0.1:8093/files.html (override with PORT=8094)
 ```
 
-Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The first build downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/browser-jco/dependencies/`; it never runs package scripts or installs a dependency tree. `dependencies.json` records the exact tested browser subset, not the full CLI dependency closure. The build also downloads unchanged released plugins and their original license assets from pinned GitHub tags in `plugins.json`, verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). No sibling repository checkout is needed.
+Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The first build downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/browser-jco/dependencies/`; it never runs package scripts or installs a dependency tree. `dependencies.json` records the exact tested browser subset, not the full CLI dependency closure. The build also downloads unchanged released plugins and their original license assets from pinned GitHub tags in `plugins.json`, verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). The [real Files View shell](FILES.md) additionally pins released UI Units/theme in `view-assets.json`, retaining their original license assets and using canonical Host Runtime/helpers from this checkout. No sibling repository checkout is needed.
 
 | Command (from repository root, inside the Nix shell) | Effect |
 | --- | --- |
@@ -161,7 +162,7 @@ The worker separately awaits the lower-level `$init` to measure initialization b
 
 ### F2 — Compiler assets and bundling need explicit handling
 
-Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside an **approximately 688 KB** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
+Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside an **approximately 692 KB** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
 
 esbuild aliases only the public browser entry and its browser dependency subset. It preserves `import.meta.url`; the worker and four core modules are placed together under `site/vendor/` so `../vendor/<asset>` resolves correctly. No generated JavaScript is rewritten. The conditional Node `node:fs/promises` branch remains external and is never executed in a browser. Do not import the Node-oriented Jco root/default CLI implementation or pull in its native minifier/compiler dependencies.
 

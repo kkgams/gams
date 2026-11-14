@@ -3,16 +3,104 @@ import base64
 import hashlib
 import io
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
+import stat
 import subprocess
 import tarfile
 import urllib.request
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "experiments/browser-jco"
 BUILD = ROOT / "build.nosync/browser-jco"
 SITE = BUILD / "site"
+
+
+def verified_download(url, target, expected):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        with urllib.request.urlopen(url) as response:
+            data = response.read()
+        if hashlib.sha256(data).hexdigest() != expected:
+            raise ValueError(f"Integrity mismatch: {url}")
+        target.write_bytes(data)
+    data = target.read_bytes()
+    if hashlib.sha256(data).hexdigest() != expected:
+        raise ValueError(f"Integrity mismatch: {target}")
+    return data
+
+
+def extract_unit(data, target):
+    # Validate every member before writing; never extract links or special files.
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        members = archive.infolist()
+        if len(members) > 10000 or sum(item.file_size for item in members) > 100 * 1024 * 1024:
+            raise ValueError(f"Unit archive exceeds extraction limits: {target.name}")
+        seen = set()
+        for item in members:
+            path = PurePosixPath(item.filename)
+            kind = stat.S_IFMT(item.external_attr >> 16)
+            if (not path.parts or path.is_absolute() or '..' in path.parts
+                    or '\\' in item.filename or ':' in item.filename
+                    or kind not in (0, stat.S_IFREG, stat.S_IFDIR) or path in seen):
+                raise ValueError(f"Unsafe unit archive member: {item.filename}")
+            seen.add(path)
+        for parent in (target, *target.parents):
+            if parent.is_symlink():
+                raise ValueError(f"Refusing symlink extraction destination: {parent}")
+        if target.exists():
+            shutil.rmtree(target)
+        target.mkdir(parents=True)
+        for item in members:
+            destination = target / item.filename
+            if item.is_dir():
+                destination.mkdir(parents=True, exist_ok=True)
+            else:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                # Reading to EOF checks the archive member's CRC as well.
+                destination.write_bytes(archive.read(item))
+
+
+def build_files():
+    for unit in json.loads((SOURCE / 'view-assets.json').read_text()):
+        repo = unit['repository'].split('/')[-1]
+        base_url = f"https://github.com/{unit['repository']}/releases/download/{unit['tag']}"
+        cache = BUILD / 'releases' / repo / unit['tag']
+        checksums = verified_download(f'{base_url}/SHA256SUMS', cache / 'SHA256SUMS',
+                                      unit['checksumsSha256']).decode()
+        published = [line.split()[0] for line in checksums.splitlines()
+                     if len(line.split()) == 2 and line.split()[1].lstrip('*') == unit['archive']]
+        if published != [unit['sha256']]:
+            raise ValueError(f"Published SHA256SUMS mismatch: {repo}")
+        data = verified_download(f"{base_url}/{unit['archive']}", cache / unit['archive'], unit['sha256'])
+        extract_unit(data, SITE / 'units' / repo)
+        print(f"Verified {repo} {unit['tag']}: {unit['sha256']}")
+
+    host = ROOT / 'cmd/app/src'
+    paths = [
+        'core/runtime.js', 'util/view-plugin.js', 'util/view-source-state.js',
+        'util/files-create-path.js', 'util/add-style.js', 'css/reset.css', 'css/base.css',
+        'fonts/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].woff2',
+        'fonts/licenses/material-symbols.Apache-2.0.txt',
+    ]
+    for path in paths:
+        destination = SITE / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(host / path, destination)
+    for name in ('LICENSE', 'NOTICE'):
+        shutil.copy2(ROOT / name, SITE / name)
+    (SITE / 'core/runtime').mkdir(parents=True, exist_ok=True)
+    for source, output, extra in (
+        ('files-host.ts', 'files-host.js', ['--external:/core/*', '--external:/units/*']),
+        ('files-transport.ts', 'core/runtime/native.js', []),
+    ):
+        subprocess.run([
+            'esbuild', str(SOURCE / source), '--bundle', '--format=esm',
+            '--platform=browser', '--target=es2022', f'--outfile={SITE / output}', *extra,
+        ], check=True)
+    shutil.copy2(SOURCE / 'files.html', SITE / 'files.html')
+    shutil.copy2(SOURCE / 'view-assets.json', SITE / 'view-assets.json')
 
 
 def build():
@@ -90,6 +178,7 @@ def build():
         subprocess.run(['wasm-tools', 'validate', str(output)], check=True)
         subprocess.run(['wasm-tools', 'component', 'targets', str(SOURCE / 'components'),
                         '-w', wat.stem, str(output)], check=True)
+    build_files()
 
 
 if __name__ == '__main__':

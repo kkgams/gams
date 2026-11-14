@@ -2,6 +2,7 @@ import { assertComponent, instantiateComponent, type TranspiledComponent } from 
 import { createCapabilitySession, type CapabilitySession } from './capabilities';
 import { runPersistenceCheck } from './opfs-checks';
 import { runRandomChecks, runFilesystemChecks } from './plugin-checks';
+import { prepareFilesystemCall, filesystemHostValue } from './files-call';
 
 let transpiled: TranspiledComponent | undefined;
 let instance: Record<string, unknown> | undefined;
@@ -71,6 +72,22 @@ async function handle({ id, operation, args }) {
         const fn = Object.hasOwn(owner, args.name) ? owner[args.name] : undefined;
         if (typeof fn !== 'function') throw new Error(`No callable export: ${args.name}`);
         result = await fn(...args.values);
+        break;
+      }
+      case 'invoke-filesystem': {
+        if (!instance || !capabilities || capabilities.storage !== 'opfs') throw new Error('Files View requires an explicitly granted OPFS session.');
+        const call = prepareFilesystemCall(args.target, args.values);
+        const fs = instance['gams:fs/fs@1.2.0'] as Record<string, (...values: unknown[]) => unknown>;
+        if (!fs || !Object.hasOwn(fs, call.name) || typeof fs[call.name] !== 'function') throw new Error(`Missing filesystem export: ${call.name}`);
+        try {
+          result = { ok: filesystemHostValue(await fs[call.name](...call.values)) };
+        } catch (error) {
+          const util = instance._util as { isComponentError(error: unknown): boolean };
+          // Only a declared WIT result error becomes a Host result envelope.
+          // Traps, adapter/checkpoint failures and wiring errors must reject.
+          if (!util.isComponentError(error) || typeof error.payload !== 'string') throw error;
+          result = { err: error.payload };
+        }
         break;
       }
       case 'check-random': {
