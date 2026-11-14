@@ -310,6 +310,11 @@
         word-break: keep-all;
     }
 
+    /* Specialized cursors in the theme layer override this focusable default. */
+    [tabindex] {
+        cursor: pointer;
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
      BUTTONS
 
