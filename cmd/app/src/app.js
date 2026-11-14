@@ -1,18 +1,15 @@
 import { init, prepareTheme } from "/___/services.js"
 import { initSaveMenu } from "/core/menu.js"
-import { selectFilesystemSource } from "/core/project-units.js"
+import { validateLocalPath } from "/core/local-path.js"
 import { runtime } from "/core/runtime.js"
 import { createStartupProgress } from "/core/startup-progress.js"
-import { projectUnits, require } from "/util/require.js"
+import { require } from "/util/require.js"
 
 window.require = require
 
-// Fallback only when Project plugins do not name plugin.fs.wasm.
-const FS_BOOTSTRAP_SOURCE = "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"
-
 app.innerHTML = ""
 const loading = createStartupProgress(document, () => location.reload())
-const unsubscribeProgress = projectUnits.subscribeProgress((event) => loading.update(event))
+const unsubscribeProgress = runtime.subscribeResolutionProgress((snapshot) => loading.updateResolution(snapshot))
 
 async function main() {
     console.time("runtime.ready")
@@ -20,12 +17,12 @@ async function main() {
     console.timeEnd("runtime.ready")
 
     const config = runtime.config
-    loading.phase("Preparing filesystem", 1)
-    await projectUnits.bootstrapFilesystem(selectFilesystemSource(config.plugins, FS_BOOTSTRAP_SOURCE))
+    loading.phase("Loading Project plugins", 1)
+    await loadPlugins(config)
 
-    loading.phase("Preparing theme and plugins", 2)
+    loading.phase("Preparing Project theme", 2)
     const themeReady = prepareTheme(config)
-    await Promise.all([themeReady, loadPlugins(config)])
+    await themeReady
 
     const saveMenu = await initSaveMenu()
     loading.phase("Loading Project interface", 3)
@@ -38,8 +35,9 @@ async function main() {
 
 async function loadPlugins(config) {
     console.time("addPlugins")
-    const pluginPaths = await Promise.all(config.plugins.map((source) => projectUnits.resolve(source)))
-    await runtime.addPlugins(pluginPaths, true)
+    if (!Array.isArray(config.plugins)) throw new Error("Project plugins must be an array")
+    config.plugins.forEach((path, index) => validateLocalPath(path, `gams config plugins[${index}]`))
+    await runtime.addPlugins(config.plugins, true)
     console.timeEnd("addPlugins")
 }
 

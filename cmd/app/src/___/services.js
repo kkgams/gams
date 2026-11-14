@@ -1,4 +1,4 @@
-import { require, projectUnits } from "/util/require.js"
+import { require } from "/util/require.js"
 import { runtime } from "/core/runtime.js"
 import { getUiServiceSources } from "/core/ui-service-sources.js"
 import { restoreViewSourceState } from "/util/view-source-state.js"
@@ -121,7 +121,7 @@ function createConfiguredViewRegistry(config) {
 }
 
 export async function prepareTheme(config) {
-    const { path: themePath, href: themeHref } = await loadProjectTheme(config, { projectUnits, runtime, document })
+    const { path: themePath, href: themeHref } = await loadProjectTheme(config, { runtime, document })
     const previousUrl = currentThemeStylesheetObjectUrl
     currentThemeStylesheetObjectUrl = themeHref
 

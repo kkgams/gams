@@ -86,9 +86,41 @@ test("startup failures stay visible with reload, while successful startup remove
   assert.equal(host.removed, true)
 })
 
+test("native snapshot replay maps phases/units and deduplicates unchanged resource events", () => {
+  const document = { body: element(), createElement: () => element() }
+  const screen = createStartupProgress(document, () => {})
+  const events = []
+  const update = screen.update
+  screen.update = event => { events.push(event); update(event) }
+  const config = { resource: "gams.json", phase: "ready", completed: 1, total: 1, unit: null, cached: false }
+  screen.updateResolution({ resources: [config] })
+  const resource = "https://example.com/unit.zip"
+  const send = event => screen.updateResolution({ resources: [config, { resource, cached: false, ...event }] })
+  send({ phase: "resolving", completed: 0, total: null, unit: null })
+  send({ phase: "checking-cache", completed: 0, total: null, unit: null })
+  send({ phase: "downloading", completed: 12, total: null, unit: "bytes" })
+  send({ phase: "extracting", completed: 2, total: 5, unit: "entries", entry: "views/view.js" })
+  send({ phase: "ready", completed: 1, total: 1, unit: null, cached: true })
+  send({ phase: "ready", completed: 1, total: 1, unit: null, cached: true })
+  assert.deepEqual(events.map(event => event.phase), ["ready", "checking", "checking", "downloading", "extracting", "ready"])
+  assert.deepEqual(events[3], { source: resource, phase: "downloading", downloaded: 12, total: null, cached: false })
+  assert.deepEqual(events[4], { source: resource, phase: "extracting", completed: 2, total: 5, entry: "views/view.js", cached: false })
+  assert.deepEqual(events[5], { source: resource, phase: "ready", cached: true })
+  assert.equal(events.filter(event => event.source === "gams.json").length, 1)
+  const root = document.body.children[0]
+  assert.equal(root.querySelector("form").children.length, 2)
+  assert.equal(root.querySelector("#count").textContent, "2 Units prepared · 0 active")
+  send({ phase: "failed", completed: 0, total: null, unit: null, error: "native failure" })
+  assert.deepEqual(events.at(-1), { source: resource, phase: "checking", cached: false, error: "native failure" })
+  screen.fail(new Error("native failure"))
+  send({ phase: "ready", completed: 1, total: 1, unit: null, cached: true })
+  assert.equal(events.length, 7, "failed screen freezes the native progress snapshot")
+  assert.throws(() => createStartupProgress(document, () => {}).updateResolution({ resources: [{ resource, phase: "unknown" }] }), /Unknown resolution phase/)
+})
+
 test("app subscribes before startup, cleans up both outcomes, and only exposes the ready runtime on success", async () => {
   const app = await readFile(new URL("../cmd/app/src/app.js", import.meta.url), "utf8")
-  assert.ok(app.indexOf("subscribeProgress") < app.indexOf("await runtime.ready"))
+  assert.ok(app.indexOf("subscribeResolutionProgress") < app.indexOf("await runtime.ready"))
   assert.match(app, /unsubscribeProgress\(\)[\s\S]*loading.finish\(\)/)
   assert.match(app, /unsubscribeProgress\(\)[\s\S]*loading.fail\(error\)/)
   assert.match(app, /if \(saveMenu\) \{/)

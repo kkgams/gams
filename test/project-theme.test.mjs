@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { loadProjectTheme } from "../cmd/app/src/core/project-theme.js"
 
-const config = { ui: { theme: { url: "https://example.com/theme.zip#themes/theme.css" } } }
+const config = { ui: { theme: { url: "gams_modules/theme-archive/themes/theme.css" } } }
 function fixture({ previousHref = null, read = { ok: [47, 42, 42, 47] }, immediateLoad = false } = {}) {
     const listeners = new Map()
     const attributes = new Map([["rel", "stylesheet"]])
@@ -27,14 +27,18 @@ function fixture({ previousHref = null, read = { ok: [47, 42, 42, 47] }, immedia
     }
     const deps = {
         document: { getElementById(id) { assert.equal(id, "theme-stylesheet"); return link } },
-        projectUnits: { async resolve(source) { calls.push(["resolve", source]); return "/modules/theme.css" } },
-        runtime: { async invoke(method, path) { calls.push([method, path]); return read } },
+        runtime: {
+            async invoke(method, path) { calls.push([method, path]); return read },
+            resolveFile() { assert.fail("theme must not resolve Units") },
+            download() { assert.fail("theme must not download Units") },
+            addPlugins() { assert.fail("theme must not acquire filesystem plugins") },
+        },
         url: { createObjectURL(blob) { assert.equal(blob.type, "text/css"); return "blob:new-theme" }, revokeObjectURL(href) { revoked.push(href) } },
     }
     return { deps, link, listeners, calls, revoked, assignment }
 }
 
-test("Project theme resolution waits for CSS load, with listeners installed before href assignment", async () => {
+test("local Project theme waits for CSS load, with listeners installed before href assignment", async () => {
     const f = fixture()
     let finished = false
     const task = loadProjectTheme(config, f.deps).then(result => { finished = true; return result })
@@ -43,10 +47,10 @@ test("Project theme resolution waits for CSS load, with listeners installed befo
     assert.equal(f.link.getAttribute("href"), "blob:new-theme")
     assert.deepEqual([...f.listeners.keys()], ["load", "error"])
     f.listeners.get("load")()
-    assert.deepEqual(await task, { path: "/modules/theme.css", href: "blob:new-theme" })
+    assert.deepEqual(await task, { path: config.ui.theme.url, href: "blob:new-theme" })
     assert.equal(f.listeners.size, 0)
     assert.deepEqual(f.revoked, [])
-    assert.deepEqual(f.calls, [["resolve", config.ui.theme.url], ["fs/fs::read-file", "/modules/theme.css"]])
+    assert.deepEqual(f.calls, [["fs/fs::read-file", config.ui.theme.url]])
     const immediate = fixture({ immediateLoad: true })
     assert.equal((await loadProjectTheme(config, immediate.deps)).href, "blob:new-theme")
 })
@@ -76,9 +80,9 @@ test("no selected theme keeps base styling without resolving or reading a Unit",
 })
 
 test("missing config/Host link and filesystem failures fail without applying a theme", async () => {
-    for (const invalid of [{ ui: { theme: {} } }, { ui: { theme: { url: 1 } } }, { ui: { theme: { url: " " } } }]) {
+    for (const invalid of [{ ui: { theme: {} } }, ...[1, " ", "https://example.com/theme.css", "https://example.com/theme.zip#theme.css", "file:///theme.css"].map(url => ({ ui: { theme: { url } } }))]) {
         const f = fixture()
-        await assert.rejects(loadProjectTheme(invalid, f.deps), /ui.theme.url is required/)
+        await assert.rejects(loadProjectTheme(invalid, f.deps), /ui.theme.url.*local path.*\$file/)
         assert.deepEqual(f.calls, [])
     }
     for (const invalid of [null, {}, { ui: [] }]) {
@@ -97,6 +101,19 @@ test("missing config/Host link and filesystem failures fail without applying a t
     }
 })
 
+test("missing FS lookup propagates unchanged without acquisition or fallback", async () => {
+    const f = fixture()
+    const error = new Error("Unknown operation: fs/fs::read-file")
+    f.deps.runtime.invoke = async (method, path) => {
+        f.calls.push([method, path])
+        throw error
+    }
+    await assert.rejects(loadProjectTheme(config, f.deps), failure => failure === error)
+    assert.deepEqual(f.calls, [["fs/fs::read-file", config.ui.theme.url]])
+    assert.equal(f.link.getAttribute("href"), null)
+    assert.deepEqual(f.revoked, [])
+})
+
 test("services bootstrap accepts no theme and clears shadow links without assigning a null URL", async () => {
     const f = fixture({ previousHref: "blob:previous-theme" })
     const shadow = fixture({ previousHref: "blob:previous-theme" }).link
@@ -104,9 +121,9 @@ test("services bootstrap accepts no theme and clears shadow links without assign
     const window = {}, revoked = []
     const source = await readFile(new URL("../cmd/app/src/___/services.js", import.meta.url), "utf8")
     const body = source.replace(/^import .*$/gm, "").replace(/^export /gm, "")
-    const run = new Function("loadProjectTheme", "projectUnits", "runtime", "document", "window", "URL",
+    const run = new Function("loadProjectTheme", "runtime", "document", "window", "URL",
         `${body}\nreturn prepareTheme`)
-    const prepare = run(loadProjectTheme, f.deps.projectUnits, f.deps.runtime, f.deps.document, window,
+    const prepare = run(loadProjectTheme, f.deps.runtime, f.deps.document, window,
         { revokeObjectURL(href) { revoked.push(href) } })
     await prepare({ ui: {} })
     assert.equal(window.__currentThemePath, null)
@@ -120,5 +137,5 @@ test("services bootstrap accepts no theme and clears shadow links without assign
 test("legacy local theme path still uses the same explicit Project source", async () => {
     const f = fixture({ immediateLoad: true })
     await loadProjectTheme({ ui: { theme: { path: "themes/local.css" } } }, f.deps)
-    assert.deepEqual(f.calls[0], ["resolve", "themes/local.css"])
+    assert.deepEqual(f.calls, [["fs/fs::read-file", "themes/local.css"]])
 })

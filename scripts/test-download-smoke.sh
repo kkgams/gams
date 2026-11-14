@@ -30,3 +30,4 @@ make app-icons
 cd cmd/app/src-tauri
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/build.nosync/app/target}"
 cargo test prebuilt_fs_download_save_and_offline_reload_smoke --lib -- --ignored --nocapture
+cargo test configured_resources_load_before_filesystem_plugin_smoke --lib -- --ignored --nocapture

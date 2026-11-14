@@ -67,10 +67,35 @@ export function createStartupProgress(document, reload) {
     const count = host.querySelector("#count")
     const list = host.querySelector("form")
     const rows = new Map()
+    const reported = new Map()
     host.querySelector("button").addEventListener("click", reload)
     let failed = false
 
-    return {
+    const progress = {
+        updateResolution(snapshot) {
+            if (failed) return
+            const phases = {
+                resolving: "checking",
+                "checking-cache": "checking",
+                downloading: "downloading",
+                extracting: "extracting",
+                ready: "ready",
+                failed: "checking", // runtime.ready supplies startup's failure.
+            }
+            for (const event of snapshot.resources) {
+                const signature = JSON.stringify(event)
+                if (reported.get(event.resource) === signature) continue
+                reported.set(event.resource, signature)
+                const phase = phases[event.phase]
+                if (!phase) throw new Error(`Unknown resolution phase: ${event.phase}`)
+                const details = { source: event.resource, phase, cached: event.cached }
+                if (event.unit === "bytes") Object.assign(details, { downloaded: event.completed, total: event.total })
+                if (event.unit === "entries") Object.assign(details, { completed: event.completed, total: event.total })
+                if (event.entry !== undefined) details.entry = event.entry
+                if (event.error !== undefined) details.error = event.error
+                progress.update(details)
+            }
+        },
         phase(message, completedStages) {
             phase.textContent = message
             overall.value = completedStages / 4
@@ -124,4 +149,5 @@ export function createStartupProgress(document, reload) {
             host.remove()
         },
     }
+    return progress
 }

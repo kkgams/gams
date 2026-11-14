@@ -17,28 +17,55 @@ function node() {
         remove() { this.removed = true },
     }
 }
-async function runApp(t, filesystemSource) {
-    const bootstrap = deferred(), bootstrapStarted = deferred()
+async function runApp(t, plugins = ["gams_modules/fs-archive/plugins/plugin.fs.wasm", "plugins/other.wasm"]) {
+    const ready = deferred(), subscribed = deferred()
     const theme = deferred(), themeStarted = deferred()
-    const plugin = deferred(), pluginStarted = deferred(), pluginsLoaded = deferred()
+    const plugin = deferred(), pluginStarted = deferred()
     const ui = deferred(), uiStarted = deferred(), enable = deferred(), enabling = deferred()
     const document = { body: node(), documentElement: node(), createElement: node, getElementById() { return null } }
-    let unsubscribed = 0, initCalls = 0, themeCalls = 0, fsReady = false
+    let unsubscribed = 0, themeCalls = 0, initCalls = 0, pluginCalls = 0, menuCalls = 0
+    let pluginsLoaded = false, themeLoaded = false
     const runtime = {
-        ready: Promise.resolve(), config: { plugins: filesystemSource ? [filesystemSource] : ["plugin.wasm"] },
-        async addPlugins(paths, replace) { assert.deepEqual(paths, ["installed.wasm"]); assert.equal(replace, true); pluginsLoaded.resolve() },
+        ready: ready.promise, config: { plugins },
+        subscribeResolutionProgress(listener) {
+            listener({ resources: [{ resource: "https://example.com/config.json", phase: "downloading", unit: "bytes", completed: 12, total: 24, cached: false }] })
+            subscribed.resolve()
+            return () => { unsubscribed++ }
+        },
+        async addPlugins(paths, replace) {
+            pluginCalls++
+            assert.equal(paths, plugins)
+            assert.equal(replace, true)
+            pluginStarted.resolve()
+            await plugin.promise
+            pluginsLoaded = true
+        },
+        resolveFile() { throw new Error("startup must not resolve Units") },
+        download() { throw new Error("startup must not download Units") },
     }
     const deps = {
         runtime,
         require() { throw new Error("startup must not load a View module directly") },
-        projectUnits: {
-            subscribeProgress() { return () => { unsubscribed++ } },
-            async bootstrapFilesystem(source) { assert.equal(source, filesystemSource || "https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm"); bootstrapStarted.resolve(); await bootstrap.promise; fsReady = true },
-            async resolve(source) { assert.equal(source, filesystemSource || "plugin.wasm"); assert.equal(fsReady, true); pluginStarted.resolve(); await plugin.promise; return "installed.wasm" },
+        prepareTheme() {
+            assert.equal(pluginsLoaded, true)
+            themeCalls++
+            themeStarted.resolve()
+            return theme.promise
         },
-        prepareTheme() { assert.equal(fsReady, true); themeCalls++; themeStarted.resolve(); return theme.promise },
-        async init(config, themeReady) { assert.equal(config, runtime.config); assert.equal(themeReady, theme.promise); initCalls++; uiStarted.resolve(); await ui.promise },
-        async initSaveMenu() { return { async enable() { enabling.resolve(); await enable.promise } } },
+        async init(config, themeReady) {
+            assert.equal(config, runtime.config)
+            assert.equal(themeReady, theme.promise)
+            assert.equal(themeLoaded, true)
+            initCalls++
+            uiStarted.resolve()
+            await ui.promise
+        },
+        async initSaveMenu() {
+            assert.equal(pluginsLoaded, true)
+            assert.equal(themeLoaded, true)
+            menuCalls++
+            return { async enable() { enabling.resolve(); await enable.promise } }
+        },
     }
     const globals = { window: {}, document, location: { reload() {} }, app: {}, requestAnimationFrame() {}, __startupAppTest: deps }
     const previous = new Map(Object.keys(globals).concat("runtime").map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
@@ -53,34 +80,40 @@ async function runApp(t, filesystemSource) {
         ['import { runtime } from "/core/runtime.js"', 'const { runtime } = globalThis.__startupAppTest'],
         ['import { initSaveMenu } from "/core/menu.js"', 'const { initSaveMenu } = globalThis.__startupAppTest'],
         ['import { init, prepareTheme } from "/___/services.js"', 'const { init, prepareTheme } = globalThis.__startupAppTest'],
-        ['import { projectUnits, require } from "/util/require.js"', 'const { projectUnits, require } = globalThis.__startupAppTest'],
-        ['from "/core/startup-progress.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/startup-progress.js", import.meta.url).href)}`],
-        ['from "/core/project-units.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/project-units.js", import.meta.url).href)}`],
+        ['import { require } from "/util/require.js"', 'const { require } = globalThis.__startupAppTest'],
+        ...["startup-progress", "local-path"].map(name => [`from "/core/${name}.js"`, `from ${JSON.stringify(new URL(`../cmd/app/src/core/${name}.js`, import.meta.url).href)}`]),
     ]) {
         assert.ok(source.includes(line), `startup harness import not found: ${line}`)
         source = source.replace(line, replacement)
     }
     const task = import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${Math.random()}`).toString("base64")}`)
-    await Promise.race([bootstrapStarted.promise, task.then(() => { throw new Error("startup ended before filesystem bootstrap") })])
-    assert.equal(window.require, deps.require)
+    await subscribed.promise
     const host = document.body.children[0]
+    assert.equal(window.require, deps.require)
+    assert.equal(pluginCalls, 0)
     assert.equal(themeCalls, 0)
-    bootstrap.resolve()
-    await Promise.all([themeStarted.promise, pluginStarted.promise])
-    return { task, host, theme, plugin, pluginsLoaded, ui, uiStarted, enable, enabling, runtime, stats: () => ({ unsubscribed, initCalls, themeCalls }) }
+    assert.equal(host.querySelector("form").children[0].querySelector("progress").value, 0.5, "config acquisition replay is visible before runtime.ready")
+    return {
+        task, host, ready, theme, themeStarted, plugin, pluginStarted, ui, uiStarted, enable, enabling, runtime,
+        finishTheme() { themeLoaded = true; theme.resolve() },
+        stats: () => ({ unsubscribed, initCalls, themeCalls, pluginCalls, menuCalls }),
+    }
 }
 
-test("theme and plugins start together after FS, UI waits for both, and screen waits for layout/menu", async t => {
-    const f = await runApp(t, "https://example.com/v2/plugin.fs.wasm")
-    assert.equal(f.host.querySelector("#phase").textContent, "Preparing theme and plugins")
+test("prepared plugins load once before theme, then UI/menu; screen waits for layout and menu enabling", async t => {
+    const f = await runApp(t)
+    f.ready.resolve()
+    await f.pluginStarted.promise
+    assert.equal(f.host.querySelector("#phase").textContent, "Loading Project plugins")
+    assert.equal(f.stats().themeCalls, 0)
     f.plugin.resolve()
-    await f.pluginsLoaded.promise
+    await f.themeStarted.promise
     assert.equal(f.stats().initCalls, 0)
     assert.equal(f.host.removed, undefined)
-    f.theme.resolve()
+    assert.equal(f.host.querySelector("#phase").textContent, "Preparing Project theme")
+    f.finishTheme()
     await f.uiStarted.promise
     assert.equal(f.host.querySelector("#phase").textContent, "Loading Project interface")
-    assert.equal(f.stats().themeCalls, 1)
     assert.equal(globalThis.runtime, undefined)
     f.ui.resolve()
     await f.enabling.promise
@@ -88,20 +121,71 @@ test("theme and plugins start together after FS, UI waits for both, and screen w
     f.enable.resolve()
     await f.task
     assert.equal(f.host.removed, true)
-    assert.equal(f.stats().unsubscribed, 1)
+    assert.deepEqual(f.stats(), { unsubscribed: 1, initCalls: 1, themeCalls: 1, pluginCalls: 1, menuCalls: 1 })
     assert.equal(globalThis.runtime, f.runtime)
 })
 
-for (const failing of ["theme", "plugin"]) test(`${failing} failure keeps the screen and handles later parallel rejection`, async t => {
+for (const failing of ["ready", "plugin", "theme"]) test(`${failing} failure retains error screen and unsubscribes without initializing UI`, async t => {
     const f = await runApp(t)
+    if (failing !== "ready") {
+        f.ready.resolve()
+        await f.pluginStarted.promise
+    }
+    if (failing === "theme") {
+        f.plugin.resolve()
+        await f.themeStarted.promise
+    }
     f[failing].reject(new Error(`${failing} failed`))
     await f.task
     assert.equal(f.host.removed, undefined)
     assert.equal(f.host.querySelector("#error").textContent, `${failing} failed`)
     assert.equal(f.host.querySelector("button").hidden, false)
     assert.equal(f.stats().initCalls, 0)
+    assert.equal(f.stats().menuCalls, 0)
     assert.equal(f.stats().unsubscribed, 1)
     assert.equal(globalThis.runtime, undefined)
-    f[failing === "theme" ? "plugin" : "theme"].reject(new Error("later failure"))
-    await new Promise(resolve => setImmediate(resolve))
+})
+
+for (const plugins of [null, {}, [null], [""], [" "], ["valid.wasm", "https://example.com/plugin.fs.wasm"], ["file:///plugin.wasm"], [{ $file: "plugin.wasm" }]]) {
+    test(`invalid plugins fail before native loading: ${JSON.stringify(plugins)}`, async t => {
+        const f = await runApp(t, plugins)
+        f.ready.resolve()
+        await f.task
+        assert.equal(f.stats().pluginCalls, 0)
+        assert.equal(f.stats().themeCalls, 0)
+        assert.equal(f.stats().unsubscribed, 1)
+        assert.match(f.host.querySelector("#error").textContent, /plugins/)
+        if (Array.isArray(plugins)) assert.match(f.host.querySelector("#error").textContent, /\$file/)
+    })
+}
+
+for (const plugins of [["plugins/renamed-component.wasm"], ["a/plugin.fs.wasm", "b/plugin.fs.wasm"]]) {
+    test(`plugin paths have no filesystem basename selection rule: ${JSON.stringify(plugins)}`, async t => {
+        const f = await runApp(t, plugins)
+        f.ready.resolve()
+        await f.pluginStarted.promise
+        f.plugin.resolve()
+        await f.themeStarted.promise
+        f.finishTheme()
+        await f.uiStarted.promise
+        f.ui.resolve()
+        await f.enabling.promise
+        f.enable.resolve()
+        await f.task
+        assert.equal(f.stats().pluginCalls, 1)
+        assert.equal(f.host.removed, true)
+    })
+}
+
+test("no FS selection/fallback is invented for an empty plugin list; missing FS propagates from theme lookup", async t => {
+    const f = await runApp(t, [])
+    f.ready.resolve()
+    await f.pluginStarted.promise
+    f.plugin.resolve()
+    await f.themeStarted.promise
+    f.theme.reject(new Error("Unknown operation: fs/fs::read-file"))
+    await f.task
+    assert.equal(f.stats().pluginCalls, 1)
+    assert.match(f.host.querySelector("#error").textContent, /Unknown operation: fs\/fs::read-file/)
+    assert.equal(f.stats().unsubscribed, 1)
 })

@@ -23,8 +23,8 @@ an existing file.
 ## Resolving configuration resources
 
 The native Host recursively resolves `$ref` and `$file` expressions before
-publishing `runtime.config` or loading Project Units. The resolved top-level
-value must be an object. Configuration resolution does not depend on `plugin.fs`.
+publishing `runtime.config`, completing `runtime.ready`, or loading Project Units.
+The resolved top-level value must be an object. Configuration resolution does not depend on `plugin.fs`.
 
 ```json
 {
@@ -55,10 +55,10 @@ value must be an object. Configuration resolution does not depend on `plugin.fs`
 | Errors | Malformed expressions, missing resources or pointers, invalid JSON, circular references and unsafe archives fail loading. Reusing a reference is allowed. |
 
 HTTPS and loopback-only HTTP transport policy is unchanged. Remote resources use
-one native URL-keyed cache shared by configuration resolution and Unit loading;
+one native URL-keyed cache for configuration resources, including Unit sources;
 ZIP entry selectors do not create separate archive copies. Full archives are
 validated, extracted and atomically published before use, including before
-filesystem-plugin bootstrap. Cached URLs are not automatically updated; no
+any configured WASM plugin loads. Cached URLs are not automatically updated; no
 refresh feature is introduced. Local ZIP sources use the same extraction cache.
 ZIP-inside-ZIP extraction is not supported; a nested ZIP remains an ordinary file.
 Direct-file downloads do not discover sibling imports; distribute files with
@@ -86,13 +86,42 @@ Native Project loading starts asynchronously through `runtime_project`, with its
 `onProgress` channel installed before consumers await readiness. See
 [[project-loading|Project startup progress]] for the runtime progress API.
 
-Existing direct-file and `https://example.com/unit.zip#path/to/entry` Unit URLs
-remain supported through a compatibility adapter to native resolution. JavaScript
-Unit loaders no longer own downloading, ZIP extraction or cache publication.
-The adapter still rejects ZIP filesystem bootstrap: the Host selects the sole
-configured source named `plugin.fs.wasm`, or the pinned v0.1.1 fallback if absent.
-Multiple matches and selected-source failures are errors, not fallback triggers.
-This selection restriction is not a native extraction dependency.
+**Breaking configuration contract:** frontend Unit loaders accept only already-local
+string paths in `plugins` and View/UI Service/theme `url` fields. Project-relative
+guest paths remain valid; use `$file` to normalize native OS paths such as Windows
+drive paths. Bare HTTP, HTTPS and `file:` URL strings are rejected with
+an error directing the Project to use `$file`; legacy `URL#entry` Unit loading
+is not supported. Use `$file` for direct downloads or a `{ "url", "entry" }`
+descriptor for archive entries:
+
+```json
+{
+  "plugins": [
+    { "$file": "https://github.com/kkgams/plugin.fs/releases/download/v0.2.0/plugin.fs.wasm" },
+    "plugins/local-component.wasm"
+  ],
+  "ui": {
+    "views": {
+      "view-files": {
+        "url": {
+          "$file": {
+            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.0/view.files-1.0.0.zip",
+            "entry": "views/view-files.js"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+This source example is not a complete Project UI configuration. All configured
+WASM plugins load together once, before the theme or JavaScript UI Services.
+The Project must explicitly declare `plugin.fs` or a compatible filesystem
+provider. There is no filename-based selection, special FS bootstrap, or pinned
+fallback; a filesystem component in a ZIP works after native `$file` resolution.
+The provider supplies JS/theme reads and Project Save, not configuration reads,
+downloads, extraction or cache publication. No frontend Unit resolver runs.
 
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The
@@ -122,5 +151,5 @@ separately extracted helper repositories. Selectable cell grids use the shared
 [[selectable-grids|selectable grids]] for interaction and compatibility.
 
 The current `gams.json` shape and bootstrap ordering are pre-release contracts.
-Git-source installation remains unsupported. See the installation design
-for the implemented source forms and remaining work.
+Git-source installation remains unsupported. See
+[[project-unit-installation|Project Unit installation]] for the current contract.

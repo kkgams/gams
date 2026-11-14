@@ -19,9 +19,9 @@ Host-scoped rules only provide positioning/layout, visibility and readable
 error/action layout. The separate hard-coded `startup.css` is no longer used.
 
 The overall bar represents startup stages, not a byte-weighted percentage or
-remaining-time estimate: configuration, FS bootstrap, theme/plugins, and Project
-UI. Every progress bar uses `max="1"` and a ratio, or omits `value` for unknown
-progress. Completed Unit bars are hidden, but cached/prepared details stay visible.
+remaining-time estimate: native configuration/resource resolution, configured
+WASM plugins, theme, and Project UI. Every progress bar uses `max="1"` and a ratio,
+or omits `value` for unknown progress. Completed Unit bars are hidden, but cached/prepared details stay visible.
 Each requested source gets its own row, so parallel downloads are not collapsed
 into a misleading single current filename. Active rows appear above completed
 rows. Source labels show the asset filename and ZIP selector, without URL query
@@ -29,10 +29,11 @@ parameters. No new preload of unused Views is introduced.
 
 Resource resolution reports cache checks, download bytes (indeterminate when the
 size is unknown), archive extraction and completion. The existing startup screen
-continues to report Unit preparation and bootstrap component loading.
+reports native resource preparation, configured plugin loading and UI initialization.
 `Ready` means the source has been prepared, not that the corresponding View has
-finished initialization. Cached sources are marked explicitly. The prepared-Unit
-count covers unique requested sources, not all configured but unused Views.
+finished initialization. Cached sources are marked explicitly. Counts reflect
+native resolution resources, not View readiness. All configured `$file` resources
+resolve before `runtime.ready`, including sources for Views not yet initialized.
 
 The screen is removed only after awaited UI initialization and Save-menu enabling
 succeed. Startup failures are logged under `[project.open]`, retained on screen,
@@ -40,39 +41,39 @@ and offer **Reload Project**. Failed startup does not expose the ready debug
 runtime or start the FPS overlay. Reload restarts initialization; this is not an
 in-place transaction rollback, partial-cache cleanup, or download cancellation.
 
-## Early Project theme preparation
+## Plugin and Project theme preparation
 
-After FS bootstrap, the app starts `prepareTheme(config)` alongside plugin
-preparation/loading and observes both promises immediately. The theme becomes
-visible as soon as its stylesheet loads; it does not wait for other plugins or
-UI Services. UI initialization waits for both tasks and reuses the same theme
-promise, without a second theme download/read/application. Direct `init(config)`
-callers retain default theme preparation.
+After `runtime.ready`, all configured WASM plugins load together once from local
+paths. The Project explicitly supplies `plugin.fs` or a compatible FS provider;
+there is no special filesystem bootstrap, filename selection or pinned fallback.
+Only after plugin loading succeeds does the app prepare the theme and initialize
+JS UI Services. The theme becomes visible when its stylesheet loads, before
+Project UI initialization completes. No frontend Unit resolver or second theme
+download runs. Direct `init(config)` callers retain default theme preparation.
 
 A Project may omit `ui.theme` or set it to `null` to use Host base styling alone.
 No theme Unit is resolved or read in that case. A selected theme must still have
 a valid source; malformed configuration and theme loading failures remain errors.
 
-`core/project-theme.js` resolves the selected Project's `ui.theme.url` (or legacy
-local `path`), reads CSS through the filesystem plugin, and installs a blob URL
-on the required Host theme link. Listeners are installed before href assignment;
+`core/project-theme.js` consumes the selected Project's already-local
+`ui.theme.url` (or legacy local `path`), reads CSS through the filesystem provider,
+and installs a blob URL on the required Host theme link. Listeners are installed before href assignment;
 CSS `load`, not href assignment, completes preparation. A failed stylesheet load
 restores the prior link, releases the failed blob, and fails startup visibly.
 Successfully replaced theme blobs are released by the services bootstrap. Existing
 View/Popup shadow links continue to receive the applied theme href. No new
 relative CSS-asset resolver or theme-source fallback is introduced.
 
-If another parallel task fails, later theme/plugin work is still observed (no
-unhandled parallel rejection), but startup does not proceed to UI initialization.
-The visible failure snapshot stops updating and hides progress bars. This is not
-cancellation of the remaining work.
+A plugin or theme failure prevents further UI initialization. The visible failure
+snapshot stops updating and hides progress bars. This is not cancellation of
+remaining native work.
 
 ## Native resolution progress
 
 Native Project loading starts asynchronously through `runtime_project` with its
 `onProgress` channel installed before consumers await `runtime.ready`. It resolves
-configuration resources before Units consume `runtime.config`, including full
-archive preparation before filesystem-plugin bootstrap.
+all configuration resources before `runtime.ready` completes and Units consume
+`runtime.config`, including full archive preparation before any WASM plugin loads.
 
 | Runtime API | Behavior |
 | --- | --- |
@@ -116,19 +117,21 @@ more resources is not a fixed total or a remaining-time estimate. This boundary
 covers native configuration/resource resolution, not View initialization or
 layout readiness.
 
-The existing Unit-loader compatibility progress remains available to startup
-consumers. Native resolution owns resource work; JS loader notifications must not
-be treated as evidence that JavaScript performs ZIP extraction or cache writes.
-Subscribing to resolution progress does not introduce a new UI, preload unused
-Views, reopen the startup screen for lazy loads, or add refresh/update behavior.
-Reload still restarts startup rather than refreshing completed URL cache entries.
+Startup subscribes directly to `runtime.subscribeResolutionProgress`; the
+`core/startup-progress.js` model maps native snapshots into screen rows. There is
+no frontend Unit resolver or compatibility-loader progress stream. Native code
+owns downloads, extraction and cache writes. Preparing configured resources does
+not initialize unused Views. Subscribing does not reopen the startup screen for
+explicit later resolutions or add refresh/update behavior. Reload restarts
+startup rather than refreshing completed URL cache entries.
 
 ## Verification boundary
 
 Run `nix develop --command make validate-docs` for documentation validation and
 `nix develop --command make test` for Host tests. Automated loader and DOM-boundary
-tests do not establish full Tauri WebView startup behavior. The browser style
-fixture below checks the existing renderer, not native resource resolution.
+tests do not establish native screen rendering or Windows/Linux desktop smoke
+behavior. The browser style fixture below checks the existing renderer, not
+native resource resolution.
 
 ## Browser style regression check
 

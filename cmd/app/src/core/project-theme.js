@@ -1,3 +1,5 @@
+import { validateLocalPath } from "./local-path.js"
+
 function unwrapRead(result) {
     if (result && Object.hasOwn(result, "err")) throw new Error(`theme read: ${result.err}`)
     if (!result || !Object.hasOwn(result, "ok")) throw new Error("theme read: expected WIT result object")
@@ -7,9 +9,9 @@ function unwrapRead(result) {
     return bytes
 }
 
-// Resolving and reading a Project theme requires the filesystem bootstrap, not
-// other plugins or UI Services. Stylesheet load is part of startup completion.
-export async function loadProjectTheme(config, { projectUnits, runtime, document, url = URL }) {
+// Native preparation supplies the local path; configured plugins provide FS.
+// Stylesheet load is part of startup completion.
+export async function loadProjectTheme(config, { runtime, document, url = URL }) {
     if (!config || !config.ui || typeof config.ui !== "object" || Array.isArray(config.ui))
         throw new Error("gams config ui must be an object")
     const link = document.getElementById("theme-stylesheet")
@@ -21,9 +23,7 @@ export async function loadProjectTheme(config, { projectUnits, runtime, document
         return { path: null, href: null }
     }
     const source = config.ui.theme.url ?? config.ui.theme.path
-    if (typeof source !== "string" || source.trim().length === 0) throw new Error("gams config ui.theme.url is required")
-
-    const path = await projectUnits.resolve(source)
+    const path = validateLocalPath(source, "gams config ui.theme.url")
     const bytes = unwrapRead(await runtime.invoke("fs/fs::read-file", path))
     const href = url.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "text/css" }))
     const previousHref = link.getAttribute("href")

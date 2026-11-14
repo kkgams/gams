@@ -5,7 +5,7 @@ import { BOOTSTRAP_UI_SERVICE_IDS, getUiServiceSources } from "../cmd/app/src/co
 
 function config() {
   return { ui: { services: Object.fromEntries(BOOTSTRAP_UI_SERVICE_IDS.map(id => [id, {
-    url: `https://example.com/${id}.zip#ui-plugins/${id}.js`,
+    url: `gams_modules/${id}/ui-plugins/${id}.js`,
   }])) } }
 }
 
@@ -23,7 +23,7 @@ test("missing or malformed required service sources fail explicitly without loca
     for (const entry of [undefined, [], {}, { url: "" }, { url: " " }, { url: 12 }]) {
       const project = config()
       project.ui.services[id] = entry
-      assert.throws(() => getUiServiceSources(project), error => error.message.includes(`ui.services.${id}.url is required`))
+      assert.throws(() => getUiServiceSources(project), error => error.message.includes(`ui.services.${id}.url`) && error.message.includes("$file"))
     }
   }
 })
@@ -34,9 +34,12 @@ test("Host UI bootstrap consumes configured sources instead of hardcoded Unit pa
   assert.doesNotMatch(source, /require\("ui-plugins\//)
 })
 
-test("filesystem bootstrap selects Project FS with an explicit pinned fallback", async () => {
-  const source = await readFile(new URL("../cmd/app/src/app.js", import.meta.url), "utf8")
-  assert.match(source, /const FS_BOOTSTRAP_SOURCE = "https:\/\/github.com\/kkgams\/plugin.fs\/releases\/download\/v0.1.1\/plugin.fs.wasm"/)
-  assert.doesNotMatch(source, /const FS_BOOTSTRAP_SOURCE = "plugins\//)
-  assert.match(source, /bootstrapFilesystem\(selectFilesystemSource\(config.plugins, FS_BOOTSTRAP_SOURCE\)\)/)
+test("legacy remote service sources are rejected immediately with $file guidance", () => {
+  for (const id of BOOTSTRAP_UI_SERVICE_IDS) {
+    for (const url of ["https://example.com/service.js", "https://example.com/unit.zip#service.js", "file:///service.js"]) {
+      const project = config()
+      project.ui.services[id].url = url
+      assert.throws(() => getUiServiceSources(project), /local path.*\$file/)
+    }
+  }
 })

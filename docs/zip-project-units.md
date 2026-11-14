@@ -27,34 +27,48 @@ Relative resources in included JSON resolve relative to that document, including
 its containing archive entry. Configuration resolution completes before Units
 consume `runtime.config`; it does not require `plugin.fs`.
 
-## Existing Unit URL compatibility
+## Configuring a Unit from an archive
 
-Existing configured plugin, View, UI Service and theme sources still select an
-archive file with a URL fragment:
+Use a `$file` descriptor at the plugin source or View/UI Service/theme `url`:
 
-```text
-https://example.com/unit.zip#views/view.js
+```json
+{
+  "ui": {
+    "views": {
+      "view-files": {
+        "url": {
+          "$file": {
+            "url": "https://github.com/kkgams/view.files/releases/download/v1.0.0/view.files-1.0.0.zip",
+            "entry": "views/view-files.js"
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
-The compatibility adapter requires a `.zip` URL pathname (case-insensitive) and
-an explicit archive-root-relative file selector, decoded once. It removes the
-fragment and passes the URL and entry to native resolution. This legacy Unit
-syntax is distinct from a `$ref` JSON Pointer.
+This is a source example, not a complete Project. Keep the published tag and
+asset name when converting a legacy source; move its archive-root-relative
+selector into `entry`. Bare `URL#entry` Unit strings are no longer accepted.
+After native resolution, frontend loaders consume only the resulting local
+string paths; they do not resolve URLs themselves.
 
-ZIP filesystem bootstrap remains rejected by the adapter. The Host still
-selects the sole configured source named `plugin.fs.wasm`, or its pinned v0.1.1
-fallback when absent. Native extraction itself can run before that plugin;
-the restriction is retained selection behavior, not an extraction dependency.
-All six shell UI Services still require explicit Project-configured URLs; see
+A filesystem WASM component can also be selected from a ZIP with `$file`.
+All configured plugins load together once before JS services or the theme.
+The Project must explicitly include `plugin.fs` or a compatible provider;
+there is no filename-based FS selection or pinned fallback. Native extraction
+and config reading do not depend on that provider. All six shell UI Services
+still require explicit Project-configured sources; see
 [[direct-file-downloads|direct-file downloads]]. Git sources remain unsupported.
 
 ## Native cache and extraction
 
 The native resolver owns downloads, ZIP validation, extraction and cache
-publication. JavaScript Unit loading is an adapter, not a second installer.
+publication. There is no frontend Unit installer or resolution adapter.
 Cache identity uses the archive URL without the entry selector. Different
 entries in one archive share the download and extracted package, including
-requests from configuration resolution and Unit loading.
+all references encountered during configuration resolution.
 
 The whole archive is extracted before any selected resource is returned,
 preserving nested paths, binary companion assets, empty directories and

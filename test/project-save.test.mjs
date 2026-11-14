@@ -61,6 +61,13 @@ test("Project Save awaits hooks in registration order, then publishes current co
   assert.match(writes[0].args[0], /^\.gams\.json\..+\.tmp$/)
 })
 
+test("Save with no filesystem provider propagates native operation failure without acquiring a plugin", async () => {
+  const { runtime, files, writes } = await setup(() => "Unknown operation: fs/fs::write-text")
+  await assert.rejects(runtime.projectSave(), /Unknown operation: fs\/fs::write-text/)
+  assert.equal(files.get("gams.json"), "original")
+  assert.deepEqual(writes.map(write => write.target), ["fs/fs::write-text"])
+})
+
 test("unregistered hooks are excluded and malformed hooks fail loudly", async () => {
   const { runtime } = await setup()
   assert.throws(() => runtime.register({ id: "bad", methods: { projectSave: true } }), /must be a function/)
@@ -258,7 +265,6 @@ test("UI initialization awaits layout loading before Save can be enabled", async
     requiredSources.push(source)
     return { createUiContext: () => ({ id: "ui.context" }), createUiKeys: () => ({ id: "ui.keys" }) }
   }
-  globalThis.__servicesTestUnits = { async resolve() { return "theme.css" } }
   globalThis.window = { addEventListener() {} }
   const themeListeners = new Map()
   const themeAttributes = new Map([["rel", "stylesheet"]])
@@ -279,7 +285,7 @@ test("UI initialization awaits layout loading before Save can be enabled", async
   }
   globalThis.DocumentFragment = class { appendChild() {} }
   const source = (await readFile(new URL("../cmd/app/src/___/services.js", import.meta.url), "utf8"))
-    .replace('import { require, projectUnits } from "/util/require.js"', 'const require = globalThis.__servicesTestRequire; const projectUnits = globalThis.__servicesTestUnits')
+    .replace('import { require } from "/util/require.js"', 'const require = globalThis.__servicesTestRequire')
     .replace('import { runtime } from "/core/runtime.js"', 'const runtime = globalThis.__servicesTestRuntime')
     .replace('from "/core/ui-service-sources.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/ui-service-sources.js", import.meta.url).href)}`)
     .replace('import { restoreViewSourceState } from "/util/view-source-state.js"', 'const restoreViewSourceState = () => {}')
@@ -287,7 +293,7 @@ test("UI initialization awaits layout loading before Save can be enabled", async
   const { init } = await importSource(source)
   let complete = false
   const ids = ["ui-context", "ui-keys", "ui-layout", "ui-toast", "ui-popup", "ui-tooltip"]
-  const services = Object.fromEntries(ids.map(id => [id, { url: `https://example.com/${id}.zip#service.js` }]))
+  const services = Object.fromEntries(ids.map(id => [id, { url: `gams_modules/${id}/service.js` }]))
   services["ui-layout"].config = { layout: "<view-empty/>" }
   const initialized = init({ ui: { views: {}, theme: { url: "theme.css" }, services } }).then(() => { complete = true })
   await loading

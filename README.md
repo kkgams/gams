@@ -72,9 +72,10 @@ example, `TARGET=aarch64-apple-darwin make package` selects the macOS package.
 Selecting a target does not install a cross-compilation SDK; release CI uses a
 native runner for each supported platform.
 
-`make open` uses released Unit URLs from the root `gams.json`, not sibling source
-checkouts. That configuration is development-only and is not packaged. For an
-external Project, use `GAMS_APP_CWD=/absolute/path make run`; set `GAMS_CONFIG` to
+`make open` uses pinned released Units declared with `$file` in the root
+`gams.json`, not sibling source checkouts. That configuration is development-only
+and is not packaged. For an external Project, use
+`GAMS_APP_CWD=/absolute/path make run`; set `GAMS_CONFIG` to
 a filename to select a config other than `gams.json`. Windows/Linux currently
 require an explicit Project path when no config is present in the working
 directory; their native folder picker is not implemented.
@@ -104,6 +105,25 @@ SHA-256-verified Tauri CLI and cargo-about binaries into `build.nosync/ci-tools/
 instead of compiling the tools. macOS retains its pinned Nix toolchain. The first
 branch run populates caches; different tags cannot share tag-only caches.
 GitHub Pages uses the GitHub Actions deployment source.
+
+## Project Unit sources
+
+Native `$ref`/`$file` resolution prepares all configuration resources before
+`runtime.ready`. Frontend plugin and View/UI Service/theme loaders accept only
+already-local string paths. **Breaking change:** wrap remote sources in `$file`;
+use `{ "url", "entry" }` inside `$file` for ZIP entries, not bare `URL#entry`
+strings. Bare HTTP, HTTPS and `file:` Unit URLs fail with a use-`$file` error;
+Project-relative guest paths remain valid. Use `$file` to normalize native OS
+paths, including Windows drive paths.
+
+Projects must explicitly declare `plugin.fs` or a compatible filesystem provider.
+All configured WASM plugins load together once before the theme and JS services;
+there is no filename-based FS bootstrap or pinned fallback. ZIP-contained FS
+components work after native resolution. The provider supplies JS/theme reads
+and Project Save, not config reads, downloads or extraction.
+
+See [Unit installation](docs/project-unit-installation.md) for examples and
+[Host configuration](docs/host-runtime.md) for cache, shared-storage and Save rules.
 
 ## Documentation and licenses
 

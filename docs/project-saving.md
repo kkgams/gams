@@ -8,7 +8,9 @@ status: reference
 The native **File → Save Project** menu invokes the Host command `project.save`,
 which delegates to `runtime.projectSave()`. The menu definition lives in
 `cmd/app/src/core/menu.js`. Standard native menus are retained. The menu item is
-disabled until filesystem/plugin bootstrap and UI/layout initialization complete.
+disabled until configured WASM plugin loading and UI/layout initialization complete.
+The Project must explicitly declare `plugin.fs` or a compatible provider; the
+Host supplies no pinned filesystem fallback.
 
 **All keyboard bindings belong to `gams.json` `ui.keys`.** The Host installs no
 Save accelerator or key listener. Ordinary `activeView.save` / `activeView.saveAs`

@@ -592,6 +592,7 @@ mod tests {
             ("shared.json", r#"{"data":{"value":42}}"#),
             ("presets/sum.lua", "return function() end"),
             ("views/editor.js", "export default {}"),
+            ("plugins/renamed.wasm", "\0asm\x0d\0\x01\0"),
             ("NOTICE", "Retained notice"),
         ] {
             zip.start_file(name, zip::write::SimpleFileOptions::default())
@@ -620,6 +621,7 @@ mod tests {
         let original = serde_json::json!({
             "presets": {"$ref":{"url":url,"entry":"config/presets.json","pointer":"/presets"}},
             "view": {"$file":{"url":url,"entry":"views/editor.js"}},
+            "plugins": [{"$file":{"url":url,"entry":"plugins/renamed.wasm"}}],
             "directory": {"$file":{"url":url,"entry":"presets"}}
         });
         std::fs::write(root.path().join("gams.json"), original.to_string()).unwrap();
@@ -660,12 +662,17 @@ mod tests {
             },
         ];
         let session = Session::new(
-            root_path,
+            root_path.clone(),
             "gams.json".into(),
             project.modules_dir.clone(),
-            mounts,
+            mounts.clone(),
         );
         let mut current = session.project(&mut |_| {}).unwrap().config;
+        let runtime = crate::runtime::Runtime::new_at(root_path, mounts).unwrap();
+        let plugin = current["plugins"][0].as_str().unwrap().to_owned();
+        assert!(plugin.starts_with("gams_modules/"));
+        assert!(plugin.ends_with("plugins/renamed.wasm"));
+        assert_eq!(runtime.add_plugins(vec![plugin], true).unwrap().len(), 1);
         let folder = session
             .resolve_file(
                 &serde_json::json!({"url":url,"entry":"presets"}),
@@ -763,6 +770,69 @@ mod tests {
         let runtime = crate::runtime::Runtime::new_at(root_path, mounts).unwrap();
         assert_eq!(runtime.add_plugins(vec![guest], false).unwrap().len(), 1);
         assert_eq!(project.prepare_config(&project.config).unwrap(), original);
+    }
+
+    #[test]
+    #[ignore = "requires an external prebuilt FS Unit and local static server; run scripts/test-download-smoke.sh"]
+    fn configured_resources_load_before_filesystem_plugin_smoke() {
+        let base = std::env::var("GAMS_TEST_UNIT_BASE_URL").expect("set GAMS_TEST_UNIT_BASE_URL");
+        let shared = tempfile::tempdir().unwrap();
+        let shared_path = shared.path().canonicalize().unwrap();
+        let original = serde_json::json!({
+            "plugins": [{"$file": format!("{base}/fs.wasm")}],
+            "view": {"$file": format!("{base}/view.js")},
+        });
+        let mut expected_view = None;
+        for offline in [false, true] {
+            let root = project_root();
+            let root_path = root.path().canonicalize().unwrap();
+            std::fs::write(root_path.join("gams.json"), original.to_string()).unwrap();
+            let mounts = vec![
+                crate::runtime::FsPreopen {
+                    host_path: root_path.clone(),
+                    guest_path: ".".into(),
+                },
+                crate::runtime::FsPreopen {
+                    host_path: shared_path.clone(),
+                    guest_path: "gams_modules".into(),
+                },
+            ];
+            let runtime =
+                crate::runtime::Runtime::new_at(root_path.clone(), mounts.clone()).unwrap();
+            let session = Session::new(root_path, "gams.json".into(), shared_path.clone(), mounts);
+            let mut snapshots = Vec::new();
+            let project = session
+                .project(&mut |snapshot| snapshots.push(snapshot))
+                .unwrap();
+            let plugin = project.config["plugins"][0].as_str().unwrap().to_owned();
+            let view = project.config["view"].as_str().unwrap();
+            assert!(plugin.starts_with("gams_modules/"));
+            assert!(view.starts_with("gams_modules/"));
+            assert!(runtime
+                .invoke("fs/fs::read-file", serde_json::json!([view]))
+                .is_err());
+            // Configuration has already acquired both files without an FS provider.
+            let sources = snapshots.last().unwrap();
+            assert_eq!(sources.status, "ready");
+            if offline {
+                assert!(sources.resources.iter().all(|event| event.cached));
+                assert!(!snapshots
+                    .iter()
+                    .flat_map(|snapshot| &snapshot.resources)
+                    .any(|event| event.phase == "downloading"));
+            }
+            assert_eq!(runtime.add_plugins(vec![plugin], true).unwrap().len(), 1);
+            let bytes = runtime
+                .invoke("fs/fs::read-file", serde_json::json!([view]))
+                .unwrap();
+            assert!(bytes["ok"].is_array(), "{bytes}");
+            if let Some(expected) = &expected_view {
+                assert_eq!(&bytes, expected);
+            } else {
+                expected_view = Some(bytes);
+            }
+            assert_eq!(session.prepare_config(&project.config).unwrap(), original);
+        }
     }
 
     fn project_root() -> tempfile::TempDir {
