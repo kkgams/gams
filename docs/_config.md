@@ -17,6 +17,8 @@ subwikis:
     url: https://kkgams.github.io/plugin.image/
   plugin-layout:
     url: https://kkgams.github.io/plugin.layout/
+  plugin-layout2:
+    url: https://kkgams.github.io/plugin.layout2/
   plugin-lua:
     url: https://kkgams.github.io/plugin.lua/
   plugin-markov-junior:
@@ -57,6 +59,8 @@ subwikis:
     url: https://kkgams.github.io/view.bullet/
   view-catalog:
     url: https://kkgams.github.io/view.catalog/
+  view-character:
+    url: https://kkgams.github.io/view.character/
   view-code:
     url: https://kkgams.github.io/view.code/
   view-files:
