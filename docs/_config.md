@@ -73,6 +73,8 @@ subwikis:
     url: https://kkgams.github.io/view.markov/
   view-ng:
     url: https://kkgams.github.io/view.ng/
+  view-nine:
+    url: https://kkgams.github.io/view.nine/
   view-project-tools:
     url: https://kkgams.github.io/view.project-tools/
   view-sql:

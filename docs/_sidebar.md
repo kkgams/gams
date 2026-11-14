@@ -46,6 +46,7 @@
 - [[view-image|view.image]]
 - [[view-markov|view.markov]]
 - [[view-ng|view.ng]]
+- [[view-nine|view.nine]]
 - [[view-project-tools|view.project-tools]]
 - [[view-sql|view.sql]]
 - [[view-tilemap|view.tilemap]]
