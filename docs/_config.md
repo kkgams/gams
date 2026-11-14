@@ -11,4 +11,6 @@ subwikis:
     url: https://kkgams.github.io/view.files/
   view-ng:
     url: https://kkgams.github.io/view.ng/
+  view-track:
+    url: https://kkgams.github.io/view.track/
 ---
