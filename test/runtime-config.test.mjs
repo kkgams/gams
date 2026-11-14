@@ -6,14 +6,17 @@ const source = await readFile(new URL("../cmd/app/src/core/runtime.js", import.m
 const nativeSource = await readFile(new URL("../cmd/app/src/core/runtime/native.js", import.meta.url), "utf8")
 let moduleId = 0
 
-async function loadRuntime(project, handleCommand) {
+async function loadRuntime(project, handleCommand, projectProgress = []) {
   const calls = []
   globalThis.__TAURI__ = {
     core: {
       Channel: class { onmessage = () => {} },
       async invoke(command, args) {
         calls.push({ command, args })
-        if (command === "runtime_project") return project
+        if (command === "runtime_project") {
+          for (const event of projectProgress) args.onProgress.onmessage(event)
+          return project
+        }
         if (command === "runtime_call_view_ready") return
         if (handleCommand) return handleCommand(command, args)
         throw new Error(`Unexpected command: ${command}`)
@@ -88,4 +91,91 @@ test("app bootstrap uses runtime config instead of reading gams.json via fs", as
   assert.match(app, /const config = runtime\.config/)
   assert.doesNotMatch(app, /gams_modules/)
   assert.doesNotMatch(app, /fs\/fs::read-text|JSON\.parse|setProjectConfig/)
+})
+
+test("resolution progress from Project initialization replays before readiness and supports unsubscribe", async () => {
+  const first = { operationId: 1, status: "resolving", discovered: 0, completed: 0, resources: [], error: null }
+  const last = { ...first, status: "ready" }
+  let finishProject
+  const project = new Promise(resolve => { finishProject = resolve })
+  const { runtime, calls } = await loadRuntime(project, null, [first])
+  const events = []
+  const unsubscribe = runtime.subscribeResolutionProgress(event => events.push(event))
+  assert.throws(() => runtime.config, /not loaded/)
+  assert.equal(runtime.resolutionProgress, first)
+  assert.deepEqual(events, [first])
+  calls[0].args.onProgress.onmessage(last)
+  assert.equal(runtime.resolutionProgress, last)
+  assert.deepEqual(events, [first, last])
+  unsubscribe()
+  calls[0].args.onProgress.onmessage(last)
+  finishProject({ config: {}, configFile: "gams.json", modulesDir: "/modules" })
+  await runtime.ready
+  assert.deepEqual(events, [first, last])
+  assert.ok(calls[0].args.onProgress instanceof globalThis.__TAURI__.core.Channel)
+  assert.throws(() => runtime.subscribeResolutionProgress(null), /must be a function/)
+})
+
+test("resolveFile passes native source/Channel and updates global and per-call progress", async () => {
+  let progressChannel
+  const events = [
+    { operationId: 2, status: "resolving", discovered: 1, completed: 0, resources: [{ resource: "view.js", phase: "checking-cache", completed: 0, total: null, unit: null, cached: false }], error: null },
+    { operationId: 2, status: "ready", discovered: 1, completed: 1, resources: [{ resource: "view.js", phase: "ready", completed: 1, total: 1, unit: null, cached: true }], error: null },
+  ]
+  const { runtime } = await loadRuntime({ config: {}, configFile: "gams.json", modulesDir: "/modules" }, (command, args) => {
+    assert.equal(command, "runtime_resolve_file")
+    assert.deepEqual(args.source, { url: "https://example.com/unit.zip", entry: "views/view.js" })
+    progressChannel = args.onProgress
+    for (const event of events) progressChannel.onmessage(event)
+    return "/modules/unit/views/view.js"
+  })
+  const subscribed = []
+  const unsubscribe = runtime.subscribeResolutionProgress(event => subscribed.push(event))
+  const local = []
+  assert.equal(await runtime.resolveFile({ url: "https://example.com/unit.zip", entry: "views/view.js" }, event => local.push(event)), "/modules/unit/views/view.js")
+  assert.deepEqual(subscribed, events)
+  assert.deepEqual(local, events)
+  assert.equal(runtime.resolutionProgress, events.at(-1))
+  unsubscribe()
+  progressChannel.onmessage({ phase: "checking" })
+  assert.equal(subscribed.length, 2)
+  for (const source of [null, [], {}, "", { url: "" }, { url: "x", entry: 3 }])
+    await assert.rejects(runtime.resolveFile(source), /source/)
+  await assert.rejects(runtime.resolveFile("x", null), /callback/)
+  await runtime.ready
+})
+
+test("native file resolution errors propagate without client-side retry", async () => {
+  let calls = 0
+  const { runtime } = await loadRuntime({ config: {}, configFile: "gams.json", modulesDir: "/modules" }, () => {
+    calls++
+    throw new Error("native resolution failed")
+  })
+  await assert.rejects(runtime.resolveFile("local.js"), /native resolution failed/)
+  assert.equal(calls, 1)
+  await runtime.ready
+})
+
+test("latest native resolution snapshot can be queried and replayed", async () => {
+  const snapshot = { operationId: "native-1", status: "ready", discovered: 0, completed: 0, resources: [], error: null }
+  const { runtime } = await loadRuntime({ config: {}, configFile: "gams.json", modulesDir: "/modules" }, (command, args) => {
+    assert.equal(command, "runtime_resolution_progress")
+    assert.deepEqual(args, {})
+    return snapshot
+  })
+  await runtime.ready
+  assert.equal(await runtime.getResolutionProgress(), snapshot)
+  const received = []
+  runtime.subscribeResolutionProgress(event => received.push(event))()
+  assert.deepEqual(received, [snapshot])
+})
+
+test("empty ZIP entry selects the root directory through the native boundary", async () => {
+  const { runtime } = await loadRuntime({ config: {}, configFile: "gams.json", modulesDir: "/modules" }, (command, args) => {
+    assert.equal(command, "runtime_resolve_file")
+    assert.deepEqual(args.source, { url: "https://example.com/assets.zip", entry: "" })
+    return "/modules/assets/content"
+  })
+  await runtime.ready
+  assert.equal(await runtime.resolveFile({ url: "https://example.com/assets.zip", entry: "" }), "/modules/assets/content")
 })

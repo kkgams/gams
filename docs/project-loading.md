@@ -27,8 +27,9 @@ into a misleading single current filename. Active rows appear above completed
 rows. Source labels show the asset filename and ZIP selector, without URL query
 parameters. No new preload of unused Views is introduced.
 
-Rows report cache checks, download bytes (indeterminate when the size is unknown),
-ZIP member path/count, installation publication and bootstrap component loading.
+Resource resolution reports cache checks, download bytes (indeterminate when the
+size is unknown), archive extraction and completion. The existing startup screen
+continues to report Unit preparation and bootstrap component loading.
 `Ready` means the source has been prepared, not that the corresponding View has
 finished initialization. Cached sources are marked explicitly. The prepared-Unit
 count covers unique requested sources, not all configured but unused Views.
@@ -66,32 +67,68 @@ unhandled parallel rejection), but startup does not proceed to UI initialization
 The visible failure snapshot stops updating and hides progress bars. This is not
 cancellation of the remaining work.
 
-## Progress boundary
+## Native resolution progress
 
-`createProjectUnits(runtime).subscribeProgress(listener)` returns an unsubscribe
-function. Events are `{ source, phase, ...details }`; phases are `checking`,
-`downloading`, `extracting`, `saving`, `loading`, and `ready`.
+Native Project loading starts asynchronously through `runtime_project` with its
+`onProgress` channel installed before consumers await `runtime.ready`. It resolves
+configuration resources before Units consume `runtime.config`, including full
+archive preparation before filesystem-plugin bootstrap.
 
-- Download details retain `{ downloaded, total }`, with unknown `total: null`.
-- Extraction details are `{ entry, completed, total }`, counted before processing
-  and after persisting each member (including explicit directories).
-- Ready events contain `cached`.
+| Runtime API | Behavior |
+| --- | --- |
+| `runtime.subscribeResolutionProgress(callback)` | Subscribes to native resolution snapshots and immediately replays the latest available snapshot. Returns an unsubscribe function. |
+| `runtime.resolutionProgress` | Holds the latest received snapshot. |
+| `runtime.getResolutionProgress()` | Queries the latest native snapshot and updates subscribers. |
 
-The existing per-call `resolve(source, onProgress)`/bootstrap callback still
-receives download-byte events only. Subscribers observe new preparation work;
-there is no historical-event replay for already settled in-process requests.
-The app subscribes before startup and unsubscribes on both success and failure.
-Lazy source loading after startup does not reopen this screen.
+Each snapshot has this shape:
 
-Checks: `nix develop --command make test`. Node tests exercise real installer
-progress plus a small DOM boundary double, stylesheet load/error and resource
-cleanup, and the actual app bootstrap with deferred boundary dependencies. Checks
-cover FS-first concurrency, both parallel failure orders, theme-promise reuse and
-waiting for layout/menu completion. The production renderer and loader were also
-checked in a standalone Chrome fixture: themeless → external The98 adoption,
-preserved ratios, indeterminate bars, hidden completed bars, in-dialog footer,
-readable full errors, reload and removal. That is not a full Tauri WebView startup
-smoke test.
+```ts
+{
+  operationId: string,
+  status: "resolving" | "ready" | "failed",
+  discovered: number,
+  completed: number,
+  resources: ResourceEvent[],
+  error: string | null
+}
+```
+
+`discovered` and `completed` count resources in that resolution operation.
+Each `ResourceEvent` contains:
+
+```ts
+{
+  operationId: number,
+  resource: string,
+  phase: "resolving" | "checking-cache" | "downloading" | "extracting" | "ready" | "failed",
+  completed: number,
+  total: number | null,
+  unit: "bytes" | "entries" | null,
+  cached: boolean,
+  entry: string | null,
+  error: string | null
+}
+```
+
+Resource counters are non-negative integers. Unknown totals are `null`;
+`unit` distinguishes byte and entry counts from unmeasured phases. Discovering
+more resources is not a fixed total or a remaining-time estimate. This boundary
+covers native configuration/resource resolution, not View initialization or
+layout readiness.
+
+The existing Unit-loader compatibility progress remains available to startup
+consumers. Native resolution owns resource work; JS loader notifications must not
+be treated as evidence that JavaScript performs ZIP extraction or cache writes.
+Subscribing to resolution progress does not introduce a new UI, preload unused
+Views, reopen the startup screen for lazy loads, or add refresh/update behavior.
+Reload still restarts startup rather than refreshing completed URL cache entries.
+
+## Verification boundary
+
+Run `nix develop --command make validate-docs` for documentation validation and
+`nix develop --command make test` for Host tests. Automated loader and DOM-boundary
+tests do not establish full Tauri WebView startup behavior. The browser style
+fixture below checks the existing renderer, not native resource resolution.
 
 ## Browser style regression check
 

@@ -20,60 +20,92 @@ without falling back to another config. The folder picker, Project Save, and
 paths and `GAMS_APP_CWD` are unchanged; Project initialization never overwrites
 an existing file.
 
-## Splitting configuration with `$ref`
+## Resolving configuration resources
 
-A `$ref` object is replaced by the referenced JSON value before the Host uses
-configuration. The resolved top-level value must still be an object.
+The native Host recursively resolves `$ref` and `$file` expressions before
+publishing `runtime.config` or loading Project Units. The resolved top-level
+value must be an object. Configuration resolution does not depend on `plugin.fs`.
 
 ```json
 {
   "database": { "$ref": "config/database.json" },
   "ui": { "$ref": "config/ui.json#/desktop" },
-  "databaseCopy": { "$ref": "#/database" }
+  "databaseCopy": { "$ref": "#/database" },
+  "presets": {
+    "$ref": {
+      "url": "https://example.com/content.zip",
+      "entry": "presets.json",
+      "pointer": "/presets"
+    }
+  },
+  "assets": { "$file": { "url": "https://example.com/content.zip", "entry": "assets" } }
 }
 ```
 
-| Rule | Behavior |
+| Expression | Behavior |
 | --- | --- |
-| Whole file | `{"$ref":"config/database.json"}` includes that file's JSON value. |
-| File and pointer | `{"$ref":"config/ui.json#/desktop"}` selects `/desktop` from that file. |
-| Current file | `{"$ref":"#/database"}` selects `/database` from the file containing the reference. `#` selects its root. |
-| Relative files | Paths resolve relative to the file containing `$ref`, including nested references. These are local filesystem paths, not download URLs. |
+| `$ref` string | Reads local or HTTPS JSON; an optional `#/pointer` selects a value. `#/database` refers to the containing JSON document; `#` selects its root. |
+| `$ref` descriptor | `{ "url": "https://example.com/content.zip", "entry": "presets.json", "pointer": "/presets" }` reads JSON from an archive entry and selects the pointer. Omit `pointer` to select the JSON root. |
+| `$file` string | Resolves a local or HTTPS resource to a local filesystem path. Local files remain in place. |
+| `$file` descriptor | `{ "url": "https://example.com/content.zip", "entry": "assets" }` selects a file or directory. Omitting `entry` selects the extracted archive root. |
+| Relative resources | Resolve relative to the containing JSON, including nested JSON documents and archive entries. Ordinary strings are not resource expressions; existing Project-relative Unit paths retain their meaning. |
 | JSON Pointer | Slash-separated keys and array indexes; `~1` means `/`, `~0` means `~`. `/` selects an empty key. |
-| Replacement | Objects, arrays, strings, numbers, booleans and `null` can be included. References inside included values are resolved too. |
-| Siblings | `$ref` must be the object's only property. No merging or overrides. |
-| Errors | Empty/non-string references, missing files or pointers, invalid JSON/pointers and circular references fail loading. Reusing a reference is allowed. |
+| Replacement | `$ref` can include any JSON value; expressions inside included values resolve recursively. `$file` produces a local path. |
+| Siblings | A resource expression is the object's only property; there is no merge or override behavior. |
+| Errors | Malformed expressions, missing resources or pointers, invalid JSON, circular references and unsafe archives fail loading. Reusing a reference is allowed. |
 
-Only `$ref` file paths gain file-relative resolution. Other configuration values,
-such as local Unit paths, retain their existing Project-relative meaning.
-**Project Save flattens references** into the active config file; it does not update
-included files. See [[project-saving|Project Save]].
+HTTPS and loopback-only HTTP transport policy is unchanged. Remote resources use
+one native URL-keyed cache shared by configuration resolution and Unit loading;
+ZIP entry selectors do not create separate archive copies. Full archives are
+validated, extracted and atomically published before use, including before
+filesystem-plugin bootstrap. Cached URLs are not automatically updated; no
+refresh feature is introduced. Local ZIP sources use the same extraction cache.
+ZIP-inside-ZIP extraction is not supported; a nested ZIP remains an ordinary file.
+Direct-file downloads do not discover sibling imports; distribute files with
+relative dependencies together in a ZIP.
+
+Local `$file` targets must be within the Project, its selected modules directory,
+or a directory symlink preopened from the Project root. Other local locations
+are rejected rather than returning paths that plugins cannot access. Returned
+paths are Project-relative WASI paths with `/` separators on every platform.
+`gams_modules/` addresses the selected store even when `GAMS_MODULES_DIR` points
+outside the Project; the Host maps that directory for both filesystem plugins
+and native WASM loading. Units do not receive Windows-native cache paths.
+
+[[project-saving|Project Save]] preserves unchanged `$ref` subtrees. An edited
+referenced subtree is flattened into the main config without changing included
+source files. References whose same-document dependencies changed are flattened
+too, so reopening preserves the current values. `$file` expressions are preserved
+or canonicalized, never replaced with serialized cache paths.
 
 ## Project bootstrap and Unit storage
 
-After `await runtime.ready`, frontend code can read native-loaded `gams.json`
-as `runtime.config` and the selected Unit storage path as `runtime.modulesDir`.
-Configuration reading does not depend on the filesystem plugin. Direct-file
-HTTPS (and loopback HTTP test) sources can be downloaded and installed via
-`require` and configured WASM/theme loading. The development ZIP slice also
-supports `https://example.com/unit.zip#path/to/entry`, extracting packages through
-the filesystem plugin. A Host-owned startup screen reports per-Unit downloads,
-ZIP extraction, cache reuse and initialization, with visible errors and reload;
-see `project-loading.md`. Git sources are not implemented.
-FS bootstrap uses the configured `plugin.fs.wasm` local/direct-file source,
-or the pinned v0.1.1 fallback if absent; it does not accept ZIP sources. See `direct-file-downloads.md` for APIs and the local-server smoke
-test, and `zip-project-units.md` for ZIP scope, deferred safeguards and tests.
-Third-party browser bundle notices and original license texts are included in
-the Host distribution; see the repository NOTICE.
+After `await runtime.ready`, frontend code reads fully resolved configuration as
+`runtime.config` and the selected cache/storage directory as `runtime.modulesDir`.
+Native Project loading starts asynchronously through `runtime_project`, with its
+`onProgress` channel installed before consumers await readiness. See
+[[project-loading|Project startup progress]] for the runtime progress API.
+
+Existing direct-file and `https://example.com/unit.zip#path/to/entry` Unit URLs
+remain supported through a compatibility adapter to native resolution. JavaScript
+Unit loaders no longer own downloading, ZIP extraction or cache publication.
+The adapter still rejects ZIP filesystem bootstrap: the Host selects the sole
+configured source named `plugin.fs.wasm`, or the pinned v0.1.1 fallback if absent.
+Multiple matches and selected-source failures are errors, not fallback triggers.
+This selection restriction is not a native extraction dependency.
 
 GUI startup creates `<project>/gams_modules` by default. Set `GAMS_MODULES_DIR`
 to a non-empty absolute directory path to select shared storage instead. The
 selected directory is canonicalized and preopened for runtime/filesystem access;
-there is no local fallback when the override is set. The [[runtime-terminal|REPL]]
-does not require GUI bootstrap or an existing config. Use
-[[runtime-commands|GAMS commands]] to initialize a Project and load plugins.
+there is no local fallback when the override is set. Local resource files stay
+at their original locations rather than being copied into the cache. The
+[[runtime-terminal|REPL]] does not require GUI bootstrap or an existing config.
+Use [[runtime-commands|GAMS commands]] to initialize a Project and load plugins.
 
-See `project-unit-installation.md` for the remaining installation design.
+See [[direct-file-downloads|direct-file downloads]] and
+[[zip-project-units|ZIP resources]] for transport and archive behavior. Git
+sources remain unsupported. Third-party notices and original license texts
+remain part of the Host distribution; see the repository NOTICE.
 
 ## Host UI URL contract
 

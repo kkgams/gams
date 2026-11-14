@@ -15,13 +15,16 @@ export class Runtime {
     #modulesDir = null
     #configFile = null
     #projectSaveInFlight = null
+    #resolutionProgress = null
+    #resolutionProgressListeners = new Set()
 
     constructor() {
         this.#callViewListenerReady = this.#initialize()
     }
 
     async #initialize() {
-        const project = await invokeCommand("runtime_project", {})
+        const onProgress = createProgressChannel(snapshot => this.#reportResolutionProgress(snapshot))
+        const project = await invokeCommand("runtime_project", { onProgress })
         this.setProjectConfig(project.config)
         assertString(project.configFile, "runtime config filename")
         this.#configFile = project.configFile
@@ -90,6 +93,45 @@ export class Runtime {
         const progress = createProgressChannel(onProgress)
         const bytes = await invokeCommand("runtime_download", { url, onProgress: progress })
         return new Uint8Array(bytes)
+    }
+
+    #reportResolutionProgress(snapshot) {
+        this.#resolutionProgress = snapshot
+        for (const listener of this.#resolutionProgressListeners) listener(snapshot)
+    }
+
+    get resolutionProgress() {
+        return this.#resolutionProgress
+    }
+
+    async getResolutionProgress() {
+        const snapshot = await invokeCommand("runtime_resolution_progress", {})
+        this.#reportResolutionProgress(snapshot)
+        return snapshot
+    }
+
+    subscribeResolutionProgress(listener) {
+        if (typeof listener !== "function") throw new Error("Resolution progress listener must be a function")
+        this.#resolutionProgressListeners.add(listener)
+        if (this.#resolutionProgress !== null) listener(this.#resolutionProgress)
+        return () => this.#resolutionProgressListeners.delete(listener)
+    }
+
+    async resolveFile(source, onProgress = () => {}) {
+        if (typeof source === "string") assertString(source, "runtime.resolveFile source")
+        else {
+            if (!source || typeof source !== "object" || Array.isArray(source))
+                throw new Error("runtime.resolveFile source must be a string or { url, entry }")
+            assertString(source.url, "runtime.resolveFile source URL")
+            if (source.entry !== undefined && typeof source.entry !== "string")
+                throw new Error("runtime.resolveFile source entry must be a string")
+        }
+        if (typeof onProgress !== "function") throw new Error("Resolution progress callback must be a function")
+        const progress = createProgressChannel(snapshot => {
+            this.#reportResolutionProgress(snapshot)
+            onProgress(snapshot)
+        })
+        return await invokeCommand("runtime_resolve_file", { source, onProgress: progress })
     }
 
     async loadFromBytes(bytes, path) {
@@ -182,7 +224,8 @@ export class Runtime {
         }
 
         await report(`Writing ${this.#configFile}`)
-        const text = `${JSON.stringify(this.config, null, 2)}\n`
+        const config = await invokeCommand("runtime_prepare_config", { config: this.config })
+        const text = `${JSON.stringify(config, null, 2)}\n`
         const temporary = `.${this.#configFile}.${crypto.randomUUID()}.tmp`
         unwrap(await this.invoke("fs/fs::write-text", temporary, text), "write Project config")
         completed++

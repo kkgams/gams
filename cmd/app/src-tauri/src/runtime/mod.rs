@@ -609,11 +609,7 @@ impl RuntimeInner {
             bytes.len() <= 64 * 1024 * 1024,
             "component exceeds 64 MiB limit"
         );
-        let candidate = if Path::new(path).is_absolute() {
-            PathBuf::from(path)
-        } else {
-            safe_join(&self.root, path)?
-        };
+        let candidate = host_path(&self.root, &self.preopens, path)?;
         let resolved_path = if candidate.exists() {
             candidate.canonicalize()?
         } else {
@@ -2087,13 +2083,35 @@ fn path_is_preopened(path: &Path, preopens: &[FsPreopen]) -> bool {
         .any(|preopen| path.starts_with(&preopen.host_path))
 }
 
-fn resolve_component_path(root: &Path, preopens: &[FsPreopen], path: &str) -> Result<PathBuf> {
+// Resolve the same guest filesystem mounts exposed to WASI plugins. In
+// particular, shared storage need not physically exist under the Project root.
+pub(crate) fn host_path(root: &Path, preopens: &[FsPreopen], path: &str) -> Result<PathBuf> {
     let raw = PathBuf::from(path);
-    let candidate = if raw.is_absolute() {
-        raw
-    } else {
-        safe_join(root, path)?
-    };
+    if raw.is_absolute() {
+        return Ok(raw);
+    }
+    let normalized = path.replace('\\', "/");
+    if let Some((mount, suffix)) = preopens
+        .iter()
+        .filter(|mount| mount.guest_path != "." && !Path::new(&mount.guest_path).is_absolute())
+        .filter_map(|mount| {
+            if normalized == mount.guest_path {
+                Some((mount, ""))
+            } else {
+                normalized
+                    .strip_prefix(&format!("{}/", mount.guest_path))
+                    .map(|suffix| (mount, suffix))
+            }
+        })
+        .max_by_key(|(mount, _)| mount.guest_path.len())
+    {
+        return safe_join(&mount.host_path, suffix);
+    }
+    safe_join(root, &normalized)
+}
+
+fn resolve_component_path(root: &Path, preopens: &[FsPreopen], path: &str) -> Result<PathBuf> {
+    let candidate = host_path(root, preopens, path)?;
 
     if !candidate.exists() {
         if PathBuf::from(path).is_absolute() {

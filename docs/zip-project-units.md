@@ -1,88 +1,98 @@
 ---
-title: "ZIP Project Unit installation — first slice"
+title: "ZIP resources and Project Units"
 status: reference
 ---
 
-# ZIP Project Unit installation — first slice
+# ZIP resources and Project Units
 
-Configured plugin, View, UI Service and theme sources can select a file in a ZIP:
+The native Host resolves ZIP resources for configuration and Project Units.
+`$ref` reads JSON from a selected entry; `$file` resolves an entry file or
+directory, or the archive root when `entry` is omitted:
+
+```json
+{
+  "presets": {
+    "$ref": {
+      "url": "https://example.com/content.zip",
+      "entry": "presets.json",
+      "pointer": "/presets"
+    }
+  },
+  "assets": { "$file": { "url": "https://example.com/content.zip", "entry": "assets" } },
+  "packageRoot": { "$file": { "url": "https://example.com/content.zip" } }
+}
+```
+
+Relative resources in included JSON resolve relative to that document, including
+its containing archive entry. Configuration resolution completes before Units
+consume `runtime.config`; it does not require `plugin.fs`.
+
+## Existing Unit URL compatibility
+
+Existing configured plugin, View, UI Service and theme sources still select an
+archive file with a URL fragment:
 
 ```text
 https://example.com/unit.zip#views/view.js
 ```
 
-The URL pathname must end in `.zip` (case-insensitive). An explicit archive-root
-relative file selector is required; URI escaping is decoded once. The fragment
-is stripped before `runtime.download()` runs. HTTPS and existing loopback HTTP
-transport policy remain unchanged. Local ZIP paths, Git sources and ZIP-based
-filesystem bootstrap are not supported; the Host starts FS from the configured
-`plugin.fs.wasm` source, or its pinned v0.1.1 fallback when absent, before
-package extraction needs it. All six shell UI
-Service roles must have explicit Project-configured URLs (see
-[direct-file downloads](#/direct-file-downloads)).
+The compatibility adapter requires a `.zip` URL pathname (case-insensitive) and
+an explicit archive-root-relative file selector, decoded once. It removes the
+fragment and passes the URL and entry to native resolution. This legacy Unit
+syntax is distinct from a `$ref` JSON Pointer.
 
-## Responsibilities
+ZIP filesystem bootstrap remains rejected by the adapter. The Host still
+selects the sole configured source named `plugin.fs.wasm`, or its pinned v0.1.1
+fallback when absent. Native extraction itself can run before that plugin;
+the restriction is retained selection behavior, not an extraction dependency.
+All six shell UI Services still require explicit Project-configured URLs; see
+[[direct-file-downloads|direct-file downloads]]. Git sources remain unsupported.
 
-- `/util/zip.js` wraps locally bundled `@zip.js/zip.js@2.23.0`. Its
-  `extractZip(bytes, selectedEntry, writeEntry)` validates members and the
-  selected file, then calls the async sink with each relative path and file
-  `Uint8Array`, or `null` for an empty/explicit directory. Entries are processed
-  sequentially. Workers and CRC verification are disabled in this slice.
-- `/core/project-units.js` downloads, creates directories, writes file bytes
-  through `fs/fs`, and renames the fully extracted staging directory to its
-  final installation name. Existing Unit loaders receive the selected local
-  file path. Raw `runtime.config` keeps the original configured source.
+## Native cache and extraction
 
-All members are extracted, preserving nested paths, binary companion assets,
-empty directories and LICENSE/NOTICE files. Extraction never executes members
-or installation scripts. Archives with symlinks or encrypted entries fail
-explicitly. Absolute paths, traversal, backslashes, NULs and non-canonical path
-segments are rejected rather than rewritten.
+The native resolver owns downloads, ZIP validation, extraction and cache
+publication. JavaScript Unit loading is an adapter, not a second installer.
+Cache identity uses the archive URL without the entry selector. Different
+entries in one archive share the download and extracted package, including
+requests from configuration resolution and Unit loading.
 
-## Storage and failure behavior
+The whole archive is extracted before any selected resource is returned,
+preserving nested paths, binary companion assets, empty directories and
+LICENSE/NOTICE files. Extraction never executes archive members or installation
+scripts. Native safe-ZIP validation rejects unsafe members and selectors,
+including paths escaping the extraction root. Failed validation or extraction
+must not publish a partial package: staging is atomically published only after
+full extraction succeeds. A missing selected entry is an error, not a reason to
+redownload a completed installation. CRC errors, symlinks, encrypted members,
+special files and conflicting/case-colliding paths are rejected. Limits are
+64 MiB compressed, 64 MiB per expanded member, 256 MiB expanded in total, and
+10,000 members.
 
-ZIP sources map to `<runtime.modulesDir>/<sha256-of-full-source>/<entry>`.
-The hash includes the entry selector for now: different selectors into the same
-archive may download and install separate copies. Calls for the identical source
-share existing in-process pending work; archive-level deduplication is deferred.
+Installations use per-source lock files and temporary staging. A crash may leave
+a lock or staging directory; an existing lock fails explicitly rather than
+starting another writer. Recovery must wait until no process is installing that
+source. There is no automatic stale-lock recovery or cache garbage collection.
 
-Extraction writes into a unique sibling `<hash>.<uuid>.tmp` directory. Only
-successful extraction receives the final `<hash>` name. The final directory's
-existence is this slice's completion indicator; there is no separate completion
-manifest. Interrupted/failed writes may leave ignored `.tmp` directories. A fresh
-loader reuses a completed package offline, checks the selected file is still a
-regular file, and does not redownload a completed package with a missing entry.
-Missing members and unreadable ZIP directory metadata fail before the sink is
-called; later write/decompression failures never publish the staging directory.
+Completed cache entries can be reused offline. HTTPS and loopback-only HTTP
+transport policy is unchanged. The URL cache does not authenticate publisher
+content or detect changed bytes at an unchanged URL. There is no automatic
+update or refresh feature. Local ZIP files use the same URL-keyed installation
+policy; changing bytes at the same local path does not refresh an extracted copy.
+ZIP-inside-ZIP extraction is unsupported.
 
-This is a development slice, **not a hardened installer for hostile archives**.
-Expanded-byte limits, entry-count limits, CRC checks, advanced archive collision
-checks, cross-process coordination, staging cleanup and archive-level reuse are
-deferred. The transport's existing 64 MiB compressed-download limit is not a
-ZIP-bomb defense. The URL cache does not authenticate publisher bytes or refresh
-changed content at the same URL.
+## Loader and save boundaries
 
-## Loader limits
+Extraction does not change Blob-based JS imports or add relative module imports
+or companion asset URLs. Installed Views can continue using Host-owned absolute
+imports such as `/util` and `/widgets`.
 
-Extraction does not change Blob-based JS imports or implement relative module
-imports/asset URLs. An installed View can continue using Host-owned absolute
-imports such as `/util` and `/widgets`; package-relative module loading remains
-separate work. The filesystem API writes whole files, so a file is buffered in
-memory before persistence. Desktop WebView behavior still needs a smoke test.
+Resolved cache paths are runtime values, not portable Project configuration.
+[[project-saving|Project Save]] preserves or canonicalizes `$file` expressions
+and preserves unchanged `$ref` subtrees; edited referenced subtrees are flattened
+into the main config without changing included source files.
 
-## Validation and redistribution
-
-```sh
-nix develop --command node --test test/zip.test.mjs test/project-units.test.mjs
-nix develop --command make test
-```
-
-`test/fixtures/zip.json` contains small synthetic DEFLATE archives generated by
-Python's standard-library `zipfile`: a JS test export, binary companion bytes,
-an empty directory, a fixture notice, and a separate traversal archive. They
-are not external Project/Unit source. Tests exercise real zip.js extraction and
-Node-backed filesystem doubles; they do not establish native WebView startup.
-
-Pinned package/bundle hashes and original license texts are under
-`cmd/app/src/util/vendor/zipjs/`. Host distributions include the original licenses
-and provenance under `BUNDLE-LICENSES/zipjs/`; preserve their attribution and terms.
+See [[host-runtime|Host runtime and configuration]] for expression rules and
+[[project-loading|Project startup progress]] for native resolution progress.
+Existing third-party ZIP bundle notices and license texts remain under
+`cmd/app/src/util/vendor/zipjs/` and in Host distributions under
+`BUNDLE-LICENSES/zipjs/`; preserve their attribution and terms.

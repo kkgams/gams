@@ -4,6 +4,7 @@ mod options;
 mod output;
 mod project;
 mod repl;
+mod resources;
 mod rpc;
 mod runtime;
 
@@ -21,8 +22,62 @@ fn runtime_console(level: String, message: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn runtime_project(project: tauri::State<'_, project::Project>) -> project::Project {
-    project.inner().clone()
+async fn runtime_project(
+    session: tauri::State<'_, std::sync::Arc<project::Session>>,
+    on_progress: tauri::ipc::Channel<project::ResolutionProgress>,
+) -> Result<project::Project, String> {
+    let session = session.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        session
+            .project(&mut |snapshot| {
+                // A progress subscriber may detach without cancelling the operation.
+                let _ = on_progress.send(snapshot);
+            })
+            .map_err(|error| format!("{error:#}"))
+    })
+    .await
+    .map_err(|error| format!("Project loading task failed: {error}"))?
+}
+
+#[tauri::command]
+async fn runtime_resolve_file(
+    source: serde_json::Value,
+    session: tauri::State<'_, std::sync::Arc<project::Session>>,
+    on_progress: tauri::ipc::Channel<project::ResolutionProgress>,
+) -> Result<String, String> {
+    let session = session.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = session
+            .resolve_file(&source, &mut |snapshot| {
+                let _ = on_progress.send(snapshot);
+            })
+            .map_err(|error| format!("{error:#}"))?;
+        Ok(path)
+    })
+    .await
+    .map_err(|error| format!("resource resolution task failed: {error}"))?
+}
+
+#[tauri::command]
+fn runtime_resolution_progress(
+    session: tauri::State<'_, std::sync::Arc<project::Session>>,
+) -> project::ResolutionProgress {
+    session.progress()
+}
+
+#[tauri::command]
+async fn runtime_prepare_config(
+    config: serde_json::Value,
+    session: tauri::State<'_, std::sync::Arc<project::Session>>,
+) -> Result<serde_json::Value, String> {
+    let session = session.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        session
+            .prepare_config(&config)
+            .map_err(|error| format!("{error:#}"))
+    })
+    .await
+    .map_err(|error| format!("config preparation task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -201,9 +256,16 @@ fn preopens_for_root(root: &Path) -> anyhow::Result<Vec<runtime::FsPreopen>> {
         let target = entry.path().canonicalize()?;
         if target.is_dir() {
             preopens.push(runtime::FsPreopen {
-                host_path: target,
+                host_path: target.clone(),
                 guest_path: entry.file_name().to_string_lossy().into_owned(),
             });
+            let guest_path = target.to_string_lossy().into_owned();
+            if !preopens.iter().any(|entry| entry.guest_path == guest_path) {
+                preopens.push(runtime::FsPreopen {
+                    guest_path,
+                    host_path: target,
+                });
+            }
         }
     }
 
@@ -346,19 +408,37 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
                 std::process::exit(0); // Normal native Project-picker cancellation.
             };
             let mut preopens = preopens_for_root(&root)?;
-            let project = project::Project::load(
+            let modules_dir = project::modules_path(
                 &root,
                 options
                     .modules_dir
                     .as_deref()
                     .map(std::path::Path::as_os_str),
-                &options.config,
             )?;
+            std::fs::create_dir_all(&modules_dir)?;
+            let modules_dir = modules_dir.canonicalize()?;
+            let modules_guest = modules_dir.to_string_lossy().into_owned();
+            if !preopens
+                .iter()
+                .any(|entry| entry.guest_path == modules_guest)
+            {
+                preopens.push(runtime::FsPreopen {
+                    host_path: modules_dir.clone(),
+                    guest_path: modules_guest,
+                });
+            }
+            // Stable, platform-independent paths for both local and shared storage.
+            preopens.retain(|entry| entry.guest_path != "gams_modules");
             preopens.push(runtime::FsPreopen {
-                host_path: project.modules_dir.clone(),
-                guest_path: project.modules_dir.to_string_lossy().into_owned(),
+                host_path: modules_dir.clone(),
+                guest_path: "gams_modules".into(),
             });
-            app.manage(project);
+            app.manage(std::sync::Arc::new(project::Session::new(
+                root.clone(),
+                options.config.clone(),
+                modules_dir,
+                preopens.clone(),
+            )));
             let runtime = runtime::Runtime::new_at(root.clone(), preopens)?;
             runtime.attach_app_handle(app.handle().clone())?;
             let cache_dir = match &options.plugin_cache_dir {
@@ -402,6 +482,9 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
         .invoke_handler(tauri::generate_handler![
             runtime_console,
             runtime_project,
+            runtime_resolve_file,
+            runtime_resolution_progress,
+            runtime_prepare_config,
             runtime_download,
             runtime_load_from_bytes,
             runtime_add_plugins,

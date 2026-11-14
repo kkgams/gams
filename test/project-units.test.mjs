@@ -1,43 +1,13 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, writeFile, rename, readdir, rm, mkdir, stat } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { pathToFileURL } from "node:url"
-import { createServer } from "node:http"
+import { createProjectUnits, selectFilesystemSource } from "../cmd/app/src/core/project-units.js"
 
 const moduleUrl = new URL("../cmd/app/src/core/project-units.js", import.meta.url)
-// Independent ZIP fixtures produced with Python's stdlib zipfile (DEFLATE).
-const zipFixtures = JSON.parse(await readFile(new URL("./fixtures/zip.json", import.meta.url), "utf8"))
-const zipBytes = () => new Uint8Array(Buffer.from(zipFixtures.unit, "base64"))
-
-// Filesystem/IPC is an external boundary here; native smoke tests cover real WASI.
-function filesystemRuntime(directory) {
-  return {
-    modulesDir: directory,
-    async invoke(target, ...args) {
-      let value
-      switch (target) {
-        case "fs/fs::list": value = (await readdir(args[0], { withFileTypes: true })).map(entry => ({ name: entry.name, type: entry.isDirectory() ? "directory" : "regular-file" })); break
-        case "fs/fs::stat": {
-          const info = await stat(args[0])
-          value = { type: info.isDirectory() ? "directory" : "regular-file" }
-          break
-        }
-        case "fs/fs::create-dir": await mkdir(args[0]); break
-        case "fs/fs::write-file": await writeFile(args[0], new Uint8Array(args[1])); break
-        case "fs/fs::rename": await rename(...args); break
-        default: throw new Error(`Unexpected call: ${target}`)
-      }
-      return { ok: value ?? null }
-    },
-  }
-}
 
 test("filesystem selection uses the exact plugin.fs.wasm basename or the pinned fallback", async () => {
   const { selectFilesystemSource } = await import(moduleUrl)
   const fallback = "https://example.com/pinned/plugin.fs.wasm"
-  for (const source of ["plugins/plugin.fs.wasm", "/custom/plugin.fs.wasm", "https://example.com/v2/plugin.fs.wasm?download=1"])
+  for (const source of ["plugins/plugin.fs.wasm", "/custom/plugin.fs.wasm", String.raw`C:\project\plugin.fs.wasm`, "C:/project/plugin.fs.wasm", String.raw`\\server\project\plugin.fs.wasm`, "https://example.com/v2/plugin.fs.wasm?download=1"])
     assert.equal(selectFilesystemSource(["other.wasm", source], fallback), source)
   for (const source of ["my-plugin.fs.wasm", "plugin.fs.wasm.bak", "https://example.com/plugin.fs.wasm/other.wasm"])
     assert.equal(selectFilesystemSource([source], fallback), fallback)
@@ -48,253 +18,142 @@ test("filesystem selection uses the exact plugin.fs.wasm basename or the pinned 
     assert.throws(() => selectFilesystemSource(plugins, fallback), /plugins|source/)
 })
 
-test("filesystem bootstrap loads bytes on first launch and uses its saved path next time", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-bootstrap-"))
-  const bytes = new Uint8Array([0, 97, 115, 109, 13, 0, 1, 0])
-  let downloads = 0
-  let byteLoads = 0
-  let filesystemReady = false
-  const fsRuntime = filesystemRuntime(directory)
-  const runtime = {
-    ...fsRuntime,
-    async addPlugins([path]) {
-      try { await readFile(path) } catch (error) {
-        if (error.code === "ENOENT") throw `absolute component path not found: ${path}`
-        throw error
-      }
-      filesystemReady = true
-    },
-    async download() { downloads++; return bytes },
-    async loadFromBytes(actual, path) {
-      assert.deepEqual(actual, bytes)
-      assert.equal(await readdir(directory).then(entries => entries.length), 0)
-      assert.ok(path.startsWith(directory))
-      filesystemReady = true
-      byteLoads++
-    },
-    async invoke(...args) {
-      assert.ok(filesystemReady, "no filesystem calls before FS bootstrap")
-      return fsRuntime.invoke(...args)
-    },
-  }
-  try {
-    const source = "http://127.0.0.1:8765/fs.wasm"
-    const path = await createProjectUnits(runtime).bootstrapFilesystem(source)
-    assert.deepEqual(new Uint8Array(await readFile(path)), bytes)
-    filesystemReady = false
-    assert.equal(await createProjectUnits(runtime).bootstrapFilesystem(source), path)
-    assert.equal(downloads, 1)
-    assert.equal(byteLoads, 1)
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
+
+test("Unit sources resolve at the native boundary, including decoded legacy ZIP selectors", async () => {
+  const sources = []
+  const runtime = { async resolveFile(source) { sources.push(source); return "/native/resolved" } }
+  const units = createProjectUnits(runtime)
+  for (const source of ["views/local.js", String.raw`C:\project\view.js`, "https://example.com/view.js?download=1", "https://example.com/unit.zip?download=1#views%2Fwith%20space.js"])
+    assert.equal(await units.resolve(source), "/native/resolved")
+  assert.deepEqual(sources, ["views/local.js", String.raw`C:\project\view.js`, "https://example.com/view.js?download=1", {
+    url: "https://example.com/unit.zip?download=1", entry: "views/with space.js",
+  }])
 })
 
-test("requested filesystem load and download errors propagate without fallback", async () => {
-  const { createProjectUnits, selectFilesystemSource } = await import(moduleUrl)
-  const source = "https://example.com/v2/plugin.fs.wasm"
-  const selected = selectFilesystemSource([source], "https://example.com/pinned/plugin.fs.wasm")
-  let downloads = 0
+test("filesystem bootstrap resolves natively before loading by path, with no filesystem or byte bootstrap calls", async () => {
+  const order = []
   const runtime = {
-    modulesDir: "/modules",
-    async addPlugins() { throw new Error("invalid component") },
-    async download(url) { assert.equal(url, source); downloads++; throw new Error("offline") },
+    async resolveFile(source) { order.push(["resolve", source]); return "/native/plugin.fs.wasm" },
+    async addPlugins(paths) { order.push(["load", paths]) },
   }
-  await assert.rejects(createProjectUnits(runtime).bootstrapFilesystem(selected), /invalid component/)
-  assert.equal(downloads, 0)
-  runtime.addPlugins = async () => { throw new Error("absolute component path not found: missing") }
-  await assert.rejects(createProjectUnits(runtime).bootstrapFilesystem(selected), /offline/)
-  assert.equal(downloads, 1)
+  const units = createProjectUnits(runtime)
+  const source = "https://example.com/plugin.fs.wasm"
+  assert.equal(await units.bootstrapFilesystem(source), "/native/plugin.fs.wasm")
+  assert.deepEqual(order, [["resolve", source], ["load", ["/native/plugin.fs.wasm"]]])
+  await assert.rejects(units.bootstrapFilesystem("https://example.com/fs.zip#plugin.fs.wasm"), /not ZIP/)
+  assert.equal(order.length, 2)
 })
 
-test("failed downloads can be retried without publishing a partial Unit", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-retry-"))
+test("resolution and selected filesystem load failures propagate without fallback; a later call can retry", async () => {
   let attempts = 0
+  let loads = 0
+  const source = "https://example.com/plugin.fs.wasm"
   const runtime = {
-    ...filesystemRuntime(directory),
-    async download() {
-      if (++attempts === 1) throw new Error("connection interrupted")
-      return new Uint8Array([1, 2, 3])
+    async resolveFile(selected) {
+      assert.equal(selected, source)
+      if (++attempts === 1) throw new Error("offline")
+      return "/native/plugin.fs.wasm"
     },
+    async addPlugins() { loads++; throw new Error("invalid component") },
   }
-  try {
-    const units = createProjectUnits(runtime)
-    const source = "http://127.0.0.1:8765/unit.wasm"
-    await assert.rejects(units.resolve(source), /connection interrupted/)
-    assert.deepEqual(await readdir(directory), [])
-    assert.ok(await units.resolve(source))
-    assert.equal(attempts, 2)
-    for (const unsupported of ["https://example.com/units.tar#view.js", "github:owner/repo#ref=v1"]) {
-      await assert.rejects(units.resolve(unsupported), /not supported|Unsupported/)
-    }
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
+  const units = createProjectUnits(runtime)
+  await assert.rejects(units.bootstrapFilesystem(source), /offline/)
+  assert.equal(loads, 0)
+  await assert.rejects(units.bootstrapFilesystem(source), /invalid component/)
+  assert.equal(attempts, 2)
+  assert.equal(loads, 1)
 })
 
-test("direct-file Units are downloaded, persisted once, and reused offline", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-units-"))
-  let downloads = 0
-  const server = createServer((_request, response) => {
-    downloads++
-    response.end('export const value = "downloaded"')
-  })
-  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve))
-  const url = `http://127.0.0.1:${server.address().port}/view.js`
-  const runtime = {
-    ...filesystemRuntime(directory),
-    async download(source) {
-      const response = await fetch(source)
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      return new Uint8Array(await response.arrayBuffer())
-    },
-  }
-  try {
-    const units = createProjectUnits(runtime)
-    const [path, duplicate] = await Promise.all([units.resolve(url), units.resolve(url)])
-    assert.equal(path, duplicate)
-    assert.equal(downloads, 1)
-    assert.equal((await readdir(directory)).length, 1)
-    await new Promise(resolve => server.close(resolve))
-    // A new loader represents another launch, not just an in-memory cache hit.
-    assert.equal(await createProjectUnits(runtime).resolve(url), path)
-    assert.match(await readFile(path, "utf8"), /downloaded/)
-    const view = await import(pathToFileURL(path))
-    assert.equal(view.value, "downloaded")
-  } finally {
-    server.close()
-    await rm(directory, { recursive: true, force: true })
-  }
+test("all Unit adapters delegate requests to the shared native resolver without a JS cache", async () => {
+  const calls = []
+  const runtime = { async resolveFile(source) { calls.push(source); return "/native/unit.js" } }
+  const first = createProjectUnits(runtime)
+  const second = createProjectUnits(runtime)
+  const source = "https://example.com/unit.zip#view.js"
+  assert.deepEqual(await Promise.all([first.resolve(source), first.resolve(source), second.resolve(source)]), Array(3).fill("/native/unit.js"))
+  assert.equal(calls.length, 3, "native owns deduplication, not individual JS adapters")
+  await first.resolve(source)
+  assert.equal(calls.length, 4, "native checks completed installations")
 })
 
-test("ZIP Units download without a fragment, publish their package, and reopen offline", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-zip-units-"))
-  const source = "http://127.0.0.1:8765/unit.zip#views%2Fview.js"
-  let downloads = 0
-  const runtime = {
-    ...filesystemRuntime(directory),
-    async download(url, progress) {
-      assert.equal(url, "http://127.0.0.1:8765/unit.zip")
-      progress({ downloaded: zipBytes().length, total: zipBytes().length })
-      downloads++
-      return zipBytes()
-    },
-  }
-  try {
-    const progress = []
-    const path = await createProjectUnits(runtime).resolve(source, event => progress.push(event))
-    assert.match(path, /\/views\/view\.js$/)
-    const [name] = await readdir(directory)
-    assert.match(name, /^[a-f0-9]{64}$/)
-    assert.deepEqual(new Uint8Array(await readFile(join(directory, name, "views/assets/data.bin"))), new Uint8Array([0, 128, 255]))
-    assert.match(await readFile(join(directory, name, "LICENSE"), "utf8"), /fixture notice/)
-    assert.ok((await stat(join(directory, name, "empty"))).isDirectory())
-    assert.equal(progress.length, 1)
-    runtime.download = async () => { throw new Error("offline") }
-    assert.equal(await createProjectUnits(runtime).resolve(source), path)
-    assert.equal(downloads, 1)
-    const view = await import(pathToFileURL(path))
-    assert.equal(view.value, "zip fixture")
-    await rm(path)
-    await assert.rejects(createProjectUnits(runtime).resolve(source), /ZIP entry unavailable|ENOENT/)
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
+test("invalid legacy sources fail before reaching native resolution", async () => {
+  const units = createProjectUnits({ resolveFile() { throw new Error("must not resolve invalid source") } })
+  for (const source of [null, 12, "", "https://example.com/unit.zip", "https://example.com/unit.zip#../view.js", "https://example.com/unit.zip#%2Fview.js", "https://example.com/unit.zip#views%5Cview.js", "https://example.com/view.js#view.js", "https://user:pass@example.com/view.js", "https://example.com/unit.tar#view.js", "github:owner/repo#ref=v1"])
+    await assert.rejects(units.resolve(source), /source|selector|Unsafe|credentials|Unsupported/)
 })
 
-test("failed ZIP writes leave only staging and can be retried", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-zip-retry-"))
-  const filesystem = filesystemRuntime(directory)
-  let fail = true
-  let writes = 0
+test("native snapshot replay maps resource phases and units, deduplicates unchanged rows, and unsubscribes", async () => {
+  const resource = "https://example.com/unit.zip"
+  const config = { resource: "gams.json", phase: "ready", completed: 1, total: 1, unit: null, cached: false }
+  let send
+  let stopped = 0
   const runtime = {
-    ...filesystem,
-    async download() { return zipBytes() },
-    async invoke(target, ...args) {
-      if (target === "fs/fs::write-file" && ++writes === 2 && fail) return { err: "disk full" }
-      return filesystem.invoke(target, ...args)
+    subscribeResolutionProgress(listener) {
+      send = listener
+      listener({ operationId: 1, status: "resolving", discovered: 1, completed: 1, resources: [config], error: null })
+      return () => { stopped++ }
     },
   }
-  try {
-    const source = "http://127.0.0.1:8765/unit.zip#views/view.js"
-    const units = createProjectUnits(runtime)
-    await assert.rejects(units.resolve(source), /disk full/)
-    assert.ok((await readdir(directory)).every(name => name.endsWith(".tmp")))
-    fail = false
-    const path = await units.resolve(source)
-    assert.match(await readFile(path, "utf8"), /zip fixture/)
-    assert.equal((await readdir(directory)).filter(name => !name.endsWith(".tmp")).length, 1)
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
+  const units = createProjectUnits(runtime)
+  const events = []
+  const unsubscribe = units.subscribeProgress(event => events.push(event))
+  assert.deepEqual(events, [{ source: "gams.json", phase: "ready", cached: false }])
+  const update = event => send({ operationId: 2, status: "resolving", discovered: 2, completed: 1, resources: [config, { resource, cached: false, ...event }], error: null })
+  update({ phase: "resolving", completed: 0, total: null, unit: null })
+  update({ phase: "checking-cache", completed: 0, total: null, unit: null })
+  update({ phase: "downloading", completed: 12, total: null, unit: "bytes" })
+  update({ phase: "extracting", completed: 2, total: 5, unit: "entries", entry: "views/view.js" })
+  update({ phase: "ready", completed: 1, total: 1, unit: null, cached: true })
+  update({ phase: "ready", completed: 1, total: 1, unit: null, cached: true })
+  assert.deepEqual(events.map(event => event.phase), ["ready", "checking", "checking", "downloading", "extracting", "ready"])
+  assert.deepEqual(events[3], { source: resource, phase: "downloading", downloaded: 12, total: null, cached: false })
+  assert.deepEqual(events[4], { source: resource, phase: "extracting", completed: 2, total: 5, entry: "views/view.js", cached: false })
+  assert.deepEqual(events[5], { source: resource, phase: "ready", cached: true })
+  assert.equal(events.filter(event => event.source === "gams.json").length, 1)
+  unsubscribe()
+  send({ resources: [{ ...config, phase: "checking-cache" }] })
+  assert.equal(events.length, 6)
+  assert.equal(stopped, 1)
+  assert.throws(() => units.subscribeProgress(null), /must be a function/)
 })
 
-test("invalid ZIP sources and archives fail without publishing an installation", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-zip-invalid-"))
-  let downloaded = zipBytes()
-  const runtime = { ...filesystemRuntime(directory), async download() { return downloaded } }
-  try {
-    const units = createProjectUnits(runtime)
-    for (const source of ["https://example.com/unit.zip", "https://example.com/unit.zip#../view.js", "https://example.com/unit.zip#%2Fview.js", "https://example.com/view.js#view.js"])
-      await assert.rejects(units.resolve(source), /selector|Unsafe|selectors/)
-    await assert.rejects(units.resolve("https://example.com/unit.zip#missing.js"), /ZIP entry not found/)
-    downloaded = new Uint8Array([1, 2, 3])
-    await assert.rejects(units.resolve("https://example.com/unit.zip#views/view.js"))
-    assert.deepEqual(await readdir(directory), [])
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
-})
-
-test("Unit observers report download, extraction, publication and offline cache reuse", async () => {
-  const { createProjectUnits } = await import(moduleUrl)
-  const directory = await mkdtemp(join(tmpdir(), "gams-unit-progress-"))
-  const source = "http://127.0.0.1:8765/unit.zip#views/view.js"
-  const bytes = zipBytes()
+test("legacy per-call callbacks receive only matching download-byte progress, not snapshots or other resources", async () => {
+  const source = "https://example.com/unit.zip#views%2Fview.js"
+  const resource = "https://example.com/unit.zip"
   const runtime = {
-    ...filesystemRuntime(directory),
-    async download(url, progress) {
-      progress({ downloaded: bytes.length, total: bytes.length })
-      return bytes
+    async resolveFile(selected, progress) {
+      assert.deepEqual(selected, { url: resource, entry: "views/view.js" })
+      const downloading = { resource: `${resource}#views/view.js`, phase: "downloading", completed: 12, total: 20, unit: "bytes", cached: false }
+      progress({ resources: [{ ...downloading, resource: "other.js" }] })
+      progress({ resources: [downloading] })
+      progress({ resources: [downloading] })
+      progress({ resources: [{ ...downloading, phase: "extracting", completed: 1, total: 2, unit: "entries" }] })
+      progress({ resources: [{ ...downloading, phase: "ready" }] })
+      return "/native/view.js"
     },
-    async addPlugins() {},
   }
-  try {
-    const units = createProjectUnits(runtime)
-    const events = []
-    const unsubscribe = units.subscribeProgress(event => events.push(event))
-    const byteEvents = []
-    await units.resolve(source, event => byteEvents.push(event))
-    assert.deepEqual(byteEvents, [{ downloaded: bytes.length, total: bytes.length }])
-    assert.ok(events.every(event => event.source === source))
-    assert.equal(events[0].phase, "checking")
-    assert.ok(events.some(event => event.phase === "downloading" && event.total === null))
-    const extraction = events.filter(event => event.phase === "extracting")
-    assert.equal(extraction[0].completed, 0)
-    assert.equal(extraction[0].entry, "views/view.js")
-    assert.equal(extraction.at(-1).completed, extraction.at(-1).total)
-    assert.equal(events.at(-2).phase, "saving")
-    assert.deepEqual(events.at(-1), { source, phase: "ready", cached: false })
-    unsubscribe()
-    const count = events.length
-    await units.bootstrapFilesystem("local/fs.wasm")
-    assert.equal(events.length, count)
+  const events = []
+  await createProjectUnits(runtime).resolve(source, event => events.push(event))
+  assert.deepEqual(events, [{ downloaded: 12, total: 20 }])
+})
 
-    runtime.download = async () => { throw new Error("offline") }
-    const reopened = createProjectUnits(runtime)
-    const cached = []
-    reopened.subscribeProgress(event => cached.push(event))
-    await reopened.resolve(source)
-    assert.deepEqual(cached.map(event => event.phase), ["checking", "ready"])
-    assert.equal(cached.at(-1).cached, true)
-    assert.throws(() => reopened.subscribeProgress(null), /must be a function/)
-  } finally {
-    await rm(directory, { recursive: true, force: true })
+test("filesystem bootstrap preserves native cached status and reports loaded only after addPlugins", async () => {
+  const source = "https://example.com/plugin.fs.wasm"
+  let snapshotListener
+  let loaded = false
+  const events = []
+  const runtime = {
+    subscribeResolutionProgress(listener) { snapshotListener = listener; return () => {} },
+    async resolveFile(selected, progress) {
+      const snapshot = { resources: [{ resource: selected, phase: "ready", completed: 1, total: 1, unit: null, cached: true }] }
+      snapshotListener(snapshot)
+      progress(snapshot)
+      return "/native/plugin.fs.wasm"
+    },
+    async addPlugins() { assert.equal(events.at(-1).phase, "loading"); loaded = true },
   }
+  const units = createProjectUnits(runtime)
+  units.subscribeProgress(event => events.push({ ...event, loaded }))
+  await units.bootstrapFilesystem(source)
+  assert.deepEqual(events.at(-1), { source, phase: "ready", cached: true, loaded: true })
 })

@@ -21,7 +21,7 @@ export function unitProgress(event) {
         }
         case "extracting":
             return {
-                text: `Extracting ${event.completed}/${event.total} · ${event.entry}`,
+                text: `Extracting ${event.completed}/${event.total}${event.entry ? ` · ${event.entry}` : ""}`,
                 value: event.total > 0 ? Math.min(1, event.completed / event.total) : null,
                 max: 1,
             }

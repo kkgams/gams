@@ -5,63 +5,57 @@ status: reference
 
 # Direct-file Project Unit downloads
 
-This implementation slice supports direct HTTPS files and loopback HTTP files
-for testing. ZIP selectors are now supported by the separate
-[first ZIP slice](#/zip-project-units), with a
-[Host startup progress screen](#/project-loading). Git sources remain deferred. No lockfile, build scripts, or automatic transitive dependency loading.
+The native Host resolves local and HTTPS resources for configuration and Project
+Units. HTTP remains allowed only on loopback for testing. ZIP resources use the
+same resolver; see [[zip-project-units|ZIP resources]]. Git sources remain
+unsupported. No lockfile, downloaded build scripts or automatic transitive Unit
+dependency loading is introduced.
 
 ## APIs and storage
 
-After `await runtime.ready`:
+After `await runtime.ready`, `runtime.config` already contains recursively
+resolved `$ref` and `$file` values. Resolution and cache preparation happen
+natively before Project Units load, without filesystem-plugin assistance.
+See [[host-runtime|Host runtime and configuration]] for expression syntax.
 
-- `runtime.download(url, onProgress)` returns a `Uint8Array`. Rust performs a
-  binary GET with TLS verification, HTTP status checks, a 64 MiB bound, a
-  120-second request timeout, and at most five redirects. Progress is
-  `{ downloaded, total }`, with `total: null` when unknown. No CORS bypass or
-  disabled WebView security is needed. HTTP is allowed only on loopback.
-- `runtime.loadFromBytes(bytes, path)` compiles and loads ordinary WASM component
-  bytes. The path is the component's identity/intended save location, not an
-  instruction to write a file. Its parent must exist under a filesystem preopen.
-  Persist the original bytes before requesting a path-based reload. Loading from
-  bytes does not deserialize a compiled native cache; the existing path loader
-  populates its compiled cache after persistence.
-- `createProjectUnits(runtime)` in `/core/project-units.js` provides
-  `resolve(source, onProgress)` and `bootstrapFilesystem(source, onProgress)`.
-  Direct-file URLs map to `<runtime.modulesDir>/<sha256-of-url>.<extension>`.
-  Writes go through the filesystem plugin to a temporary file, then rename to
-  publish the complete download. Concurrent requests in one loader share work.
-  Failed downloads can be retried. Interrupted writes may leave ignored `.tmp`
-  files; cleanup and cross-process install locking are deferred.
-- `require(source)` resolves/downloads a remote JS file, reads installed bytes
-  through the filesystem plugin, then uses the existing JS import mechanism.
-  JS relative-import/companion-asset resolution is not added by this slice.
+| API | Behavior |
+| --- | --- |
+| `runtime.resolveFile(source, onProgress)` | Resolves a local/HTTPS string or `{ url, entry }` descriptor to a local path through the native resolver. A ZIP entry may select a file or directory; omitting it selects the archive root. |
+| `runtime.download(url, onProgress)` | Returns a `Uint8Array` through native binary GET. Transport checks TLS and HTTP status, bounds downloads to 64 MiB and requests to 120 seconds, and allows at most five redirects. Progress is `{ downloaded, total }`, with unknown `total: null`. |
+| `runtime.loadFromBytes(bytes, path)` | Compiles ordinary WASM component bytes. The path identifies the component but does not write its source; persist source before path-based reload. Downloaded bytes are not deserialized as trusted compiled caches. |
+| `createProjectUnits(runtime)` | Adapts existing Unit URL strings to native resolution through `resolve(source, onProgress)` and `bootstrapFilesystem(source, onProgress)`. It no longer owns downloads, extraction or filesystem-backed cache writes. |
+| `require(source)` | Resolves the source natively, reads the local JS through the filesystem plugin, then uses the existing JS import mechanism. Relative JS imports and companion asset URL resolution are unchanged. |
 
-`GAMS_MODULES_DIR` selects shared storage; otherwise storage is Project-local.
-Cached files are reused without contacting the server. Changed content at an
-unchanged URL is not detected automatically. This is a URL-keyed installation
-cache, not a reproducible/content-authenticated package lock.
+One native URL-keyed cache serves configuration and Unit requests. ZIP entry
+selectors do not change the cache key. Local files remain in place. Remote
+resources are fully prepared and atomically published before use; concurrent
+requests share native resolution work. `GAMS_MODULES_DIR` selects shared storage;
+otherwise storage is Project-local. Completed cached resources are reused without
+contacting the server. Changed content at an unchanged URL is not detected
+automatically, and no refresh feature is introduced. This is not a
+content-authenticated package lock. Browser CORS bypasses or disabled WebView
+security are unnecessary.
 
 `app.js` selects the sole `plugins` source whose exact basename is
-`plugin.fs.wasm` (URL pathname, or local path). If absent, `FS_BOOTSTRAP_SOURCE`
-falls back to `https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
-Multiple matches are an error, including repeated entries. Query strings do not
-change URL basename matching. A ZIP selector naming `plugin.fs.wasm` is rejected
-because FS is needed for extraction. Invalid configuration and selected-source
-load/download failures never trigger fallback. The selected configured source
-resolves to the same path during subsequent plugin loading, not a second FS
-provider. This filename convention is intentional; export-based discovery is deferred.
-The helper also accepts local paths: for a remote source it first tries
-its cached path, then downloads and byte-loads FS on a miss, and persists FS
-through its own filesystem API. No filesystem-less Project mode is implemented.
-Only missing-path errors cause bootstrap download; other component load failures
-remain errors.
+`plugin.fs.wasm` (URL pathname or local path). If absent, `FS_BOOTSTRAP_SOURCE`
+falls back to
+`https://github.com/kkgams/plugin.fs/releases/download/v0.1.1/plugin.fs.wasm`.
+Multiple matches are errors, including repeated entries. Query strings do not
+change basename matching. The adapter still rejects ZIP filesystem bootstrap;
+this is a selection restriction, not a need for FS to perform extraction.
+Invalid configuration and selected-source load/download failures never trigger
+fallback. Native resolution prepares the selected file before FS loads; later
+plugin loading resolves the same source to the same path. Export-based discovery
+and a filesystem-less Project mode are not introduced.
 
-Configured WASM plugin strings are resolved before loading. View/service JS
-loads through `require` support direct-file URLs. Theme loading resolves `url`
-(the old `path` still works during this incremental migration). The six shell UI Services now require explicit `url` entries under
-`ui.services`: `ui-context`, `ui-keys`, `ui-layout`, `ui-toast`, `ui-popup`,
-`ui-tooltip`. They load through `require`, including ZIP sources. There is no
-silent fallback to the former local `ui-plugins` paths.
+Configured WASM plugin strings resolve before loading. View/service JS loads
+through `require` support direct-file and legacy ZIP URLs. Theme loading resolves
+`url` (legacy `path` still works). The six shell UI Services require explicit
+`url` entries under `ui.services`: `ui-context`, `ui-keys`, `ui-layout`, `ui-toast`,
+`ui-popup`, `ui-tooltip`. There is no silent fallback to local `ui-plugins` paths.
+
+See [[project-loading|Project startup progress]] for native resolution snapshots
+and the existing startup screen.
 
 ## Test a prebuilt filesystem Unit through a real static server
 

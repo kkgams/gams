@@ -10,7 +10,7 @@ pub struct DownloadProgress {
     pub total: Option<u64>,
 }
 
-fn validate_url(url: &reqwest::Url) -> Result<()> {
+pub(crate) fn validate_url(url: &reqwest::Url) -> Result<()> {
     anyhow::ensure!(
         url.username().is_empty() && url.password().is_none(),
         "download URLs must not contain credentials"

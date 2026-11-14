@@ -9,14 +9,15 @@ const viewSource = await readFile(new URL("../cmd/app/src/util/view-plugin.js", 
 let moduleId = 0
 const importSource = source => import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${moduleId++}`).toString("base64")}`)
 
-async function setup(fail = () => null, configFile = "gams.json") {
+async function setup(fail = () => null, configFile = "gams.json", prepareConfig = config => config) {
   const config = { plugins: [], ui: { layout: "initial" } }
   const files = new Map([[configFile, "original"]])
   const writes = []
   globalThis.__TAURI__ = {
-    core: { async invoke(command, args) {
+    core: { Channel: class { onmessage = () => {} }, async invoke(command, args) {
       if (command === "runtime_project") return { config, configFile, modulesDir: "/project/gams_modules" }
       if (command === "runtime_call_view_ready") return
+      if (command === "runtime_prepare_config") return prepareConfig(args.config)
       assert.equal(command, "runtime_invoke")
       writes.push(args)
       const error = fail(args)
@@ -307,4 +308,35 @@ test("Project Save publishes only the selected config filename", async () => {
   assert.equal(files.has("gams.json"), false)
   assert.match(writes[0].args[0], /^\.dev config\.json\..+\.tmp$/)
   assert.equal(writes[1].args[1], "dev config.json")
+})
+
+test("Save prepares the current post-hook config and serializes source references without changing runtime config", async () => {
+  const calls = []
+  const originalSource = { url: "https://example.com/config.json", entry: "ui" }
+  const { runtime, files } = await setup(() => null, "gams.json", config => {
+    calls.push(structuredClone(config))
+    return { ...config, ui: originalSource }
+  })
+  runtime.register({ id: "layout", methods: { projectSave() {
+    runtime.config.ui.layout = "changed by hook"
+  } } })
+  await runtime.projectSave()
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].ui.layout, "changed by hook")
+  assert.deepEqual(JSON.parse(files.get("gams.json")).ui, originalSource)
+  assert.equal(runtime.config.ui.layout, "changed by hook")
+})
+
+test("native config preparation failure stops publication and permits retry", async () => {
+  let fail = true
+  const { runtime, files, writes } = await setup(() => null, "gams.json", config => {
+    if (fail) throw new Error("cannot preserve source")
+    return config
+  })
+  await assert.rejects(runtime.projectSave(), /cannot preserve source/)
+  assert.equal(files.get("gams.json"), "original")
+  assert.equal(writes.length, 0)
+  fail = false
+  await runtime.projectSave()
+  assert.equal(writes.length, 2)
 })
