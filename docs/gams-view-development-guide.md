@@ -32,11 +32,11 @@ Core Views should be built only from the elements, slots, classes, and attribute
 Each view should contain exactly one main element.
 
 - `article` - main view render element.
-- `canvas` - main view render element when the view renders into canvas.
+- `svg` / `canvas` - main view render element when the view renders into an SVG or canvas viewport. SVG viewports may use native SVG drawing elements and presentation attributes for domain artwork and editor overlays; surrounding controls remain Host-themed, without View-local CSS.
 - `table` - main view render element when the view is primarily tabular.
 - `form` - main view render element when the view is primarily an editor, inspector, wizard, or other form-driven workflow.
 
-- `form>canvas+table` - stacks the table above a viewport-sized canvas.
+- `form>svg+table` / `form>canvas+table` - stacks the table above a viewport-sized SVG or canvas.
 
 ### Optional elements
 
@@ -67,7 +67,7 @@ Optional elements should appear at most once per view.
 ### Tooltip flows
 
 - tooltip, context menu, and autocomplete opening/closing should go through `runtime.call('ui.tooltip', ...)` instead of creating floating DOM directly in a view.
-- use `runtime.call('ui.tooltip.tip', ...)` for hover/read-only tips. Canvas views should pass screen-space AABB `track` regions so visibility is geometry-based instead of DOM-only.
+- use `runtime.call('ui.tooltip.tip', ...)` for hover/read-only tips. SVG/canvas views should pass screen-space AABB `track` regions so visibility is geometry-based instead of DOM-only.
 - use `runtime.call('ui.tooltip.contextMenu', ...)` for context menus tied to a clicked point or record.
 - use `runtime.call('ui.tooltip.autocomplete', ...)` for searchable/selectable completion menus next to pointer, caret, or input positions.
 - views should pass action/item data to `ui.tooltip` and then apply the resolved selection result; do not put context menu rendering, filtering, or keyboard navigation inside individual views.
