@@ -95,7 +95,7 @@ def build_files():
         ('files-host.ts', 'files-host.js', ['--external:/core/*', '--external:/units/*']),
         ('files-transport.ts', 'files-transport.js', []),
         ('browser-transport.ts', 'browser-transport.js', ['--external:/core/*']),
-        ('browser-launch.ts', 'browser-launch.js', ['--external:/app.js', '--external:/browser-transport.js']),
+        ('browser-launch.ts', 'browser-launch.js', ['--external:/app.js', '--external:/browser-transport.js', '--external:/core/*']),
         ('browser-menu.ts', 'core/menu/native.js', []),
     ):
         subprocess.run([

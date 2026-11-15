@@ -53,7 +53,7 @@ The workflow reads these explicitly; merely defining a GitHub variable does not 
 
 Add the **exact stable app origin** (`https://<project-name>.pages.dev`) to the relay's `CORS_PROXY_ALLOWED_ORIGINS`, preserving any other origins you use. Keep that configuration in the relay's deployment configuration so a later Worker redeploy retains it. Only the origin is needed, not a path. The relay's GitHub download host allowlist does not change.
 
-Open the production URL and verify Open Project, file upload, Save, checkpointed close/reopen and an actual remote Unit download. HTTP assets use `Cache-Control: no-store`; OPFS Project/resource/Jco caches are separate and still persist. Missing static paths return 404 rather than a fabricated app response. No cross-origin isolation headers are required for this execution model.
+Open the production URL and verify automatic Project startup, file upload, Save, checkpointed close/reopen and an actual remote Unit download. There is no separate welcome page or Open step; session controls stay collapsed unless startup fails. HTTP assets use `Cache-Control: no-store`; OPFS Project/resource/Jco caches are separate and still persist. Missing static paths return 404 rather than a fabricated app response. No cross-origin isolation headers are required for this execution model.
 
 ## Add a custom hostname
 
