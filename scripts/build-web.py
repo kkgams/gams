@@ -5,10 +5,8 @@ Run the browser-jco experiment build first. No downloads, compilers or sibling
 checkouts are used here; only build.nosync/web is replaced.
 """
 
-import hashlib
 import importlib.util
-import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import shutil
 from types import SimpleNamespace
 
@@ -64,28 +62,13 @@ def tree_files(directory):
             yield path
 
 
-def guest_path(value):
-    """Project resources must be local slash-separated paths, not URLs."""
-    if not isinstance(value, str):
-        raise ValueError(f"Expected same-origin Project asset path: {value!r}")
-    path = PurePosixPath(value)
-    if (not path.parts or path.is_absolute() or '..' in path.parts
-            or any(character in value for character in '\\:?#')
-            or path.as_posix() != value):
-        raise ValueError(f"Unsafe Project asset path: {value!r}")
-    return value
-
-
 def asset_plan(root):
     host = root / "cmd/app/src"
     site = root / "build.nosync/browser-jco/site"
-    experiment = root / "experiments/browser-jco"
     plan = {}
 
-    def add(source, destination, digest=None):
+    def add(source, destination):
         regular_file(source)
-        if digest is not None and hashlib.sha256(source.read_bytes()).hexdigest() != digest:
-            raise ValueError(f"Release asset SHA-256 mismatch: {source}")
         plan[destination] = source
 
     for name in HOST_REQUIRED:
@@ -116,35 +99,8 @@ def asset_plan(root):
             relative = f"vendor/licenses/{dependency}/{name}"
             add(site / relative, relative)
 
-    config_path = site / "browser-default/gams.json"
-    add(config_path, "browser-default/gams.json")
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    plugins = json.loads(regular_file(experiment / "plugins.json").read_text())
-    units = json.loads(regular_file(experiment / "view-assets.json").read_text())
-    plugin_pins = {}
-    for plugin in plugins:
-        repo = plugin['repository'].split('/')[-1]
-        base = f"plugins/{repo}/{plugin['tag']}"
-        plugin_pins[f"{base}/{repo}.wasm"] = (base, plugin['files'])
-    for plugin in config['plugins']:
-        path = guest_path(plugin['$file'])
-        base, assets = plugin_pins[path]
-        for asset in assets:
-            relative = f"browser-default/{guest_path(base + '/' + asset['name'])}"
-            add(site / relative, relative, asset['sha256'])
-
-    archive_pins = {
-        f"unit-sources/{unit['repository'].split('/')[-1]}/{unit['tag']}/{unit['archive']}": unit['sha256']
-        for unit in units
-    }
-    for group in ('services', 'views'):
-        for unit in config['ui'][group].values():
-            resource = unit['url']['$file']
-            path = guest_path(resource['url'])
-            guest_path(resource['entry'])
-            relative = f"browser-default/{path}"
-            # Copy the entire original ZIP, including its original licenses.
-            add(site / relative, relative, archive_pins[path])
+    # Project Units are installed from their configured releases by the browser.
+    add(site / "browser-default/gams.json", "browser-default/gams.json")
     return plan
 
 

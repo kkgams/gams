@@ -19,9 +19,9 @@ nix develop .#web --command make serve-web
 # http://127.0.0.1:8093/
 ```
 
-The pinned web shell supplies Python, Node 24, Make, esbuild, wasm-tools and Wrangler. It does not require Rust or the desktop GTK/WebKit SDK. `make web` assembles `build.nosync/web/`, with the configured Host at `index.html`, canonical Host assets, Jco, the default Files Project and original dependency licenses. Diagnostic experiment pages and toy components are not published. `make clean` removes this output and disposable `build.nosync/web-tools/` deployment logs/caches, not browser data.
+The pinned web shell supplies Python, Node 24, Make, esbuild, wasm-tools and Wrangler. It does not require Rust or the desktop GTK/WebKit SDK. `make web` assembles `build.nosync/web/`, with the configured Host at `index.html`, canonical Host assets, Jco, the default Files Project configuration and original Host/compiler dependency licenses. The default Project's pinned plugins, Views and UI Services download directly into browser `gams_modules/`, retaining the releases' companion files and licenses; they are not mirrored into `unit-sources/` or `plugins/` folders in the Project. Diagnostic experiment pages and toy components are not published. `make clean` removes this output and disposable `build.nosync/web-tools/` deployment logs/caches, not browser data.
 
-Set `GAMS_CORS_PROXY` in the build environment to use a public download relay. Unset/empty leaves direct downloads. Its value is emitted into public browser settings; no endpoint is hardcoded in GAMS source. Rebuild and reload after changing it.
+Set `GAMS_CORS_PROXY` in the build environment to use a public download relay. Unset/empty leaves direct downloads; fresh default Project startup then fails if GitHub denies browser CORS. Previously installed Units remain usable from OPFS caches. Its value is emitted into public browser settings; no endpoint is hardcoded in GAMS source. Rebuild and reload after changing it.
 
 ## Set up Cloudflare Pages
 

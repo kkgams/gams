@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { BrowserProject } from './browser-project.ts';
 import { parseBrowserOptions } from './browser-options.ts';
 
@@ -407,4 +408,58 @@ test('relay JSON resolution, relative files, cache markers, progress and Save re
   const reopened = new BrowserProject(store, {...options, corsProxy:'https://different-relay.test/download'}, {download:offline});
   assert.equal((await reopened.load()).config.data.nested.name, 'before');
   assert.ok(reopened.progress.resources.every(event => event.cached)); assert.equal(calls.length, 3);
+});
+
+test('default Project installs published Units only into gams_modules and reopens offline', async () => {
+  const originalBytes = await readFile(new URL('./browser-default/gams.json', import.meta.url));
+  const original = JSON.parse(originalBytes);
+  const entries = new Map();
+  const plugins = JSON.parse(await readFile(new URL('./plugins.json', import.meta.url)));
+  const units = JSON.parse(await readFile(new URL('./view-assets.json', import.meta.url)));
+  const pinned = new Set([
+    ...plugins.flatMap(pin => pin.files.filter(file => file.name.endsWith('.wasm'))
+      .map(file => `https://github.com/${pin.repository}/releases/download/${pin.tag}/${file.name}`)),
+    ...units.map(pin => `https://github.com/${pin.repository}/releases/download/${pin.tag}/${pin.archive}`),
+  ]);
+  const resources = original.plugins.map(plugin => plugin.$file);
+  for (const group of ['services','views']) for (const unit of Object.values(original.ui[group])) {
+    const {url,entry} = unit.url.$file;
+    resources.push(url);
+    if (!entries.has(url)) entries.set(url,new Set(['LICENSE']));
+    entries.get(url).add(entry);
+  }
+  for (const url of resources) assert.ok(pinned.has(url), `default Unit must use an exact published pin: ${url}`);
+  const calls = [];
+  const localOptions = {...options,modulesDir:'/project/gams_modules',source:'https://host.test/browser-default/'};
+  const store = new FakeStore();
+  const project = new BrowserProject(store,localOptions,{
+    download:async url => {
+      calls.push(url);
+      if (url === 'https://host.test/browser-default/gams.dev.json') return originalBytes;
+      assert.ok(pinned.has(url),`unexpected bootstrap download: ${url}`);
+      return bytes(url);
+    },
+    unzip:async archive => [...entries.get(text(archive))].map(name=>({name,bytes:bytes(name)})),
+  });
+  const {config} = await project.load();
+  assert.deepEqual((await store.list('/project')).sort(),['gams.dev.json','gams_modules']);
+  for (const path of config.plugins) assert.match(path,/^gams_modules\//);
+  for (const group of ['services','views']) for (const unit of Object.values(config.ui[group])) assert.match(unit.url,/^gams_modules\//);
+  assert.equal(calls.length,1+new Set(resources).size);
+  assert.deepEqual(await project.prepareConfig(config),original);
+  assert.equal(text(await store.read('/project/gams.dev.json')),text(originalBytes));
+  const reopened = await new BrowserProject(store,localOptions,{download:offline,unzip:async()=>assert.fail('cached ZIP should not be re-extracted')}).load();
+  assert.deepEqual(reopened.config,config);
+  assert.deepEqual((await store.list('/project')).sort(),['gams.dev.json','gams_modules']);
+});
+
+test('new default does not replace existing local Unit references or remove their folders', async () => {
+  const original = {old:{$file:'unit-sources/custom.bin'},plugin:{$file:'plugins/custom.wasm'}};
+  const store = await new FakeStore().seed(original,{'unit-sources/custom.bin':'user archive','plugins/custom.wasm':'user plugin'});
+  await store.mkdir('/project/unit-sources');await store.mkdir('/project/plugins');
+  const loaded = await new BrowserProject(store,{...options,source:'https://host.test/browser-default/'},{download:offline}).load();
+  assert.deepEqual(loaded.config,{old:'unit-sources/custom.bin',plugin:'plugins/custom.wasm'});
+  assert.deepEqual(JSON.parse(text(await store.read('/project/gams.dev.json'))),original);
+  assert.equal(text(await store.read('/project/unit-sources/custom.bin')),'user archive');
+  assert.equal(text(await store.read('/project/plugins/custom.wasm')),'user plugin');
 });

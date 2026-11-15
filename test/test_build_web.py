@@ -1,6 +1,5 @@
 """Native filesystem tests for the production static browser Host assembler."""
 
-import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -46,28 +45,19 @@ class BuildWebTests(unittest.TestCase):
         for dependency in ('jco', 'jco-transpile', 'preview2-shim'):
             for name in ('LICENSE', 'upstream-package.json'):
                 self.site_put(f'vendor/licenses/{dependency}/{name}', name.encode())
-        self.plugins = []
-        config_plugins = []
-        for name in ('plugin.fs', 'plugin.layout'):
-            base = f'plugins/{name}/v1.0.0'
-            assets = []
-            for asset in (f'{name}.wasm', 'LICENSE', 'NOTICE'):
-                payload = (name + asset).encode()
-                self.site_put(f'browser-default/{base}/{asset}', payload)
-                assets.append({'name': asset, 'sha256': hashlib.sha256(payload).hexdigest()})
-            self.plugins.append({'repository': f'kkgams/{name}', 'tag': 'v1.0.0', 'files': assets})
-            config_plugins.append({'$file': f'{base}/{name}.wasm'})
-        self.archive = 'unit-sources/view.files/v1.0.0/view.files.zip'
-        # The assembler must preserve arbitrary ZIP bytes, never reconstruct it.
-        self.zip_bytes = b'PK\x03\x04original release ZIP including license entries\x00'
-        self.site_put(f'browser-default/{self.archive}', self.zip_bytes)
-        units = [{'repository': 'kkgams/view.files', 'tag': 'v1.0.0',
-                  'archive': 'view.files.zip', 'sha256': hashlib.sha256(self.zip_bytes).hexdigest()}]
-        self.config = {'plugins': config_plugins, 'ui': {'services': {}, 'views': {
-            'view-files': {'url': {'$file': {'url': self.archive, 'entry': 'views/files.js'}}}
-        }}}
-        self.put('experiments/browser-jco/plugins.json', json.dumps(self.plugins).encode())
-        self.put('experiments/browser-jco/view-assets.json', json.dumps(units).encode())
+        release = 'https://github.com/kkgams'
+        self.config = {
+            'plugins': [
+                {'$file': f'{release}/{name}/releases/download/v1.0.0/{name}.wasm'}
+                for name in ('plugin.fs', 'plugin.layout')
+            ],
+            'ui': {'services': {}, 'views': {
+                'view-files': {'url': {'$file': {
+                    'url': f'{release}/view.files/releases/download/v1.0.0/view.files.zip',
+                    'entry': 'views/files.js',
+                }}}
+            }},
+        }
         self.write_config()
 
     def put(self, name, data):
@@ -82,7 +72,7 @@ class BuildWebTests(unittest.TestCase):
     def write_config(self):
         self.site_put('browser-default/gams.json', json.dumps(self.config).encode())
 
-    def test_assembles_canonical_host_generated_overrides_and_original_project_bytes(self):
+    def test_assembles_canonical_host_generated_overrides_and_notices(self):
         self.site_put('app.js', b'stale experiment copy')
         self.put('cmd/app/src/core/runtime/native.js', b'native transport must be replaced')
         self.assertEqual(web.assemble(self.root), self.output)
@@ -92,7 +82,6 @@ class BuildWebTests(unittest.TestCase):
         for name, source in plan.items():
             self.assertEqual((self.output / name).read_bytes(), source.read_bytes(), name)
         self.assertEqual((self.output / 'app.js').read_bytes(), b'canonical app')
-        self.assertEqual((self.output / f'browser-default/{self.archive}').read_bytes(), self.zip_bytes)
         self.assertIn(b'generated core/runtime/native.js', (self.output / 'core/runtime/native.js').read_bytes())
         self.assertIn('Cache-Control: no-store', (self.output / '_headers').read_text())
         self.assertIn('X-Content-Type-Options: nosniff', (self.output / '_headers').read_text())
@@ -138,9 +127,8 @@ class BuildWebTests(unittest.TestCase):
             web.assemble(self.root)
         self.assertEqual(old.read_bytes(), b'previous')
 
-    def test_missing_canonical_asset_or_release_license_is_rejected(self):
+    def test_missing_canonical_asset_or_host_dependency_license_is_rejected(self):
         for path in (self.host / 'css/reset.css',
-                     self.site / 'browser-default/plugins/plugin.fs/v1.0.0/LICENSE',
                      self.site / 'vendor/licenses/jco/LICENSE'):
             with self.subTest(path=path):
                 payload = path.read_bytes()
@@ -151,12 +139,20 @@ class BuildWebTests(unittest.TestCase):
                 finally:
                     path.write_bytes(payload)
 
-    def test_modified_pinned_release_is_rejected_before_clean(self):
-        old = self.put('build.nosync/web/old.txt', b'previous')
-        self.site_put(f'browser-default/{self.archive}', b'modified archive')
-        with self.assertRaisesRegex(ValueError, 'SHA-256 mismatch'):
-            web.assemble(self.root)
-        self.assertTrue(old.exists())
+    def test_stale_project_payloads_and_pin_manifests_are_not_inputs_or_outputs(self):
+        for name in ('plugins/plugin.fs/v1.0.0/plugin.fs.wasm',
+                     'plugins/plugin.fs/v1.0.0/LICENSE',
+                     'unit-sources/view.files/v1.0.0/view.files.zip'):
+            self.site_put(f'browser-default/{name}', b'stale unverified experiment payload')
+            self.put(f'build.nosync/web/browser-default/{name}', b'old publication payload')
+        for name in ('plugins.json', 'view-assets.json'):
+            self.put(f'experiments/browser-jco/{name}', b'not valid JSON')
+        web.assemble(self.root)
+        self.assertEqual(
+            {path.relative_to(self.output / 'browser-default').as_posix()
+             for path in (self.output / 'browser-default').rglob('*')},
+            {'gams.json'},
+        )
 
     def test_oversized_asset_is_rejected(self):
         path = self.site / 'vendor/browser-worker.js'
@@ -212,14 +208,12 @@ class BuildWebTests(unittest.TestCase):
             web.assemble(self.root)
         self.assertEqual(tracked.read_bytes(), b'authored')
 
-    def test_project_paths_cannot_escape_or_request_remote_assets(self):
-        for path in ('../secret.zip', '/absolute.zip', 'https://example.test/unit.zip',
-                     'unit.zip?token=secret', 'units\\file.zip', './unit.zip'):
-            with self.subTest(path=path):
-                self.config['ui']['views']['view-files']['url']['$file']['url'] = path
-                self.write_config()
-                with self.assertRaisesRegex(ValueError, 'Unsafe Project'):
-                    web.assemble(self.root)
+    def test_remote_config_is_copied_byte_identically_without_rewriting_resources(self):
+        # Formatting and source expressions belong to the Project, not assembly.
+        payload = (json.dumps(self.config, indent=4, ensure_ascii=False) + '\n').encode()
+        self.site_put('browser-default/gams.json', payload)
+        web.assemble(self.root)
+        self.assertEqual((self.output / 'browser-default/gams.json').read_bytes(), payload)
 
 
 if __name__ == '__main__':
