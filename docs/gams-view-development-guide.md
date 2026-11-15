@@ -205,7 +205,7 @@ APIs to select another font.
 
 - `colgroup` / `col` - column definitions, before the table's row groups. Use one `col` per logical column; a static row-number column may be included without selection state.
 - `col[aria-selected="false"]` / `col[aria-selected="true"]` - GAMS column-selection state. At most one column is selected per table. The attribute is a GAMS styling/state hook on `col`, not a browser accessibility claim.
-- `th[scope="col"][role="button"][aria-selected][tabindex]` - focusable column selector. Give it an accessible name describing the action and column. Mirror the corresponding `col` selection state on the header.
+- `th[scope="col"][role="button"][tabindex]` with `aria-selected` or `aria-pressed` - focusable column selector. Give it an accessible name describing the action and column. Mirror the corresponding `col` selection state using `aria-selected` for a highlighted header or `aria-pressed` for a sunken-button header. The `col` itself always uses `aria-selected`; choose one state attribute per header.
 - `th[role="button"][aria-disabled="true"]` - unavailable selector; do not activate it or include it in keyboard navigation.
 
 Click, Enter or Space selects the column. Left/Right select the previous/next enabled column without wrapping; Home/End select the first/last enabled column. Use roving focus: the selected enabled header has `tabindex="0"`, the others `-1`. Preserve header focus when updating selection or related View content. Selecting a column must not reorder data or imply sorting; do not use `aria-sort` for selection.
