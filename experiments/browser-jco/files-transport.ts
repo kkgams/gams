@@ -115,7 +115,7 @@ class FilesSession {
     }
     this.closed = true;
     this.worker.terminate();
-    this.report('Guest stopped; OPFS disposed/checkpointed; writer lock released.');
+    this.report('Guest stopped; OPFS disposed/checkpointed.');
   }
   forceStop() {
     this.closed = true;

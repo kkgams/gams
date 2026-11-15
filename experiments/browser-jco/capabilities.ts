@@ -16,29 +16,6 @@ export interface CapabilitySession {
   dispose(): Promise<void>;
 }
 const OPFS_DIRECTORY = 'gams-browser-jco-experiment-v1';
-const OPFS_LOCK = 'gams-browser-jco-experiment-v1:writer';
-
-// Hold a real, exclusive root lock for the whole snapshot's lifetime. The
-// upstream adapter's optional per-file locks are only best-effort coordination.
-async function acquireWriter(): Promise<() => Promise<void>> {
-  if (!navigator.locks) throw new Error('OPFS mode requires the Web Locks API.');
-  let release: () => void;
-  const released = new Promise<void>(resolve => { release = resolve; });
-  let held: Promise<void>;
-  await new Promise<void>((resolve, reject) => {
-    held = navigator.locks.request(OPFS_LOCK, { mode: 'exclusive', ifAvailable: true }, async lock => {
-      if (!lock) {
-        reject(new Error('OPFS experiment is already open in another worker/tab. Close it before retrying.'));
-        return;
-      }
-      resolve();
-      await released;
-    });
-    void held.catch(reject);
-  });
-  return async () => { release(); await held; };
-}
-
 // The shim schedules automatic flushes with `void this.flush()`. Observe their
 // errors to avoid unhandled rejections, but retain them for the next checkpoint:
 // no operation may report persistence success after an unnoticed write failure.
@@ -76,25 +53,18 @@ export async function createCapabilitySession(grants: CapabilityGrants, log: (va
     dispose = async () => { await filesystem.dispose(); };
   } else {
     if (typeof navigator.storage.getDirectory !== 'function') throw new Error('OPFS is not available in this browser/context.');
-    const release = await acquireWriter();
-    try {
-      const root = await navigator.storage.getDirectory();
-      const directory = await root.getDirectoryHandle(OPFS_DIRECTORY, { create: true });
-      const capability = await loadOpfsCapability(directory);
-      const adapter = new CheckedOpfsAdapter();
-      filesystem = createFilesystem({ adapter, preopens: { '/project': capability } });
-      flush = () => adapter.checkpoint();
-      dispose = async () => {
-        // On failure keep the session/lock alive. Only an explicit force stop
-        // may discard it; ordinary reset must not claim the data was saved.
-        await adapter.checkpoint();
-        await filesystem.dispose();
-        await release();
-      };
-    } catch (error) {
-      await release();
-      throw error;
-    }
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle(OPFS_DIRECTORY, { create: true });
+    const capability = await loadOpfsCapability(directory);
+    const adapter = new CheckedOpfsAdapter();
+    filesystem = createFilesystem({ adapter, preopens: { '/project': capability } });
+    flush = () => adapter.checkpoint();
+    dispose = async () => {
+      // On failure keep the session alive. Only an explicit force stop
+      // may discard it; ordinary reset must not claim the data was saved.
+      await adapter.checkpoint();
+      await filesystem.dispose();
+    };
   }
   // Jco 1.42 emits unversioned keys; the binary uses 0.2.6. Its type-only
   // wall-clock import is erased, so no clock or other WASI capability is granted.

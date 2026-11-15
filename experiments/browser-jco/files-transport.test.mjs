@@ -138,12 +138,12 @@ test('close waits for checkpointed shutdown acknowledgement before terminating a
   assert.equal(h.worker().terminated, false);
   assert.equal(h.api.hasSession(), true);
   await assert.rejects(h.api.invokeCommand('runtime_invoke', { target: 'fs/fs::list', args: ['.'] }), /closing or blocked/);
-  assert.equal(h.reports.some(message => message.includes('writer lock released')), false);
+  assert.equal(h.reports.some(message => message.includes('OPFS disposed/checkpointed')), false);
   h.worker().reply();
   await closing;
   assert.equal(h.worker().terminated, true);
   assert.equal(h.api.hasSession(), false);
-  assert.equal(h.reports.at(-1), 'Guest stopped; OPFS disposed/checkpointed; writer lock released.');
+  assert.equal(h.reports.at(-1), 'Guest stopped; OPFS disposed/checkpointed.');
   await assert.rejects(h.api.closeSession(), /No filesystem session/);
 });
 
@@ -155,7 +155,7 @@ test('failed shutdown retains the session/worker, refuses replacement and permit
   await assert.rejects(closing, /Persistence failure/);
   assert.equal(h.api.hasSession(), true);
   assert.equal(h.worker().terminated, false);
-  assert.equal(h.reports.some(message => message.includes('writer lock released')), false);
+  assert.equal(h.reports.some(message => message.includes('OPFS disposed/checkpointed')), false);
   await assert.rejects(h.api.openSession(() => {}), /Close the existing/);
   const retry = h.api.closeSession();
   assert.equal(h.worker().messages.at(-1).operation, 'shutdown');

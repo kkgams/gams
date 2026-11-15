@@ -4,7 +4,8 @@ import { readFile } from "node:fs/promises"
 
 const runtimeSource = await readFile(new URL("../cmd/app/src/core/runtime.js", import.meta.url), "utf8")
 const nativeSource = await readFile(new URL("../cmd/app/src/core/runtime/native.js", import.meta.url), "utf8")
-const menuSource = await readFile(new URL("../cmd/app/src/core/menu.js", import.meta.url), "utf8")
+const menuSource = (await readFile(new URL("../cmd/app/src/core/menu.js", import.meta.url), "utf8"))
+  .replace('from "./menu/native.js"', `from ${JSON.stringify(new URL("../cmd/app/src/core/menu/native.js", import.meta.url).href)}`)
 const viewSource = await readFile(new URL("../cmd/app/src/util/view-plugin.js", import.meta.url), "utf8")
 let moduleId = 0
 const importSource = source => import(`data:text/javascript;base64,${Buffer.from(source + `\n// ${moduleId++}`).toString("base64")}`)

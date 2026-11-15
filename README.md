@@ -87,7 +87,10 @@ removes only its known generated schema files, preserving unrelated files. `clea
 files and downloaded Project Units in `gams_modules/`. Those Units may include user-managed local content.
 
 The isolated [browser Component Model experiment](experiments/browser-jco/README.md)
-transpiles and executes uploaded components using Jco entirely in a browser worker.
+transpiles and executes components using Jco entirely in a browser worker. Its
+[configured browser Host](experiments/browser-jco/BROWSER.md) serves the canonical
+frontend and loads `gams.json` Projects using URL startup settings and OPFS;
+see its current compatibility limits before selecting a Project.
 
 ## CI
 

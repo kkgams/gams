@@ -77,34 +77,35 @@ def build_files():
         extract_unit(data, SITE / 'units' / repo)
         print(f"Verified {repo} {unit['tag']}: {unit['sha256']}")
 
-    host = ROOT / 'cmd/app/src'
-    paths = [
-        'core/runtime.js', 'util/view-plugin.js', 'util/view-source-state.js',
-        'util/files-create-path.js', 'util/add-style.js', 'css/reset.css', 'css/base.css',
-        'fonts/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].woff2',
-        'fonts/licenses/material-symbols.Apache-2.0.txt',
-    ]
-    for path in paths:
-        destination = SITE / path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(host / path, destination)
     for name in ('LICENSE', 'NOTICE'):
         shutil.copy2(ROOT / name, SITE / name)
     (SITE / 'core/runtime').mkdir(parents=True, exist_ok=True)
     for source, output, extra in (
         ('files-host.ts', 'files-host.js', ['--external:/core/*', '--external:/units/*']),
-        ('files-transport.ts', 'core/runtime/native.js', []),
+        ('files-transport.ts', 'files-transport.js', []),
+        ('browser-transport.ts', 'browser-transport.js', ['--external:/core/*']),
+        ('browser-launch.ts', 'browser-launch.js', ['--external:/app.js', '--external:/browser-transport.js']),
+        ('browser-menu.ts', 'core/menu/native.js', []),
     ):
         subprocess.run([
             'esbuild', str(SOURCE / source), '--bundle', '--format=esm',
             '--platform=browser', '--target=es2022', f'--outfile={SITE / output}', *extra,
         ], check=True)
+    shutil.copy2(SOURCE / 'browser-native.js', SITE / 'core/runtime/native.js')
     shutil.copy2(SOURCE / 'files.html', SITE / 'files.html')
     shutil.copy2(SOURCE / 'view-assets.json', SITE / 'view-assets.json')
 
 
 def build():
     SITE.mkdir(parents=True, exist_ok=True)
+    # Keep every shared Host module and asset canonical. Only the platform
+    # transport/menu and the experiment landing page are replaced below.
+    host = ROOT / 'cmd/app/src'
+    shutil.copytree(host, SITE, dirs_exist_ok=True, ignore=shutil.ignore_patterns('.DS_Store'))
+    browser_html = (host / 'index.html').read_text().replace(
+        'src="./app.js"', 'src="/browser-launch.js"')
+    (SITE / 'browser.html').write_text(browser_html)
+    shutil.copy2(ROOT / 'promo/favicon.svg', SITE / 'favicon.svg')
     deps = {}
     for dep in json.loads((SOURCE / "dependencies.json").read_text()):
         name = dep["name"].split("/")[-1]
@@ -131,11 +132,13 @@ def build():
         f"--alias:@bytecodealliance/preview2-shim/filesystem={shim}/dist/browser/filesystem.js",
         f"--alias:@bytecodealliance/preview2-shim={shim}/dist/browser/index.js",
     ]
-    subprocess.run([
-        "esbuild", str(SOURCE / "transpiler-worker.ts"), "--bundle", "--format=esm",
-        "--platform=browser", "--target=es2022", "--external:node:*",
-        f"--outfile={vendor}/transpiler-worker.js", *aliases,
-    ], check=True)
+    for worker in ('transpiler-worker', 'browser-worker'):
+        subprocess.run([
+            "esbuild", str(SOURCE / f"{worker}.ts"), "--bundle", "--format=esm",
+            "--platform=browser", "--target=es2022", "--external:node:*",
+            "--external:/util/*",
+            f"--outfile={vendor}/{worker}.js", *aliases,
+        ], check=True)
     subprocess.run([
         "esbuild", str(SOURCE / "ui.ts"), "--bundle", "--format=esm",
         "--platform=browser", "--target=es2022", f"--outfile={SITE}/ui.js",

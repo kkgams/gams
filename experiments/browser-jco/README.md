@@ -9,8 +9,11 @@ From the GAMS repository root:
 ```sh
 nix develop --command make -C experiments/browser-jco serve
 # Component diagnostics: http://127.0.0.1:8093
-# Real Files View: http://127.0.0.1:8093/files.html (override with PORT=8094)
+# Configured browser Host: http://127.0.0.1:8093/browser.html
+# Fixed Files View: http://127.0.0.1:8093/files.html (override with PORT=8094)
 ```
+
+The [configured browser Host](BROWSER.md) serves the complete canonical frontend and opens an explicitly selected `gams.json` Project, with URL startup settings, browser-side Unit installation and persistent Jco caches. The fixed Files/component pages remain available separately.
 
 Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The first build downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/browser-jco/dependencies/`; it never runs package scripts or installs a dependency tree. `dependencies.json` records the exact tested browser subset, not the full CLI dependency closure. The build also downloads unchanged released plugins and their original license assets from pinned GitHub tags in `plugins.json`, verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). The [real Files View shell](FILES.md) additionally pins released UI Units/theme in `view-assets.json`, retaining their original license assets and using canonical Host Runtime/helpers from this checkout. No sibling repository checkout is needed.
 
@@ -79,11 +82,11 @@ OPFS uses the same unchanged released `plugin.fs` and WASI imports. Only the bac
 - **A11 — Rename:** Click **Rename fixture**, reopen in a new worker/page, and verify the renamed layout and contents.
 - **A12 — Delete:** Click **Delete fixture**, reopen, then **Verify deletion**. Deletion validates known fixture names/content before removing only its files/directory. It does not clear the whole backing directory.
 
-Every successful worker operation awaits a checkpoint before replying; **Flush filesystem** also explicitly requests one. Normal reinstantiate, retranspile, load and restart stop the guest, await storage disposal and release the writer lock first. The worker serializes requests so async checkpoints cannot overlap lifecycle changes. Adapter automatic-flush failures are observed and retained: a later success must not conceal an earlier unreported persistence failure. On such a failure, normal close fails without claiming success; inspect diagnostics before explicitly forcing a stop. Do not close/reload during an operation. Browser unload cannot await a shutdown protocol.
+Every successful worker operation awaits a checkpoint before replying; **Flush filesystem** also explicitly requests one. Normal reinstantiate, retranspile, load and restart stop the guest, await storage disposal first. The worker serializes requests so async checkpoints cannot overlap lifecycle changes. Adapter automatic-flush failures are observed and retained: a later success must not conceal an earlier unreported persistence failure. On such a failure, normal close fails without claiming success; inspect diagnostics before explicitly forcing a stop. Do not close/reload during an operation. Browser unload cannot await a shutdown protocol.
 
 The shim reserves `.__wasi_symlinks__.json` for metadata and would otherwise hide/delete an ordinary guest file with that name despite a successful flush. An OPFS-only descriptor guard rejects that path segment with WIT `not-permitted` before any mutation, including child paths and rename/link destinations. It binds descriptor methods to their original receivers and unwraps cross-descriptor arguments, preserving resource/private-field behavior. The plugin binary and shim source are unchanged.
 
-A real exclusive Web Lock is held for the entire OPFS session, not the upstream adapter's optional best-effort file locking. A second cooperating worker/tab is rejected while the first is open. Web Locks and OPFS must be available; memory mode remains independent. No COOP/COEP, SharedArrayBuffer, JSPI or extra I/O worker is required by this mirror-based mode.
+Only one instance is supported. No Host writer lock or lock file is used; concurrent/external writes can be lost when a stale whole-tree mirror checkpoints. Do not open multiple instances against this store. OPFS must be available; memory mode remains independent. No COOP/COEP, SharedArrayBuffer, JSPI or extra I/O worker is required by this mirror-based mode.
 
 ### OPFS verification and limitations
 
@@ -98,13 +101,12 @@ Real Chrome 145 tests passed with cross-origin isolation **disabled**:
 | Delete → reload | Exact WIT `no-entry` for the fixture directory. |
 | Existing filesystem suite | All 14 checks passed with OPFS, including traversal/outside-preopen rejection. |
 | Directory boundary | A separately created sibling file under the origin root was unchanged, then removed by its creating test. |
-| Concurrent writer | Second OPFS session denied; independent memory session still passed its checks. |
 | Injected `createWritable` failure | Write and shutdown returned the quota-style failure, not success; no unhandled rejection; explicit termination released the session. |
 | Reserved shim filename | Root/nested writes and rename-to-sidecar returned `not-permitted`; the original ordinary file stayed unchanged. |
 
-A local cached run observed OPFS instantiation at 32.3 ms and fixture write/checkpoint at 26.6 ms (4.9 ms checkpoint portion). These are observations, not throughput benchmarks. The 38 native Node tests cover fixture assertions, refusal to delete unfamiliar content, reserved-name guards/private-field forwarding, and UI close/failure/timeout behavior; they do not substitute for browser persistence tests.
+A local cached run observed OPFS instantiation at 32.3 ms and fixture write/checkpoint at 26.6 ms (4.9 ms checkpoint portion). These are observations, not throughput benchmarks. The native Node tests cover fixture assertions, refusal to delete unfamiliar content, reserved-name guards/private-field forwarding, and UI close/failure/timeout behavior; they do not substitute for browser persistence tests.
 
-- **R4 — Mirror scope:** Use only this isolated experiment directory. Whole-tree rewriting is unsuitable for arbitrary user folders, large asset trees or uncoordinated external writers. The Web Lock coordinates this experiment's cooperating sessions, not every possible writer.
+- **R4 — Mirror scope:** Use only this isolated experiment directory. Whole-tree rewriting is unsuitable for arbitrary user folders, large asset trees or uncoordinated external writers. Concurrency is out of scope; no writer coordination is implemented.
 - **R5 — Persistence semantics:** Checkpoints acknowledge completion of the browser write/close APIs, not filesystem transactions, rollback snapshots, crash consistency or physical-media fsync. A forced stop can leave partial changes. Browser quota, eviction, site-data clearing and private browsing still affect storage; persistent-storage permission is not requested here.
 - **R6 — Origin and cleanup:** Storage belongs to the exact browser origin, including port. Keep `127.0.0.1:8093` to reopen these fixtures; changing host/port creates a different store. `make clean` removes checkout build output only and does not delete browser data. The fixture buttons are the bounded test cleanup; no whole-origin delete operation is provided.
 
@@ -125,7 +127,7 @@ Component bytes ──────────┤
 | `ui.ts` | Load/upload, worker RPC, status, diagnostics and measurements. |
 | `transpiler-worker.ts` | Initialize Jco; transpile, instantiate and invoke; retain output in memory. |
 | `runtime.ts` | Check component header/size and instantiate with an explicit import map. |
-| `capabilities.ts` | Construct granted imports, memory/OPFS sessions, checkpoints, disposal and exclusive writer locks. |
+| `capabilities.ts` | Construct granted imports, memory/OPFS sessions, checkpoints, disposal. |
 | `opfs-checks.ts` | Bounded persistent fixture lifecycle through the real plugin.fs exports. |
 | `opfs-paths.ts` | Reject guest paths conflicting with the shim's reserved metadata filename. |
 | `plugin-checks.ts` | Invoke real plugin interfaces and assert results/boundaries. |
@@ -162,7 +164,7 @@ The worker separately awaits the lower-level `$init` to measure initialization b
 
 ### F2 — Compiler assets and bundling need explicit handling
 
-Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside an **approximately 692 KB** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
+Jco loads four compiler core Wasm assets, totaling **5,685,103 bytes**, alongside an **approximately 691 KB** unminified worker bundle in this build. The [backend uses literal relative URLs](https://github.com/bytecodealliance/jco/blob/7d36424c577bdc6e913ff22ef3bc61b42cde0253/packages/jco-transpile/src/component.ts#L13-L38) and browser `WebAssembly.compileStreaming(fetch(url))`. Serve `.wasm` with `application/wasm`.
 
 esbuild aliases only the public browser entry and its browser dependency subset. It preserves `import.meta.url`; the worker and four core modules are placed together under `site/vendor/` so `../vendor/<asset>` resolves correctly. No generated JavaScript is rewritten. The conditional Node `node:fs/promises` branch remains external and is never executed in a browser. Do not import the Node-oriented Jco root/default CLI implementation or pull in its native minifier/compiler dependencies.
 
