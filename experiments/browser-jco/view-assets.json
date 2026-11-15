@@ -40,5 +40,19 @@
     "archive": "theme.gams.zip",
     "sha256": "a30f6b9ac5530e7f6844a2e641a892349d9120cea2ab675f5bcf8abef6feaf59",
     "checksumsSha256": "4e1b71c14290a9eca3f6d1bb60f766316d684fb4ecb8bc4debef0120c66ac672"
+  },
+  {
+    "repository": "kkgams/ui-service.keys",
+    "tag": "v0.2.2",
+    "archive": "ui-service.keys.zip",
+    "sha256": "3662ac08da68f0abe0c81751276251735c8e13ac473fc65e54e5a097dad4ffb7",
+    "checksumsSha256": "d39e80957db0429208cbf1e0bd213139a488746c32a31c24a4bbd2773f0c5ead"
+  },
+  {
+    "repository": "kkgams/ui-service.tooltip",
+    "tag": "v0.2.2",
+    "archive": "ui-service.tooltip.zip",
+    "sha256": "f8095f11e5c419e9ed1d96e38764138660c4f27055e7875bfe7b81cef8d1d3c9",
+    "checksumsSha256": "a66058017122616068ebd2cbbe57f4ba0b352acffc1498b02399328501b1f4b9"
   }
 ]

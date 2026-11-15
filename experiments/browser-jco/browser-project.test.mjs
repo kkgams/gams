@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { BrowserProject } from './browser-project.ts';
+import { parseBrowserOptions } from './browser-options.ts';
 
 const bytes = value => new TextEncoder().encode(typeof value === 'string' ? value : JSON.stringify(value));
 const text = value => new TextDecoder().decode(value);
@@ -285,4 +286,20 @@ test('HTTP Project import prepares explicitly configured local Unit files withou
   assert.deepEqual((await project.load()).config,config);
   assert.equal(text(await project.store.read('/project/plugins/fs.wasm')),'wasm');
   assert.equal(calls.length,5);
+});
+
+test('bare browser startup imports missing default config once and never overwrites an existing config',async()=>{
+  const startup=parseBrowserOptions('http://127.0.0.1:8093/browser.html');
+  const store=new FakeStore(),calls=[];
+  const initial={plugins:[],name:'first-run'};
+  const project=new BrowserProject(store,startup,{download:downloader({'http://127.0.0.1:8093/browser-default/gams.json':initial},calls)});
+  assert.deepEqual((await project.load()).config,initial);
+  assert.equal(calls.length,1);
+  const edited={plugins:[],name:'user-edited'};
+  await store.write('/projects/default/gams.json',bytes(edited));
+  const reopened=new BrowserProject(store,startup,{download:offline});
+  assert.deepEqual((await reopened.load()).config,edited);
+  await store.write('/projects/default/gams.json',bytes('invalid JSON'));
+  await assert.rejects(new BrowserProject(store,startup,{download:offline}).load(),SyntaxError);
+  assert.equal(text(await store.read('/projects/default/gams.json')),'invalid JSON');
 });

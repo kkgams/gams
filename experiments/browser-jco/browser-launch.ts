@@ -15,7 +15,8 @@ controls.innerHTML = `<summary>Browser Host</summary><fieldset><legend>Session</
 <output id="browser-state">Closed.</output></fieldset>`;
 document.body.appendChild(controls);
 app.innerHTML = `<article><h1>GAMS browser Host</h1><p>The canonical GAMS frontend runs against a browser Host worker, Jco and OPFS. No native backend is required.</p>
-<p>Select a Project with URL parameters: <code>?source=/project/&amp;cwd=/projects/example&amp;config=gams.json</code>. Source imports missing files only; an existing browser Project is not overwritten. Omit source to reopen an installed Project. Remote sources must permit browser CORS.</p>
+<p>With no Project parameters, Open initializes the default Files workspace if its config is missing. Its released Units come from this HTTP server, so you can upload files before investigating remote CORS. Existing configs are not overwritten.</p>
+<p>For another Project, use URL parameters: <code>?source=/project/&amp;cwd=/projects/example&amp;config=gams.json</code>. Explicit Project/config selections never fall back to the default. Remote sources must permit browser CORS.</p>
 <p>One instance only. Concurrent instances are unsupported; there are no Host writer locks.</p><pre id="browser-options"></pre></article>`;
 const open = document.getElementById('browser-open') as HTMLButtonElement;
 const close = document.getElementById('browser-close') as HTMLButtonElement;

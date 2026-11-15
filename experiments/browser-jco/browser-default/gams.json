@@ -1,0 +1,105 @@
+{
+  "plugins": [
+    {
+      "$file": "plugins/plugin.fs/v0.2.3/plugin.fs.wasm"
+    },
+    {
+      "$file": "plugins/plugin.layout/v0.2.3/plugin.layout.wasm"
+    }
+  ],
+  "ui": {
+    "keys": [],
+    "theme": null,
+    "services": {
+      "ui-context": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.context/v0.2.3/ui-service.context.zip",
+            "entry": "ui-plugins/context.js"
+          }
+        }
+      },
+      "ui-keys": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.keys/v0.2.2/ui-service.keys.zip",
+            "entry": "ui-plugins/keys.js"
+          }
+        }
+      },
+      "ui-toast": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.toast/v0.2.2/ui-service.toast.zip",
+            "entry": "ui-plugins/toast.js"
+          }
+        }
+      },
+      "ui-popup": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.popup/v0.2.2/ui-service.popup.zip",
+            "entry": "ui-plugins/popup.js"
+          }
+        }
+      },
+      "ui-tooltip": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.tooltip/v0.2.2/ui-service.tooltip.zip",
+            "entry": "ui-plugins/tooltip.js"
+          }
+        }
+      },
+      "ui-layout": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/ui-service.layout/v0.2.2/ui-service.layout.zip",
+            "entry": "ui-plugins/layout.js"
+          }
+        },
+        "config": {
+          "layout": "<view-files />"
+        }
+      }
+    },
+    "views": {
+      "view-files": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/view.files/v1.0.1/view.files.zip",
+            "entry": "views/view-files.js"
+          }
+        },
+        "label": "Files",
+        "group": "Project",
+        "internal": false,
+        "config": {
+          "open": {
+            "default": "files-default"
+          }
+        }
+      },
+      "files-rename": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/view.files/v1.0.1/view.files.zip",
+            "entry": "views/files-rename.js"
+          }
+        },
+        "label": "Rename File",
+        "internal": true
+      },
+      "files-default": {
+        "url": {
+          "$file": {
+            "url": "unit-sources/view.files/v1.0.1/view.files.zip",
+            "entry": "views/files-default.js"
+          }
+        },
+        "label": "File Info",
+        "internal": true
+      }
+    }
+  }
+}

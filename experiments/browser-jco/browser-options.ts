@@ -51,9 +51,13 @@ export function parseBrowserOptions(url: string): BrowserOptions {
   if (pluginCacheDir === modulesDir || pluginCacheDir.startsWith(modulesDir + '/') || modulesDir.startsWith(pluginCacheDir + '/')) {
     throw new Error('modules-dir and plugin-cache-dir must be separate directories.');
   }
+  // Seed only the implicit browser workspace. Explicit Project/config choices
+  // must never silently open a different Project when their config is missing.
+  const defaultProject = !['source', 'config', 'cwd', 'project-dir'].some(key => page.searchParams.has(key));
+  const requestedSource = read('source') ?? (defaultProject ? '/browser-default/' : undefined);
   let source: string | undefined;
-  if (read('source')) {
-    const parsed = new URL(read('source')!, page);
+  if (requestedSource) {
+    const parsed = new URL(requestedSource, page);
     if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.hash || parsed.search) {
       throw new Error('source must be an HTTP(S) Project directory URL without credentials, query or fragment.');
     }

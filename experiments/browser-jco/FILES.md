@@ -45,7 +45,7 @@ The data store is the same dedicated `gams-browser-jco-experiment-v1` origin-pri
 
 ## Reproducible assets and tests
 
-`view-assets.json` records the exact six release tags, archives and SHA-256 pins, including a pin for each published `SHA256SUMS`. Build verifies both the checksum document and archive, then safely extracts each complete archive beneath `build.nosync/browser-jco/site/units/<repository>/`. The release JS is not patched or transpiled. Original LICENSE/NOTICE files remain alongside each Unit. The Host source/font and original notices are assembled separately. Neither sibling checkouts nor package installation are needed.
+`view-assets.json` records the exact release tags, archives and SHA-256 pins, including a pin for each published `SHA256SUMS`. Build verifies both the checksum document and archive, then safely extracts each complete archive beneath `build.nosync/browser-jco/site/units/<repository>/`. The release JS is not patched or transpiled. Original LICENSE/NOTICE files remain alongside each Unit. The Host source/font and original notices are assembled separately. Neither sibling checkouts nor package installation are needed.
 
 Real Chrome 145 on macOS, without Tauri or cross-origin isolation:
 

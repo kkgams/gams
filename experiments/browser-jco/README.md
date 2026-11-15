@@ -13,7 +13,7 @@ nix develop --command make -C experiments/browser-jco serve
 # Fixed Files View: http://127.0.0.1:8093/files.html (override with PORT=8094)
 ```
 
-The [configured browser Host](BROWSER.md) serves the complete canonical frontend and opens an explicitly selected `gams.json` Project, with URL startup settings, browser-side Unit installation and persistent Jco caches. The fixed Files/component pages remain available separately.
+The [configured browser Host](BROWSER.md) serves the complete canonical frontend and opens an explicitly selected `gams.json` Project, with URL startup settings, browser-side Unit installation and persistent Jco caches. Bare `/browser.html` now initializes a minimal same-origin Files Project when its default config is missing; existing or explicitly selected configs are not replaced. The fixed Files/component pages remain available separately.
 
 Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The first build downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/browser-jco/dependencies/`; it never runs package scripts or installs a dependency tree. `dependencies.json` records the exact tested browser subset, not the full CLI dependency closure. The build also downloads unchanged released plugins and their original license assets from pinned GitHub tags in `plugins.json`, verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). The [real Files View shell](FILES.md) additionally pins released UI Units/theme in `view-assets.json`, retaining their original license assets and using canonical Host Runtime/helpers from this checkout. No sibling repository checkout is needed.
 
@@ -21,7 +21,7 @@ Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and was
 | --- | --- |
 | `make -C experiments/browser-jco build` | Assemble static files; encode/validate WAT components and check WIT conformance. |
 | `make -C experiments/browser-jco serve` | Build, then serve static files on loopback. |
-| `make -C experiments/browser-jco test` | Run native Node tests for validation, import denial, UI grants and plugin-check assertions. |
+| `make -C experiments/browser-jco test` | Run native Node tests and static HTTP server checks. |
 | `make -C experiments/browser-jco clean` | Guardedly delete only `build.nosync/browser-jco/`, including downloaded archives, dependencies and output. |
 
 The existing GAMS frontend is static JavaScript without Vite or a frontend package manifest. This experiment keeps that deployment model, adding small TypeScript modules compiled by pinned esbuild. No framework, npm task runner, or production frontend integration is introduced. esbuild strips types; this build is not a TypeScript type-check.

@@ -1,6 +1,6 @@
 # Browser Host startup
 
-`browser.html` boots the canonical GAMS `app.js`, Runtime, services bootstrap, utilities, widgets, styles and fonts against an experimental browser Host. The server serves static files only. Config resolution, downloads, ZIP extraction, Jco transpilation, plugin execution and persistence happen in a browser worker.
+`browser.html` boots the canonical GAMS `app.js`, Runtime, services bootstrap, utilities, widgets, styles and fonts against an experimental browser Host. The development server serves static files only and disables HTTP asset caching to avoid stale modules after rebuilds. This does not disable the separate OPFS Unit/Jco caches. Config resolution, downloads, ZIP extraction, Jco transpilation, plugin execution and persistence happen in a browser worker.
 
 ## Run
 
@@ -11,7 +11,11 @@ nix develop --command make -C experiments/browser-jco serve
 # http://127.0.0.1:8093/browser.html
 ```
 
-There is no bundled/default Project. Select an installed browser Project or explicitly supply an HTTP(S) Project directory using `source`. For a local static import, copy your Project's source files into `build.nosync/browser-jco/site/project/` after building, then open:
+Open the bare `/browser.html` URL and click **Open Project**. If `/projects/default/gams.json` is missing, the browser imports the minimal Files Project from `/browser-default/`. Its FS/layout components and seven complete UI/View archives are pinned, unchanged releases mirrored by the static build, so startup needs no cross-origin browser downloads. You can then upload files, download/edit/upload `gams.json`, or inspect `runtime` in DevTools. Existing configs—including invalid ones—are never replaced.
+
+Automatic first-run import applies only when `source`, `config`, `cwd` and `project-dir` are all omitted. Explicit selections still fail when missing. This default belongs to the browser experiment; Native startup and its root development config are unchanged.
+
+For another Project, select an installed browser Project or explicitly supply an HTTP(S) Project directory using `source`. For a local static import, copy your Project's source files into `build.nosync/browser-jco/site/project/` after building, then open:
 
 ```text
 http://127.0.0.1:8093/browser.html?source=/project/&project-dir=/projects/example&config=gams.json
@@ -31,7 +35,7 @@ Names match applicable Native flags; there are no process environment variables 
 | `config` | Filename within that CWD; default `gams.json`. Paths/empty names fail. |
 | `modules-dir` | Absolute virtual Unit-store path; default `<cwd>/gams_modules`. Can be outside CWD for shared storage. |
 | `plugin-cache-dir` | Jco artifact-cache path; default `/cache/jco`. Relative values resolve from CWD. Must be separate from the modules store and must not contain the Project root. |
-| `source` | Optional HTTP(S) directory URL to import missing Project files. Relative URLs resolve against the page URL. |
+| `source` | HTTP(S) directory URL to import missing Project files. Relative URLs resolve against the page URL. Implicit default startup uses same-origin `/browser-default/`; explicit Project/config choices have no automatic source. |
 | `fs` | Only `opfs` is implemented. Other values fail; there are no WebDAV/picked-folder stubs. |
 
 Duplicate, empty and unknown settings fail explicitly. `cwd` is **not** an HTTP-server directory or unrestricted OS directory. Config, Unit storage and compiler cache remain distinct. URLs may need percent-encoding, especially spaces or embedded resource URLs.
@@ -72,5 +76,6 @@ Real Chrome 145 on macOS, using unchanged checksum-verified releases served from
 | **B6 — Save** | Direct shared Save and the browser Save button succeeded; the selected file retained original `$file` URLs and its unchanged `$ref` expression. |
 | **B7 — Startup failure** | Selecting missing config failed visibly without falling back; checkpointed close still succeeded before components existed. |
 | **B8 — Local Unit import** | A configured bare local FS component path imported from the explicit HTTP Project folder and loaded alongside cached Units. |
+| **B9 — First-run Files Project** | A fresh origin with no OPFS namespace booted from bare `/browser.html`, with no console errors or cross-origin startup requests. Actual Files View upload worked. An edited config and uploaded file survived reopening with the bootstrap source unavailable; two Jco cache hits and zero retranspilations. A rejected remote GitHub download did not disable Files operations. |
 
-All 110 experiment tests and 113 existing Host JS tests passed. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.
+All 112 experiment Node tests and three static-server tests passed; the prior 113 existing Host JS tests remain unchanged. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.

@@ -30,5 +30,23 @@
         "sha256": "b7f2ea05beac359cfd7d15c2b198edb66e0437fffdf00e9e4d0250cfb226fc98"
       }
     ]
+  },
+  {
+    "repository": "kkgams/plugin.layout",
+    "tag": "v0.2.3",
+    "files": [
+      {
+        "name": "LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "name": "NOTICE",
+        "sha256": "2539d4324c10bce39bec109b54e30b0b43d184cd6dff9ee6ff81e693685cbb63"
+      },
+      {
+        "name": "plugin.layout.wasm",
+        "sha256": "7d42e209ab30152d1c1396950ea4efb1d594d3c07a005b187c8eec6fa21f2a05"
+      }
+    ]
   }
 ]

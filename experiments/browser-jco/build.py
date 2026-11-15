@@ -63,6 +63,24 @@ def extract_unit(data, target):
 
 
 def build_files():
+    default_project = SITE / 'browser-default'
+    default_project.mkdir(parents=True, exist_ok=True)
+    config_path = SOURCE / 'browser-default/gams.json'
+    shutil.copy2(config_path, default_project / 'gams.json')
+    config = json.loads(config_path.read_text())
+    archive_sources = {
+        item['url']['$file']['url']
+        for group in ('services', 'views')
+        for item in config['ui'][group].values()
+    }
+    plugins = {item['repository'].split('/')[-1]: item
+               for item in json.loads((SOURCE / 'plugins.json').read_text())}
+    for repo in ('plugin.fs', 'plugin.layout'):
+        destination = default_project / 'plugins' / repo / plugins[repo]['tag']
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(SITE / 'components' / f'{repo}.wasm', destination / f'{repo}.wasm')
+        shutil.copytree(SITE / 'vendor/licenses' / repo, destination, dirs_exist_ok=True)
+
     for unit in json.loads((SOURCE / 'view-assets.json').read_text()):
         repo = unit['repository'].split('/')[-1]
         base_url = f"https://github.com/{unit['repository']}/releases/download/{unit['tag']}"
@@ -75,6 +93,11 @@ def build_files():
             raise ValueError(f"Published SHA256SUMS mismatch: {repo}")
         data = verified_download(f"{base_url}/{unit['archive']}", cache / unit['archive'], unit['sha256'])
         extract_unit(data, SITE / 'units' / repo)
+        source = f"unit-sources/{repo}/{unit['tag']}/{unit['archive']}"
+        if source in archive_sources:
+            destination = default_project / source
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cache / unit['archive'], destination)
         print(f"Verified {repo} {unit['tag']}: {unit['sha256']}")
 
     for name in ('LICENSE', 'NOTICE'):
