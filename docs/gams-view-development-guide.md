@@ -194,6 +194,13 @@ APIs to select another font.
 - `th[role="button"][aria-expanded][tabindex="0"]` - collapsible table-group heading. It must activate with click, Enter, or Space and expose its expanded state through `aria-expanded`.
 - `td` - table data cell.
 
+### Toggle headers
+
+- `th[role="button"][aria-pressed][tabindex]` - header control for choosing an active item, such as a pattern table. Put the label directly in the `th`, not in a nested button. Use `thead` and an appropriate `scope`/`colspan` for the table.
+- `aria-pressed="true"` marks the active item; `false` marks other items. Themes and Host base styling support pressed headers alongside selected headers.
+- Click, Enter or Space activates the header. For a group of related headers, use roving focus and Left/Right/Home/End navigation without wrapping, skipping disabled headers. Preserve focus when updating content.
+- `th[role="button"][aria-disabled="true"]` is unavailable and must not activate.
+
 ### Selectable columns
 
 - `colgroup` / `col` - column definitions, before the table's row groups. Use one `col` per logical column; a static row-number column may be included without selection state.

@@ -1124,6 +1124,31 @@
         user-select: none;
     }
 
+    /* GAMS header controls share selected and pressed state styling. */
+    th[role="button"]:is([aria-selected], [aria-pressed]) {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    th[role="button"]:is([aria-selected], [aria-pressed]):not([aria-disabled="true"]) {
+        cursor: pointer;
+    }
+
+    th[role="button"]:is([aria-selected="true"], [aria-pressed="true"]) {
+        background: var(--intent-soft-bg);
+        color: var(--intent-soft-fg);
+    }
+
+    th[role="button"]:is([aria-selected="true"], [aria-pressed="true"]):not([aria-disabled="true"]):hover {
+        background: var(--intent-hover-bg);
+        color: var(--intent-fg);
+    }
+
+    th[role="button"][aria-disabled="true"] {
+        cursor: default;
+        opacity: 0.5;
+    }
+
     th:focus-visible {
         outline: 2px solid var(--border-focus);
         outline-offset: -3px;
