@@ -1,24 +1,24 @@
-# Browser Host startup
+# Web Host
 
-`browser.html` boots the canonical GAMS `app.js`, Runtime, services bootstrap, utilities, widgets, styles and fonts against an experimental browser Host. The development server serves static files only and disables HTTP asset caching to avoid stale modules after rebuilds. This does not disable the separate OPFS Unit/Jco caches. Config resolution, downloads, ZIP extraction, Jco transpilation, plugin execution and persistence happen in a browser worker.
+The root `index.html` boots the canonical GAMS `app.js`, Runtime, services bootstrap, utilities, widgets, styles and fonts against the Web Host. The development server serves static files only and disables HTTP asset caching to avoid stale modules after rebuilds. This does not disable the separate OPFS Unit/Jco caches. Config resolution, downloads, ZIP extraction, Jco transpilation, plugin execution and persistence happen in a browser worker.
 
 ## Run
 
 From the GAMS repository:
 
 ```sh
-nix develop --command make -C experiments/browser-jco serve
-# http://127.0.0.1:8093/browser.html
+nix develop .#web --command make serve-web
+# http://127.0.0.1:8093/
 ```
 
-Open the bare `/browser.html` URL. GAMS starts automatically with the shared Project loading screen; there is no welcome page or Open button. If `/projects/default/gams.json` is missing, the browser imports the minimal Files Project from `/browser-default/`. Its FS/layout components and seven UI/View archives use explicit pinned GitHub release URLs and install directly into `gams_modules/`. First startup requires the configured download relay because direct GitHub browser downloads lack CORS permission. The only imported Project source file is `gams.json`; startup no longer creates `unit-sources/` or `plugins/` input folders. You can then upload files, download/edit/upload `gams.json`, or inspect `runtime` in DevTools. Existing configs—including invalid ones—are never replaced. Existing `unit-sources/` and `plugins/` folders are not removed or migrated.
+Open the root `/` URL. GAMS starts automatically with the shared Project loading screen; there is no welcome page or Open button. If `/projects/default/gams.json` is missing, the browser imports the minimal Files Project from `/browser-default/`. Its FS/layout components and seven UI/View archives use explicit pinned GitHub release URLs and install directly into `gams_modules/`. First startup requires the configured download relay because direct GitHub browser downloads lack CORS permission. The only imported Project source file is `gams.json`; startup no longer creates `unit-sources/` or `plugins/` input folders. You can then upload files, download/edit/upload `gams.json`, or inspect `runtime` in DevTools. Existing configs—including invalid ones—are never replaced. Existing `unit-sources/` and `plugins/` folders are not removed or migrated.
 
-Automatic first-run import applies only when `source`, `config`, `cwd` and `project-dir` are all omitted. Explicit selections still fail when missing. This default belongs to the browser experiment; Native startup and its root development config are unchanged.
+Automatic first-run import applies only when `source`, `config`, `cwd` and `project-dir` are all omitted. Explicit selections still fail when missing. This default belongs to the Web Host; Native startup and its root development config are unchanged.
 
-For another Project, select an installed browser Project or explicitly supply an HTTP(S) Project directory using `source`. For a local static import, copy your Project's source files into `build.nosync/browser-jco/site/project/` after building, then open:
+For another Project, select an installed browser Project or explicitly supply an HTTP(S) Project directory using `source`. For a local static import, copy your Project's source files into `build.nosync/web/project/` after building, then open:
 
 ```text
-http://127.0.0.1:8093/browser.html?source=/project/&project-dir=/projects/example&config=gams.json
+http://127.0.0.1:8093/?source=/project/&project-dir=/projects/example&config=gams.json
 ```
 
 The selected Project opens automatically. The source is an import location: missing config/resources and explicitly configured local Unit files are fetched into the browser filesystem. Existing files are not overwritten. It does not enumerate/mirror the entire HTTP directory; declare content through `$file`/archives or upload it through the Files View. Ordinary JS imports retain Native's existing Blob-import limitations.
@@ -40,7 +40,7 @@ Then build/serve GAMS with its public relay endpoint:
 ```sh
 # In gams/
 GAMS_CORS_PROXY=http://127.0.0.1:8787/download \
-  nix develop --command make -C experiments/browser-jco serve
+  nix develop .#web --command make serve-web
 ```
 
 `GAMS_CORS_PROXY` is a **build-time browser setting**, exported to `browser-environment.json`, not a shell environment read by Chrome. Rebuild when setting/changing/unsetting it. Unset or empty disables the relay. Use an absolute HTTPS endpoint, or loopback HTTP for development, without credentials/query/fragment. This public asset must not contain secrets. The startup options display the selected endpoint.
@@ -100,9 +100,9 @@ Real Chrome 145 on macOS, using unchanged checksum-verified releases served from
 | **B6 — Save** | Direct shared Save and the browser Save button succeeded; the selected file retained original `$file` URLs and its unchanged `$ref` expression. |
 | **B7 — Startup failure** | Selecting missing config failed visibly without falling back; checkpointed close still succeeded before components existed. |
 | **B8 — Local Unit import** | A configured bare local FS component path imported from the explicit HTTP Project folder and loaded alongside cached Units. |
-| **B9 — First-run Files Project** | With the earlier bootstrap mirror, a fresh origin with no OPFS namespace booted from bare `/browser.html`, with no console errors or cross-origin startup requests. Actual Files View upload worked. An edited config and uploaded file survived reopening with the bootstrap source unavailable; two Jco cache hits and zero retranspilations. A rejected remote GitHub download did not disable Files operations. |
+| **B9 — First-run Files Project** | With the earlier bootstrap mirror, a fresh origin with no OPFS namespace booted from bare `/`, with no console errors or cross-origin startup requests. Actual Files View upload worked. An edited config and uploaded file survived reopening with the bootstrap source unavailable; two Jco cache hits and zero retranspilations. A rejected remote GitHub download did not disable Files operations. |
 | **B10 — Optional relay** | Direct Chrome GitHub fetch failed; `runtime.download()` through local relay returned the 55,491-byte FS component with its published SHA-256. Real Files View ZIP installation/extraction worked; cache metadata and Project Save retained its original GitHub URL. Reopening with the relay stopped reused the installed resource and both Jco caches. |
 | **B11 — Direct default Unit installation** | A new Project downloaded two plugins and seven ZIPs from their published GitHub URLs into nine `gams_modules/` entries through the relay. Its root contained only `gams.json` and `gams_modules/`. Save retained original remote expressions. Binary data and reopening worked with the relay stopped: two Jco cache hits, zero retranspilations. An existing legacy config/folder layout reopened unchanged. |
 | **B12 — Automatic startup** | A fresh Chrome origin loaded the real Files Project without clicking or granting storage. Save and binary persistence worked; reload automatically reopened with the relay stopped and two Jco cache hits. Invalid URL settings displayed the shared error/reload screen and disabled actions without a session. |
 
-All 128 experiment Node tests and three static-server tests passed; the prior 113 existing Host JS tests remain unchanged. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.
+The 85 Web Host Node tests, 43 separate diagnostic Node tests and three static-server tests passed; the prior 113 existing Host JS tests remain unchanged. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.

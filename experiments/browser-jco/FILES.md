@@ -45,7 +45,7 @@ The data store is the same dedicated `gams-browser-jco-experiment-v1` origin-pri
 
 ## Reproducible assets and tests
 
-`view-assets.json` records the exact release tags, archives and SHA-256 pins, including a pin for each published `SHA256SUMS`. Build verifies both the checksum document and archive, then safely extracts each complete archive beneath `build.nosync/browser-jco/site/units/<repository>/`. The release JS is not patched or transpiled. Original LICENSE/NOTICE files remain alongside each Unit. The Host source/font and original notices are assembled separately. Neither sibling checkouts nor package installation are needed.
+[`cmd/web/view-assets.json`](../../cmd/web/view-assets.json) records the exact release tags, archives and SHA-256 pins, including a pin for each published `SHA256SUMS`. Build verifies both the checksum document and archive, then safely extracts each complete archive beneath `build.nosync/browser-jco/site/units/<repository>/`. The release JS is not patched or transpiled. Original LICENSE/NOTICE files remain alongside each Unit. The Host source/font and original notices are assembled separately. Neither sibling checkouts nor package installation are needed.
 
 Real Chrome 145 on macOS, without Tauri or cross-origin isolation:
 
@@ -60,6 +60,6 @@ Real Chrome 145 on macOS, without Tauri or cross-origin isolation:
 | **T7 — Errors** | Missing paths returned WIT `no-entry`; the reserved sidecar returned `not-permitted`; traversal rejected without writing. |
 | **T8 — Failed import** | Temporarily withholding the View module reported the load failure, installed no managers/context listeners, and still allowed checkpointed close. |
 
-Native tests passed through `make -C experiments/browser-jco test`, covering argument/result conversion, boot/readiness, retained-worker failure/timeout behavior and graceful close. These mock-worker unit tests supplement, not replace, the real-View browser checks. `make clean` removes build/download output, not browser storage. Browser data tests create/delete only their own known fixture paths.
+At this milestone, native tests passed through the then-current `make -C experiments/browser-jco test`, covering argument/result conversion, boot/readiness, retained-worker failure/timeout behavior and graceful close. Today that command runs diagnostic Node tests only; shared `cmd/web/files-call.ts` conversion tests, production Runtime tests and static-server checks run through root `make test-web`. These mock-worker unit tests supplement, not replace, the real-View browser checks. `make clean` removes build/download output, not browser storage. Browser data tests create/delete only their own known fixture paths.
 
-Other browsers, the internal rename flow, a file-content editor, picked folders and arbitrary GAMS Projects are not validated by this milestone. Production Runtime and Unit source are unchanged; the only new runtime implementation is the isolated browser transport.
+Other browsers, the internal rename flow, a file-content editor, picked folders and arbitrary GAMS Projects are not validated by this milestone. At that milestone, production Runtime and Unit source were unchanged; the isolated browser transport was the only new runtime implementation. The current production browser Host is documented separately in [`cmd/web/README.md`](../../cmd/web/README.md); this page describes the fixed diagnostic shell.

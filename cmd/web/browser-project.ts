@@ -92,7 +92,7 @@ function validateMembers(members: ZipMember[]): void {
   }
 }
 
-// Keep this absolute Host-owned import external to the experiment bundle.
+// Keep this absolute Host-owned import external to the Web Host bundle.
 async function unzipBrowser(bytes: Uint8Array): Promise<ZipMember[]> {
   const zip = await import(/* @vite-ignore */ '/util/vendor/zipjs/zip-native.js');
   zip.configure({ useWebWorkers: false });

@@ -1,6 +1,6 @@
 # Browser-native Component Model experiment
 
-**Yes: Jco can dynamically transpile and execute components entirely in a browser today.** This isolated GAMS runtime experiment proves that compatibility layer, not a complete browser port of the desktop Host. Production runtime code is unchanged.
+**Jco can dynamically transpile and execute components entirely in a browser.** These diagnostics exercise that compatibility layer and a fixed Files shell. The production browser Runtime and shared compiler/helpers now live in [`cmd/web/`](../../cmd/web/README.md); the historical measurements below remain evidence for the tested workloads, not complete Host compatibility.
 
 ## Run and rebuild
 
@@ -9,22 +9,22 @@ From the GAMS repository root:
 ```sh
 nix develop --command make -C experiments/browser-jco serve
 # Component diagnostics: http://127.0.0.1:8093
-# Configured browser Host: http://127.0.0.1:8093/browser.html
+# Configured Host alias: http://127.0.0.1:8093/browser.html
 # Fixed Files View: http://127.0.0.1:8093/files.html (override with PORT=8094)
 ```
 
-The [configured browser Host](BROWSER.md) serves the complete canonical frontend and opens an explicitly selected `gams.json` Project, with URL startup settings, browser-side Unit installation and persistent Jco caches. Bare `/browser.html` initializes a minimal Files Project from same-origin `gams.json` when its default config is missing. Its pinned released Units download through the configured relay directly into `gams_modules/`, without `unit-sources/` or `plugins/` input folders. Existing or explicitly selected configs and their folders are not replaced or migrated. The fixed Files/component pages remain available separately.
+The [configured browser Host](../../cmd/web/README.md) is the production implementation. The diagnostic builder consumes its compiler builder/helpers and emits `build.nosync/browser-jco/site/` with component diagnostics at `index.html`, toy components and the fixed `files.html` page. The builder also includes a `browser.html` configured-Host alias; use `make serve-web` from the repository root for the production app at `/`. Production builds do not assemble diagnostic pages or toys.
 
-Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The first build downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/browser-jco/dependencies/`; it never runs package scripts or installs a dependency tree. `dependencies.json` records the exact tested browser subset, not the full CLI dependency closure. The build also downloads unchanged released plugins and their original license assets from pinned GitHub tags in `plugins.json`, verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). The [real Files View shell](FILES.md) additionally pins released UI Units/theme in `view-assets.json`, retaining their original license assets and using canonical Host Runtime/helpers from this checkout. No sibling repository checkout is needed.
+Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and wasm-tools 1.248.0. No Rust target or npm installation is needed. The shared compiler builder downloads three version-pinned npm **archives**, verifies their SHA-512 integrity, and extracts them under `build.nosync/web-build/dependencies/`; it never runs package scripts or installs a dependency tree. [`cmd/web/dependencies.json`](../../cmd/web/dependencies.json) records the exact tested browser subset, not the full CLI dependency closure. The diagnostic build also downloads unchanged released plugins and their original license assets using [`cmd/web/plugins.json`](../../cmd/web/plugins.json), verifying every asset against its recorded SHA-256 (checked against the published SHA256SUMS). The [real Files View shell](FILES.md) uses released UI Units/theme pinned in [`cmd/web/view-assets.json`](../../cmd/web/view-assets.json), retaining their original license assets and using canonical Host Runtime/helpers from this checkout. No sibling repository checkout is needed.
 
 | Command (from repository root, inside the Nix shell) | Effect |
 | --- | --- |
 | `make -C experiments/browser-jco build` | Assemble static files; encode/validate WAT components and check WIT conformance. |
 | `make -C experiments/browser-jco serve` | Build, then serve static files on loopback. |
-| `make -C experiments/browser-jco test` | Run native Node tests and static HTTP server checks. |
-| `make -C experiments/browser-jco clean` | Guardedly delete only `build.nosync/browser-jco/`, including downloaded archives, dependencies and output. |
+| `make -C experiments/browser-jco test` | Run diagnostic Node tests only; production and static-server checks use root `make test-web`. |
+| `make -C experiments/browser-jco clean` | Guardedly delete only `build.nosync/browser-jco/`, including diagnostic downloads/output; retain shared compiler caches. |
 
-The existing GAMS frontend is static JavaScript without Vite or a frontend package manifest. This experiment keeps that deployment model, adding small TypeScript modules compiled by pinned esbuild. No framework or npm task runner is introduced. The root-hosted app assembled by `make web` uses this same browser Host implementation; see [web deployment](../../docs/web-deployment.md). esbuild strips types; this build is not a TypeScript type-check.
+The existing GAMS frontend is static JavaScript without Vite or a frontend package manifest. This experiment keeps that deployment model, adding small TypeScript modules compiled by pinned esbuild. No framework or npm task runner is introduced. The root-hosted app assembled by `make web` uses the production implementation in `cmd/web/`, independently of these diagnostics; see [web deployment](../../docs/web-deployment.md). esbuild strips types; this build is not a TypeScript type-check.
 
 ### Try the pipeline
 
@@ -126,14 +126,16 @@ Component bytes ──────────┤
 | --- | --- |
 | `ui.ts` | Load/upload, worker RPC, status, diagnostics and measurements. |
 | `transpiler-worker.ts` | Initialize Jco; transpile, instantiate and invoke; retain output in memory. |
-| `runtime.ts` | Check component header/size and instantiate with an explicit import map. |
+| `../../cmd/web/runtime.ts` | Check component header/size and instantiate with an explicit import map. |
 | `capabilities.ts` | Construct granted imports, memory/OPFS sessions, checkpoints, disposal. |
 | `opfs-checks.ts` | Bounded persistent fixture lifecycle through the real plugin.fs exports. |
 | `opfs-paths.ts` | Reject guest paths conflicting with the shim's reserved metadata filename. |
 | `plugin-checks.ts` | Invoke real plugin interfaces and assert results/boundaries. |
-| `plugins.json` | Pin released plugin binaries and original license assets by tag/SHA-256. |
+| `../../cmd/web/plugins.json` | Pin released plugin binaries and original license assets by tag/SHA-256. |
 | `components/` | Two source components and their WIT worlds. |
-| `build.py`, `Makefile` | Static assembly, validated component encoding, serving and clean. |
+| `build.py`, `Makefile` | Diagnostic assembly using `../../cmd/web/build.py`, validated component encoding, serving and clean. |
+| `../../cmd/web/files-call.ts` | Shared filesystem argument/result conversion. |
+| `../../cmd/web/serve.py` | Static HTTP server shared with production; tested by root `make test-web`. |
 
 The server is Python's standard static HTTP server, with no transpilation endpoint or Jco subprocess. Build-time esbuild bundles the **compiler itself**; it never transpiles either sample component. Generated component bindings exist only after clicking Transpile in the browser. All runtime dependencies are served locally; no CDN or backend computation is required.
 
@@ -216,6 +218,8 @@ The final standalone test loaded bytes/initialized Jco, then **stopped the stati
 
 ## Feasibility and next boundaries
 
+This historical assessment records the original experiment, before the production browser Runtime was promoted to `cmd/web/`.
+
 - **D1 — Viable now:** Use Jco as a browser Component Model compatibility layer for dynamically loaded components with explicitly implemented host contracts. The compiler works inside a worker without a backend, filesystem or Jco changes.
 - **R1 — Startup/expansion cost:** The toy input produces over 100 KB of JS and the current experiment needs about 6.36 MB of uncompressed compiler Wasm/worker JS. Repeated runtime compilation on every load is wasteful; large GAMS plugins and low-end devices need separate measurement. These tiny timings cannot predict their cost.
 - **R2 — Missing Host facilities:** GAMS filesystem/configuration, resources, plugin interfaces and async services need real browser adapters and compatibility tests. Native Wasmtime behavior, operating-system access and plugin.js/plugin.lua compatibility are not established by this experiment.
@@ -227,4 +231,4 @@ The final standalone test loaded bytes/initialized Jco, then **stopped the stati
 
 ## Attribution
 
-Jco, its transpiler and Preview 2 shims use Apache-2.0 WITH LLVM-exception. Original license texts and upstream metadata are copied beside served assets under `vendor/licenses/`. Jco 1.42.0's npm archive omits a root LICENSE; `LICENSE-JCO` is the exact upstream license from commit `7d36424c577bdc6e913ff22ef3bc61b42cde0253` (identical SHA-256 to the transpiler archive's LICENSE). GAMS-authored experiment code follows the repository's Apache-2.0 license. Nothing is published by these commands.
+Jco, its transpiler and Preview 2 shims use Apache-2.0 WITH LLVM-exception. Original license texts and upstream metadata are copied beside served assets under `vendor/licenses/`. Jco 1.42.0's npm archive omits a root LICENSE; [`cmd/web/LICENSE-JCO`](../../cmd/web/LICENSE-JCO) is the exact upstream license from commit `7d36424c577bdc6e913ff22ef3bc61b42cde0253` (identical SHA-256 to the transpiler archive's LICENSE). GAMS-authored experiment code follows the repository's Apache-2.0 license. Nothing is published by these commands.

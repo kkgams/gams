@@ -11,11 +11,10 @@ build:
 
 test:
 	node --test *.test.mjs
-	PYTHONPYCACHEPREFIX="$(abspath $(OUTPUT))/pycache" python3 -m unittest serve_test
 
 # Standard-library static GET/HEAD server: no conversion endpoints or subprocesses.
 serve: build
-	python3 serve.py --port $(PORT) --directory $(OUTPUT)/site
+	python3 ../../cmd/web/serve.py --port $(PORT) --directory $(OUTPUT)/site
 
 # Reuse the Host's guarded deletion: refuses tracked paths and symlink traversal.
 clean:

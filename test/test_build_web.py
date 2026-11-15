@@ -20,7 +20,7 @@ class BuildWebTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix='test-build-web-', dir=build)
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        self.site = self.root / 'build.nosync/browser-jco/site'
+        self.site = self.root / 'build.nosync/web-build/site'
         self.host = self.root / 'cmd/app/src'
         self.output = self.root / 'build.nosync/web'
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
@@ -67,7 +67,7 @@ class BuildWebTests(unittest.TestCase):
         return path
 
     def site_put(self, name, data):
-        return self.put(f'build.nosync/browser-jco/site/{name}', data)
+        return self.put(f'build.nosync/web-build/site/{name}', data)
 
     def write_config(self):
         self.site_put('browser-default/gams.json', json.dumps(self.config).encode())

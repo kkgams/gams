@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Assemble the static browser Host from canonical assets and verified build outputs.
 
-Run the browser-jco experiment build first. No downloads, compilers or sibling
+Run the cmd/web production builder first. No downloads, compilers or sibling
 checkouts are used here; only build.nosync/web is replaced.
 """
 
@@ -64,7 +64,7 @@ def tree_files(directory):
 
 def asset_plan(root):
     host = root / "cmd/app/src"
-    site = root / "build.nosync/browser-jco/site"
+    site = root / "build.nosync/web-build/site"
     plan = {}
 
     def add(source, destination):

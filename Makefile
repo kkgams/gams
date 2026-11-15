@@ -259,14 +259,14 @@ promo:
 
 # Independent root-hosted browser app; never merged into the promo/docs site.
 web:
-	$(MAKE) -C experiments/browser-jco build
+	$(MAKE) -C cmd/web build
 	python3 scripts/build-web.py
 
 serve-web: web
-	python3 experiments/browser-jco/serve.py --port "$(WEB_PORT)" --directory build.nosync/web
+	python3 cmd/web/serve.py --port "$(WEB_PORT)" --directory build.nosync/web
 
 test-web:
-	$(MAKE) -C experiments/browser-jco test
+	$(MAKE) -C cmd/web test
 	python3 -m unittest discover -s test -p 'test_build_web.py'
 	python3 -m unittest discover -s test -p 'test_build_date.py'
 
@@ -286,4 +286,4 @@ TAURI_SCHEMA_FILES := $(addprefix $(TAURI_SRC_DIR)/gen/schemas/,acl-manifests.js
 # Only declared recreatable outputs; unrelated files/logs under build.nosync stay.
 # Tracked paths and symlink ancestors are refused before deleting anything.
 clean:
-	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/browser-jco" "$(BUILD_DIR)/web" "$(BUILD_DIR)/web-tools" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")
+	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/browser-jco" "$(BUILD_DIR)/web" "$(BUILD_DIR)/web-build" "$(BUILD_DIR)/web-tools" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")

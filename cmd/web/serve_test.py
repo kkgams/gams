@@ -16,7 +16,7 @@ class QuietHandler(StaticHandler):
 
 class StaticServingTests(unittest.TestCase):
     def setUp(self):
-        output = Path(__file__).resolve().parents[2] / 'build.nosync/browser-jco'
+        output = Path(__file__).resolve().parents[2] / 'build.nosync/web-build'
         output.mkdir(parents=True, exist_ok=True)
         self.directory = tempfile.TemporaryDirectory(dir=output)
         Path(self.directory.name, 'app.js').write_text('export const current = true;')

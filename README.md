@@ -71,7 +71,7 @@ rejects Nix-store-linked Linux binaries, so use the native system SDK for packag
 | `make serve-promo PROMO_PORT=8081` | Preview promo; `/docs` points to the independent docs server. |
 | `make web` | Assemble the root-hosted browser app under `build.nosync/web/`. |
 | `make serve-web WEB_PORT=8093` | Build and preview the browser app at `/`. |
-| `make test-web` | Test the browser Runtime and web assembly without Rust tests. |
+| `make test-web` | Test the production browser Runtime, static server and web assembly; exclude diagnostics and Rust tests. |
 | `make deploy-web` | Upload an existing web build to the explicitly selected Cloudflare Pages project. |
 
 `TARGET` defaults to the installed Rust compiler's native OS/architecture. For
@@ -93,13 +93,20 @@ under `build.nosync/`. Tauri itself also emits capability schemas at its fixed
 removes only its known generated schema files, preserving unrelated files. `clean` preserves authored assets/configuration, unrelated
 files and downloaded Project Units in `gams_modules/`. Those Units may include user-managed local content.
 
-The isolated [browser Component Model experiment](experiments/browser-jco/README.md)
-transpiles and executes components using Jco entirely in a browser worker. Its
-[configured browser Host](experiments/browser-jco/BROWSER.md) serves the canonical
-frontend and loads `gams.json` Projects using URL startup settings and OPFS;
-see its current compatibility limits before selecting a Project. The separately
-published root-hosted app uses the same implementation. See [web deployment](docs/web-deployment.md)
-for the dedicated `nix develop .#web` toolchain, GitHub Actions variables and Cloudflare Pages setup.
+The production [browser Host](cmd/web/README.md) serves the canonical frontend
+and loads `gams.json` Projects using URL startup settings and OPFS; see its
+compatibility limits before selecting a Project. `cmd/web/` owns the browser
+Runtime, shared component helpers, dependency pins and static server. `make web`
+stages production assets in `build.nosync/web-build/site/`, reuses compiler
+dependencies under `build.nosync/web-build/`, then assembles the publishable
+root-hosted app in `build.nosync/web/`. It does not build diagnostics.
+See [web deployment](docs/web-deployment.md) for the dedicated
+`nix develop .#web` toolchain, GitHub Actions variables and Cloudflare Pages setup.
+
+The independent [browser Component Model diagnostics](experiments/browser-jco/README.md)
+consume the production compiler builder/helpers and assemble their component and
+fixed Files pages under `build.nosync/browser-jco/site/`. Run their Node tests
+separately with `make -C experiments/browser-jco test`.
 
 ## CI
 

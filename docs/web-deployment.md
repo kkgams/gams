@@ -19,7 +19,11 @@ nix develop .#web --command make serve-web
 # http://127.0.0.1:8093/
 ```
 
-The pinned web shell supplies Python, Node 24, Make, esbuild, wasm-tools and Wrangler. It does not require Rust or the desktop GTK/WebKit SDK. `make web` assembles `build.nosync/web/`, with the configured Host at `index.html`, canonical Host assets, Jco, the default Files Project configuration and original Host/compiler dependency licenses. The default Project's pinned plugins, Views and UI Services download directly into browser `gams_modules/`, retaining the releases' companion files and licenses; they are not mirrored into `unit-sources/` or `plugins/` folders in the Project. Diagnostic experiment pages and toy components are not published. `make clean` removes this output and disposable `build.nosync/web-tools/` deployment logs/caches, not browser data.
+The pinned web shell supplies Python, Node 24, Make, esbuild, wasm-tools and Wrangler. It does not require Rust or the desktop GTK/WebKit SDK.
+
+Production sources, dependency pins and the static server live in `cmd/web/`; its `README.md` describes browser Host usage and compatibility. `make web`, `make test-web` and `make serve-web` use that production implementation; `make test-web` covers its Node tests, static-server checks and web assembly/date tests, not diagnostic tests.
+
+`make web` first stages production assets in `build.nosync/web-build/site/`, caching compiler dependencies under `build.nosync/web-build/`, then assembles `build.nosync/web/`, with the configured Host at `index.html`, canonical Host assets, Jco, the default Files Project configuration and original Host/compiler dependency licenses. The default Project's pinned plugins, Views and UI Services download directly into browser `gams_modules/`, retaining the releases' companion files and licenses; they are not mirrored into `unit-sources/` or `plugins/` folders in the Project. Diagnostic experiment pages and toy components are not published. `make clean` removes staging, compiler caches, published output and disposable `build.nosync/web-tools/` deployment logs/caches, not browser data.
 
 Set `GAMS_CORS_PROXY` in the build environment to use a public download relay. Unset/empty leaves direct downloads; fresh default Project startup then fails if GitHub denies browser CORS. Previously installed Units remain usable from OPFS caches. Its value is emitted into public browser settings; no endpoint is hardcoded in GAMS source. Rebuild and reload after changing it.
 

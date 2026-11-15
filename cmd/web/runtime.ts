@@ -9,10 +9,10 @@ export function assertComponent(bytes: Uint8Array): void {
   if (!header.every((value, index) => bytes[index] === value)) {
     throw new Error('Expected a Component Model binary, not a core Wasm module.');
   }
-  if (bytes.byteLength > 16 * 1024 * 1024) throw new Error('Experiment input limit: 16 MiB.');
+  if (bytes.byteLength > 16 * 1024 * 1024) throw new Error('Component input limit: 16 MiB.');
 }
 
-// Generated output stays in this worker. Nothing is served or written to disk.
+// Instantiate generated modules from worker-owned bytes, never generated HTTP paths.
 export async function instantiateComponent(
   output: TranspiledComponent,
   allowed: ReadonlyMap<string, unknown>,

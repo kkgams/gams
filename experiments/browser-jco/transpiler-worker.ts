@@ -1,8 +1,8 @@
-import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime';
+import { assertComponent, instantiateComponent, type TranspiledComponent } from '../../cmd/web/runtime.ts';
 import { createCapabilitySession, type CapabilitySession } from './capabilities';
 import { runPersistenceCheck } from './opfs-checks';
 import { runRandomChecks, runFilesystemChecks } from './plugin-checks';
-import { prepareFilesystemCall, filesystemHostValue } from './files-call';
+import { prepareFilesystemCall, filesystemHostValue } from '../../cmd/web/files-call.ts';
 
 let transpiled: TranspiledComponent | undefined;
 let instance: Record<string, unknown> | undefined;

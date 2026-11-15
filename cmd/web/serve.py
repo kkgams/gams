@@ -1,4 +1,4 @@
-"""Serve static experiment assets; no Host operations or conversion endpoints."""
+"""Serve static Web Host or diagnostic assets; no Host operations or conversion endpoints."""
 import argparse
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
