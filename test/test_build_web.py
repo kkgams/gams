@@ -97,6 +97,10 @@ class BuildWebTests(unittest.TestCase):
         self.assertIn('Cache-Control: no-store', (self.output / '_headers').read_text())
         self.assertIn('X-Content-Type-Options: nosniff', (self.output / '_headers').read_text())
         self.assertEqual((self.output / '_headers').read_text(), web.HEADERS)
+        for name in web.GENERATED:
+            if name.endswith('.wasm'):
+                self.assertIn(f'/{name}\n  Content-Type: application/wasm\n',
+                              (self.output / '_headers').read_text())
         self.assertIn('404', (self.output / '404.html').read_text())
         self.assertNotIn('<script', (self.output / '404.html').read_text())
 

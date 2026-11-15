@@ -33,7 +33,10 @@ GENERATED = (
     "vendor/js-component-bindgen-component.core3.wasm",
     "vendor/js-component-bindgen-component.core4.wasm",
 )
-HEADERS = "/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n"
+HEADERS = "/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n" + ''.join(
+    f"\n/{name}\n  Content-Type: application/wasm\n"
+    for name in GENERATED if name.endswith('.wasm')
+)
 NOT_FOUND = "<!doctype html>\n<html lang=\"en\"><meta charset=\"utf-8\"><title>Not found</title><h1>404 — Not found</h1></html>\n"
 
 
