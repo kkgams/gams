@@ -18,6 +18,8 @@ This guide defines the supported UI vocabulary for **Core Views**: views provide
 
 Core Views use themeable semantic elements, classes, and attributes so they can be styled consistently by GAMS themes and behave as one coherent UI surface.
 
+These are **GAMS View semantics**, a project-specific UI contract that may intentionally differ from generic browser HTML/ARIA conventions. The documented GAMS contract is authoritative for Views. For example, `col[aria-selected]` is a GAMS column-state hook, and a selectable `th[role="button"]` remains a GAMS column selector. These choices do not imply browser ARIA conformance or change CSS painting behavior. Views must still implement the documented keyboard and focus behavior explicitly.
+
 Core Views should be built only from the elements, slots, classes, and attributes documented here. Core View HTML should not contain custom CSS, inline styling, or undocumented elements/patterns. Existing code that does so is legacy/deprecated and a target for rework.
 
 ## View layout
@@ -191,6 +193,17 @@ APIs to select another font.
 - Shared Host `base.css` owns sortable-header focus/interaction styling and the Material Symbols Rounded `::after` indicator (`arrow_upward` / `arrow_downward`) selected by `aria-sort`; Views must not add local indicator markup or CSS.
 - `th[role="button"][aria-expanded][tabindex="0"]` - collapsible table-group heading. It must activate with click, Enter, or Space and expose its expanded state through `aria-expanded`.
 - `td` - table data cell.
+
+### Selectable columns
+
+- `colgroup` / `col` - column definitions, before the table's row groups. Use one `col` per logical column; a static row-number column may be included without selection state.
+- `col[aria-selected="false"]` / `col[aria-selected="true"]` - GAMS column-selection state. At most one column is selected per table. The attribute is a GAMS styling/state hook on `col`, not a browser accessibility claim.
+- `th[scope="col"][role="button"][aria-selected][tabindex]` - focusable column selector. Give it an accessible name describing the action and column. Mirror the corresponding `col` selection state on the header.
+- `th[role="button"][aria-disabled="true"]` - unavailable selector; do not activate it or include it in keyboard navigation.
+
+Click, Enter or Space selects the column. Left/Right select the previous/next enabled column without wrapping; Home/End select the first/last enabled column. Use roving focus: the selected enabled header has `tabindex="0"`, the others `-1`. Preserve header focus when updating selection or related View content. Selecting a column must not reorder data or imply sorting; do not use `aria-sort` for selection.
+
+Themes paint `col[aria-selected="true"]` with a readable soft selection background and style selected headers consistently. Column text does not inherit `color` from `col`. Row groups, rows and cells paint above column backgrounds, so this pattern requires transparent body cells; do not blanket-remove backgrounds from other table layouts. A selected/playback row intentionally paints over the column highlight at their intersection. Column state is independent of row selection and playback position.
 
 ### Selectable cell grids
 
