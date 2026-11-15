@@ -182,7 +182,8 @@ APIs to select another font.
 
 - `table` - base element for tabular data in UI.
 - `table[data-layout="separate"]` - separated-cell table layout for board-like or card-grid views where cells contain block content rather than compact row values.
-- `table.compact-actions` - table whose icon-only action buttons in body cells use compact theme sizing. Use this as an explicit exception when dense row actions should be smaller than normal buttons.
+- `table.compact-actions` - compact theme sizing for icon-only action buttons in immediate `th`/`td` cells under `thead`, `tbody`, or `tfoot`. Supports buttons directly in a cell or inside its direct `[role="buttongroup"]`; compact groups lose their outer padding. Nested tables do not inherit the opt-in.
+- `td.compact-actions` / `th.compact-actions` - apply the same compact action sizing to just that cell, without marking the whole table. Use either scope as an explicit exception for dense actions; text buttons and other controls retain their normal sizing.
 - `caption` - optional table title/label when the table needs an intrinsic semantic heading.
 - `thead` - optional table header section.
 - `tbody` - required table body section.

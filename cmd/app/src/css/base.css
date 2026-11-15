@@ -1119,6 +1119,23 @@
         text-overflow: ellipsis;
     }
 
+    /* Compact icon actions: opt in on a table or an individual header/body/footer cell. */
+    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > [role="buttongroup"] {
+        padding: 0;
+    }
+
+    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > button:has(> i:only-child),
+    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > [role="buttongroup"] > button:has(> i:only-child) {
+        min-width: 0;
+        min-height: 14px;
+        padding: 0 1px;
+    }
+
+    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > button:has(> i:only-child) > i,
+    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > [role="buttongroup"] > button:has(> i:only-child) > i {
+        font-size: inherit;
+    }
+
     th[aria-sort] {
         cursor: pointer;
         user-select: none;
