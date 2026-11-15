@@ -1124,30 +1124,18 @@
         padding: 0;
     }
 
-    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > button:has(> i:only-child),
-    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > [role="buttongroup"] > button:has(> i:only-child) {
-        min-width: 0;
-        min-height: 14px;
-        padding: 0 1px;
-    }
-
-    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > button:has(> i:only-child) > i,
-    :is(table.compact-actions > :is(thead, tbody, tfoot) > tr > :is(th, td), td.compact-actions, th.compact-actions) > [role="buttongroup"] > button:has(> i:only-child) > i {
-        font-size: inherit;
-    }
-
-    /* An adjacent cell supplies row height; keep the native table-cell layout. */
-    td.stretch-actions {
-        position: relative;
+    /* A table cell's height is a minimum; in-flow groups preserve action-only rows. */
+    td:has(> [role="buttongroup"]:only-child) {
+        height: 1px;
         padding: 0;
     }
 
-    td.stretch-actions > [role="buttongroup"] {
-        position: absolute;
-        inset: 0;
+    td > [role="buttongroup"]:only-child {
+        height: 100%;
         padding: 0;
         display: flex;
         align-items: stretch;
+        justify-content: flex-end;
     }
 
     th[aria-sort] {

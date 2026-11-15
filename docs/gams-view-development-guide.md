@@ -184,7 +184,6 @@ APIs to select another font.
 - `table[data-layout="separate"]` - separated-cell table layout for board-like or card-grid views where cells contain block content rather than compact row values.
 - `table.compact-actions` - compact theme sizing for icon-only action buttons in immediate `th`/`td` cells under `thead`, `tbody`, or `tfoot`. Supports buttons directly in a cell or inside its direct `[role="buttongroup"]`; compact groups lose their outer padding. Nested tables do not inherit the opt-in.
 - `td.compact-actions` / `th.compact-actions` - apply the same compact action sizing to just that cell, without marking the whole table. Use either scope as an explicit exception for dense actions; text buttons and other controls retain their normal sizing.
-- `td.stretch-actions` - stretch a direct `[role="buttongroup"]` to the full cell height while preserving native table layout. Combine with `compact-actions` for narrow icon buttons that fill a header/action cell vertically. The group is absolutely positioned: another cell must supply row height, and the table must allocate sufficient column width; the actions do not contribute intrinsic row height or column width. This modifier is cell-scoped, not inherited by nested tables.
 - `caption` - optional table title/label when the table needs an intrinsic semantic heading.
 - `thead` - optional table header section.
 - `tbody` - required table body section.
