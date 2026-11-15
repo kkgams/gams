@@ -1136,6 +1136,20 @@
         font-size: inherit;
     }
 
+    /* An adjacent cell supplies row height; keep the native table-cell layout. */
+    td.stretch-actions {
+        position: relative;
+        padding: 0;
+    }
+
+    td.stretch-actions > [role="buttongroup"] {
+        position: absolute;
+        inset: 0;
+        padding: 0;
+        display: flex;
+        align-items: stretch;
+    }
+
     th[aria-sort] {
         cursor: pointer;
         user-select: none;
