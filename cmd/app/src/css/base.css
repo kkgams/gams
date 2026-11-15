@@ -1124,7 +1124,7 @@
         user-select: none;
     }
 
-    /* GAMS header controls share selected and pressed state styling. */
+    /* GAMS header controls: selection highlights; pressed controls depress. */
     th[role="button"]:is([aria-selected], [aria-pressed]) {
         user-select: none;
         -webkit-user-select: none;
@@ -1134,14 +1134,31 @@
         cursor: pointer;
     }
 
-    th[role="button"]:is([aria-selected="true"], [aria-pressed="true"]) {
+    th[role="button"][aria-selected="true"] {
         background: var(--intent-soft-bg);
         color: var(--intent-soft-fg);
     }
 
-    th[role="button"]:is([aria-selected="true"], [aria-pressed="true"]):not([aria-disabled="true"]):hover {
+    th[role="button"][aria-selected="true"]:not([aria-disabled="true"]):hover {
         background: var(--intent-hover-bg);
         color: var(--intent-fg);
+    }
+
+    th[role="button"][aria-pressed] {
+        background: var(--surface-elevated);
+        color: var(--text);
+        box-shadow: inset 1px 1px 0 rgb(255 255 255 / 0.12), inset -1px -1px 0 rgb(0 0 0 / 0.3);
+    }
+
+    th[role="button"][aria-pressed="false"]:not([aria-disabled="true"]):hover {
+        background: var(--surface-hover);
+    }
+
+    th[role="button"][aria-pressed="true"],
+    th[role="button"][aria-pressed]:not([aria-disabled="true"]):active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: inset 1px 1px 2px rgb(0 0 0 / 0.45), inset -1px -1px 0 rgb(255 255 255 / 0.08);
     }
 
     th[role="button"][aria-disabled="true"] {
