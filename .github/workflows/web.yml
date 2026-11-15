@@ -1,0 +1,36 @@
+name: Deploy browser app to Cloudflare Pages
+
+on:
+  push:
+    branches: [release]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    env:
+      GAMS_CORS_PROXY: ${{ vars.GAMS_CORS_PROXY }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Test and assemble the root-hosted browser app
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            : "${GAMS_CORS_PROXY:?Set the GAMS_CORS_PROXY repository variable}"
+          fi
+          nix develop .#web --command make test-web web
+      - name: Deploy the app independently of GitHub Pages
+        if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: nix develop .#web --command make deploy-web

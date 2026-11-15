@@ -34,6 +34,10 @@
             nativeBuildInputs = hostTools;
             buildInputs = platformLibraries;
           };
+          web = pkgs.mkShell {
+            name = "gams-web-dev";
+            packages = with pkgs; [ python3 nodejs_24 gnumake esbuild wasm-tools wrangler cacert git ];
+          };
         });
     };
 }

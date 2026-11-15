@@ -2,7 +2,7 @@
 
 [GAMS](https://kkgams.github.io/gams/) is a desktop Host for composing game-editing
 workspaces from independently released plugins, Views, UI Services and themes.
-Projects own their configuration and content; Host distributions do not bundle
+Projects own their configuration and content; desktop distributions do not bundle
 an example game or Project Units.
 
 ## Desktop packages
@@ -66,6 +66,10 @@ rejects Nix-store-linked Linux binaries, so use the native system SDK for packag
 | `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.6.0. |
 | `make promo` | Assemble promo and documentation under `build.nosync/site/`. |
 | `make serve-promo PROMO_PORT=8081` | Preview promo; `/docs` points to the independent docs server. |
+| `make web` | Assemble the root-hosted browser app under `build.nosync/web/`. |
+| `make serve-web WEB_PORT=8093` | Build and preview the browser app at `/`. |
+| `make test-web` | Test the browser Runtime and web assembly without Rust tests. |
+| `make deploy-web` | Upload an existing web build to the explicitly selected Cloudflare Pages project. |
 
 `TARGET` defaults to the installed Rust compiler's native OS/architecture. For
 example, `TARGET=aarch64-apple-darwin make package` selects the macOS package.
@@ -90,7 +94,9 @@ The isolated [browser Component Model experiment](experiments/browser-jco/README
 transpiles and executes components using Jco entirely in a browser worker. Its
 [configured browser Host](experiments/browser-jco/BROWSER.md) serves the canonical
 frontend and loads `gams.json` Projects using URL startup settings and OPFS;
-see its current compatibility limits before selecting a Project.
+see its current compatibility limits before selecting a Project. The separately
+published root-hosted app uses the same implementation. See [web deployment](docs/web-deployment.md)
+for the dedicated `nix develop .#web` toolchain, GitHub Actions variables and Cloudflare Pages setup.
 
 ## CI
 
@@ -110,7 +116,10 @@ release archives and app bundles are not cached. Windows/Linux download pinned,
 SHA-256-verified Tauri CLI and cargo-about binaries into `build.nosync/ci-tools/`
 instead of compiling the tools. macOS retains its pinned Nix toolchain. The first
 branch run populates caches; different tags cannot share tag-only caches.
-GitHub Pages uses the GitHub Actions deployment source.
+GitHub Pages uses the GitHub Actions deployment source. The independent web
+workflow tests/builds the browser app on PRs and deploys `release` to Cloudflare
+Pages using explicit account/project variables and a deployment token; it does
+not change the promo/docs site or build native release packages.
 
 ## Project Unit sources
 

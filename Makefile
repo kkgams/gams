@@ -21,6 +21,9 @@ TAURI_TARGET_DIR ?= $(if $(value CARGO_TARGET_DIR),$(abspath $(value CARGO_TARGE
 RUST_TEST_STAMP := $(abspath $(BUILD_DIR)/app/rust-tests.stamp)
 # Recursive: docs/promo/font commands never need Rust installed.
 TARGET ?= $(shell rustc -vV 2>/dev/null | awk '/^host:/ {print $$2}')
+WEB_PORT ?= 8093
+CLOUDFLARE_PAGES_PROJECT ?=
+
 GAMS_CONFIG ?= gams.json
 export GAMS_CONFIG
 GAMS_APP_CWD ?=
@@ -31,13 +34,13 @@ HOST_CXX ?= $(if $(CXX),$(CXX),$(HOST_CXX_AUTO))
 # MSVC discovers its compiler through the native developer environment.
 COMPILER_ENV = case "$$(uname -s)" in MINGW*|MSYS*|CYGWIN*) unset CC CXX ;; *) if [[ -n "$(HOST_CC)" ]]; then export CC="$(HOST_CC)"; fi; if [[ -n "$(HOST_CXX)" ]]; then export CXX="$(HOST_CXX)"; fi ;; esac
 
-.PHONY: run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo clean
+.PHONY: run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo web serve-web test-web deploy-web clean
 
 $(BUILD_DIR)/tmp:
 	mkdir -p "$@"
 
 # Order-only: creating the shared temporary directory never invalidates outputs.
-run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo: | $(BUILD_DIR)/tmp
+run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo web serve-web test-web deploy-web: | $(BUILD_DIR)/tmp
 
 # Source development: no Project means the existing native picker behavior.
 run: app-icons
@@ -254,10 +257,32 @@ promo:
 	mv "$$stage/site" "$(BUILD_DIR)/site"
 	@echo 'Built Pages site: $(BUILD_DIR)/site'
 
+# Independent root-hosted browser app; never merged into the promo/docs site.
+web:
+	$(MAKE) -C experiments/browser-jco build
+	python3 scripts/build-web.py
+
+serve-web: web
+	python3 experiments/browser-jco/serve.py --port "$(WEB_PORT)" --directory build.nosync/web
+
+test-web:
+	$(MAKE) -C experiments/browser-jco test
+	python3 -m unittest discover -s test -p 'test_build_web.py'
+
+# Upload the already assembled app. Project provisioning and credentials are explicit.
+deploy-web:
+	: "$${CLOUDFLARE_ACCOUNT_ID:?Set CLOUDFLARE_ACCOUNT_ID}"
+	: "$${CLOUDFLARE_API_TOKEN:?Set CLOUDFLARE_API_TOKEN}"
+	[[ -n "$(CLOUDFLARE_PAGES_PROJECT)" ]] || { echo 'Set CLOUDFLARE_PAGES_PROJECT' >&2; exit 1; }
+	[[ -f build.nosync/web/index.html ]] || { echo 'Run make web before deploying' >&2; exit 1; }
+	mkdir -p "$(BUILD_DIR)/web-tools"
+	cd "$(BUILD_DIR)/web-tools"
+	XDG_CONFIG_HOME="$(abspath $(BUILD_DIR)/web-tools/config)" XDG_CACHE_HOME="$(abspath $(BUILD_DIR)/web-tools/cache)" WRANGLER_LOG_PATH="$(abspath $(BUILD_DIR)/web-tools/wrangler.log)" WRANGLER_SEND_METRICS=false wrangler pages deploy "$(abspath build.nosync/web)" --project-name "$(CLOUDFLARE_PAGES_PROJECT)" --branch release --commit-dirty=true
+
 # Tauri writes these generated SDK schemas at a fixed source-tree location.
 TAURI_SCHEMA_FILES := $(addprefix $(TAURI_SRC_DIR)/gen/schemas/,acl-manifests.json capabilities.json desktop-schema.json macOS-schema.json windows-schema.json linux-schema.json)
 
 # Only declared recreatable outputs; unrelated files/logs under build.nosync stay.
 # Tracked paths and symlink ancestors are refused before deleting anything.
 clean:
-	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/browser-jco" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")
+	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/browser-jco" "$(BUILD_DIR)/web" "$(BUILD_DIR)/web-tools" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")

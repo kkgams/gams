@@ -24,7 +24,7 @@ Nix uses the repository's existing lock: Node 24, Python, esbuild 0.27.2 and was
 | `make -C experiments/browser-jco test` | Run native Node tests and static HTTP server checks. |
 | `make -C experiments/browser-jco clean` | Guardedly delete only `build.nosync/browser-jco/`, including downloaded archives, dependencies and output. |
 
-The existing GAMS frontend is static JavaScript without Vite or a frontend package manifest. This experiment keeps that deployment model, adding small TypeScript modules compiled by pinned esbuild. No framework, npm task runner, or production frontend integration is introduced. esbuild strips types; this build is not a TypeScript type-check.
+The existing GAMS frontend is static JavaScript without Vite or a frontend package manifest. This experiment keeps that deployment model, adding small TypeScript modules compiled by pinned esbuild. No framework or npm task runner is introduced. The root-hosted app assembled by `make web` uses this same browser Host implementation; see [web deployment](../../docs/web-deployment.md). esbuild strips types; this build is not a TypeScript type-check.
 
 ### Try the pipeline
 

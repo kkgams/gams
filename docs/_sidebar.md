@@ -64,6 +64,7 @@
 - [[zip-project-units|ZIP Project Units]]
 - [[project-loading|Startup progress]]
 - [[project-saving|Project saving]]
+- [[web-deployment|Browser app deployment]]
 
 ## Shared UI
 
