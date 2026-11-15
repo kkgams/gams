@@ -55,7 +55,7 @@ run: app-icons
 	fi
 	$(COMPILER_ENV)
 	cd "$(TAURI_SRC_DIR)"
-	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri dev
+	GAMS_BUILD_DATE="$$(python3 "$(abspath scripts/build-date.py)")" CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri dev
 
 # Open this checkout's root Project, not the picker or an inherited Project.
 open:
@@ -111,10 +111,10 @@ $(NATIVE_OPTIONS): force-native-options | $(BUILD_DIR)/tmp
 
 build: $(NATIVE_BINARY)
 
-$(NATIVE_BINARY): $(NATIVE_INPUTS) $(BUILD_DIR)/app/icons/icon.icns $(NATIVE_OPTIONS) $(RUST_TEST_STAMP) Makefile | $(BUILD_DIR)/tmp
+$(NATIVE_BINARY): $(NATIVE_INPUTS) scripts/build-date.py $(BUILD_DIR)/app/icons/icon.icns $(NATIVE_OPTIONS) $(RUST_TEST_STAMP) Makefile | $(BUILD_DIR)/tmp
 	if [[ "$(TARGET)" == *windows* ]]; then unset CC CXX; else $(COMPILER_ENV); fi
 	cd "$(TAURI_SRC_DIR)"
-	CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri build --no-bundle --target "$(TARGET)" $(TAURI_VERSION_ARGS)
+	GAMS_BUILD_DATE="$$(python3 "$(abspath scripts/build-date.py)")" CARGO_TARGET_DIR="$(TAURI_TARGET_DIR)" cargo tauri build --no-bundle --target "$(TARGET)" $(TAURI_VERSION_ARGS)
 	# Cargo can reuse unchanged bytes after a Makefile-only change.
 	touch "$@"
 
@@ -268,6 +268,7 @@ serve-web: web
 test-web:
 	$(MAKE) -C experiments/browser-jco test
 	python3 -m unittest discover -s test -p 'test_build_web.py'
+	python3 -m unittest discover -s test -p 'test_build_date.py'
 
 # Upload the already assembled app. Project provisioning and credentials are explicit.
 deploy-web:

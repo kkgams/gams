@@ -45,6 +45,9 @@ Rust, the Tauri CLI, native license tooling, Node.js 24, Python and Make. Use
 Xcode command-line tools. Linux development uses the flake's GTK/WebKit libraries.
 Nix provisions the optional font compiler only for deliberate font regeneration.
 
+Native and web apps log `GAMS release date: YYYYMMDD` to the JavaScript console
+on startup. This is the UTC date baked into the build, not the date when opened.
+
 Native Windows uses MSVC/Windows SDK, Rust 1.94.1, Tauri CLI 2.11.0, cargo-about
 0.8.4, GNU Make, Node.js 24 and Python 3. Nix/direnv do not provide a native
 Windows development environment; WSL builds Linux targets. Official Linux release

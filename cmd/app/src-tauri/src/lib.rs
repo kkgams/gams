@@ -465,6 +465,7 @@ fn run_native(options: options::Options) -> anyhow::Result<()> {
             #[cfg(debug_assertions)]
             let window = window.initialization_script(include_str!("dev-console.js"));
             window
+                .initialization_script(include_str!(concat!(env!("OUT_DIR"), "/release-date.js")))
                 .title("GAMS")
                 .inner_size(1000.0, 700.0)
                 .devtools(options.devtools)

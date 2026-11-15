@@ -126,8 +126,11 @@ def build():
     # transport/menu and the experiment landing page are replaced below.
     host = ROOT / 'cmd/app/src'
     shutil.copytree(host, SITE, dirs_exist_ok=True, ignore=shutil.ignore_patterns('.DS_Store'))
+    date_script = subprocess.check_output(
+        ['python3', str(ROOT / 'scripts/build-date.py'), '--script'], text=True).strip()
     browser_html = (host / 'index.html').read_text().replace(
-        'src="./app.js"', 'src="/browser-launch.js"')
+        'src="./app.js"', 'src="/browser-launch.js"').replace(
+        '</head>', f'<script>{date_script}</script>\n</head>')
     (SITE / 'browser.html').write_text(browser_html)
     shutil.copy2(ROOT / 'promo/favicon.svg', SITE / 'favicon.svg')
     deps = {}

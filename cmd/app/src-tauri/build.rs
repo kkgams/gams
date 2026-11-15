@@ -1,4 +1,22 @@
 fn main() {
+    let date_script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../scripts/build-date.py");
+    println!("cargo:rerun-if-changed={}", date_script.display());
+    println!("cargo:rerun-if-env-changed=GAMS_BUILD_DATE");
+    let output = std::process::Command::new("python3")
+        .arg(&date_script)
+        .arg("--script")
+        .output()
+        .expect("Python 3 is required to bake the app release date");
+    assert!(
+        output.status.success(),
+        "failed to bake app release date: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let target = std::path::PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR"))
+        .join("release-date.js");
+    std::fs::write(target, output.stdout).expect("failed to write app release date");
+
     let msvc = std::env::var("CARGO_CFG_TARGET_OS").expect("Cargo sets the target OS") == "windows"
         && std::env::var("CARGO_CFG_TARGET_ENV").expect("Cargo sets the target environment") == "msvc";
     let mut attributes = tauri_build::Attributes::new();
