@@ -1,4 +1,5 @@
 import { normalizePath } from './browser-storage.ts';
+import { validateCorsProxy } from './browser-options.ts';
 
 export interface Store {
   read(path: string): Promise<Uint8Array>;
@@ -10,7 +11,7 @@ export interface Store {
   rename(from: string, to: string): Promise<void>;
   flush(): Promise<void>;
 }
-export interface ProjectOptions { cwd: string; config: string; modulesDir: string; pluginCacheDir: string; source?: string }
+export interface ProjectOptions { cwd: string; config: string; modulesDir: string; pluginCacheDir: string; source?: string; corsProxy?: string }
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type ObjectJson = { [key: string]: Json };
 export interface ZipMember {
@@ -135,7 +136,7 @@ export class BrowserProject {
     this.store = store; this.deps = dependencies;
     for (const key of ['cwd', 'modulesDir', 'pluginCacheDir'] as const) insist(options[key].startsWith('/'), `${key} must be absolute`);
     insist(typeof options.config === 'string' && options.config.length > 0 && !/[\/\\:\x00]/.test(options.config) && options.config !== '.' && options.config !== '..', 'config must be a filename');
-    this.options = { ...options, cwd: normalizePath(options.cwd), modulesDir: normalizePath(options.modulesDir), pluginCacheDir: normalizePath(options.pluginCacheDir) };
+    this.options = { ...options, corsProxy: validateCorsProxy(options.corsProxy), cwd: normalizePath(options.cwd), modulesDir: normalizePath(options.modulesDir), pluginCacheDir: normalizePath(options.pluginCacheDir) };
     if (options.source !== undefined) {
       if (/^[a-z][a-z\d+.-]*:/i.test(options.source)) this.validateURL(options.source);
       const source = new URL(options.source, globalThis.location?.href);
@@ -175,10 +176,17 @@ export class BrowserProject {
     const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('download timeout (120 seconds)')); }, 120_000); });
     const action = async () => {
       if (this.deps.download) return this.deps.download(url, progress);
-      const response = await fetch(url, { signal: controller.signal, mode: 'cors', credentials: 'omit' });
+      const relay = this.options.corsProxy && new URL(url).origin !== globalThis.location?.origin
+        ? new URL(this.options.corsProxy) : undefined;
+      if (relay) relay.searchParams.set('url', url);
+      const response = await fetch(relay?.href ?? url, { signal: controller.signal, mode: 'cors', credentials: 'omit' });
       insist(response.ok, `download failed: HTTP ${response.status}`);
       const final = this.validateURL(response.url);
-      insist(new URL(url).protocol !== 'https:' || final.protocol === 'https:', 'HTTPS downgrade redirect rejected');
+      if (relay) {
+        insist(final.origin === relay.origin && final.pathname === relay.pathname, 'CORS proxy redirect changed endpoint');
+      } else {
+        insist(new URL(url).protocol !== 'https:' || final.protocol === 'https:', 'HTTPS downgrade redirect rejected');
+      }
       const length = response.headers.get('content-length'); const total = length === null ? null : Number(length);
       insist(total === null || (Number.isSafeInteger(total) && total >= 0 && total <= MAX_DOWNLOAD), 'download exceeds 64 MiB limit');
       insist(response.body, 'download response has no body');

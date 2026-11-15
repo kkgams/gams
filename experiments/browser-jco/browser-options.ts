@@ -1,11 +1,31 @@
 // URL startup settings correspond to Native CLI names, but paths belong to the
 // selected browser filesystem. They never name directories on the HTTP server.
+export interface BrowserEnvironment {
+  corsProxy?: string | null;
+}
+
 export interface BrowserOptions {
   cwd: string;
   config: string;
   modulesDir: string;
   pluginCacheDir: string;
   source?: string;
+  corsProxy?: string;
+}
+
+export function validateCorsProxy(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value) || /[\x00-\x20\\?#]/.test(value)) {
+    throw new Error('corsProxy must be an absolute HTTP(S) endpoint without credentials, query or fragment.');
+  }
+  let url: URL;
+  try { url = new URL(value); } catch { throw new Error('corsProxy must be an absolute HTTP(S) endpoint.'); }
+  if (url.username || url.password) throw new Error('corsProxy must not contain credentials.');
+  const loopback = url.hostname === 'localhost' || url.hostname === '[::1]' || /^127(?:\.\d{1,3}){3}$/.test(url.hostname);
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new Error('corsProxy requires HTTPS or loopback HTTP.');
+  }
+  return url.href;
 }
 
 export function virtualPath(value: string, base = '/'): string {
@@ -23,7 +43,8 @@ export function virtualPath(value: string, base = '/'): string {
   return '/' + parts.join('/');
 }
 
-export function parseBrowserOptions(url: string): BrowserOptions {
+export function parseBrowserOptions(url: string, environment: BrowserEnvironment = {}): BrowserOptions {
+  const corsProxy = validateCorsProxy(environment.corsProxy);
   const page = new URL(url);
   const allowed = new Set(['project-dir', 'cwd', 'config', 'modules-dir', 'plugin-cache-dir', 'source', 'fs']);
   for (const key of page.searchParams.keys()) {
@@ -67,5 +88,5 @@ export function parseBrowserOptions(url: string): BrowserOptions {
     if (!parsed.pathname.endsWith('/')) parsed.pathname += '/';
     source = parsed.href;
   }
-  return { cwd, config, modulesDir, pluginCacheDir, ...(source ? { source } : {}) };
+  return { cwd, config, modulesDir, pluginCacheDir, ...(source ? { source } : {}), ...(corsProxy ? { corsProxy } : {}) };
 }

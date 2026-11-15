@@ -3,12 +3,15 @@ import base64
 import hashlib
 import io
 import json
+import os
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
 import subprocess
 import tarfile
 import urllib.request
+import urllib.parse
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -121,6 +124,19 @@ def build_files():
 
 def build():
     SITE.mkdir(parents=True, exist_ok=True)
+    # Public build-time browser settings; never export credentials/query tokens.
+    proxy = os.environ.get('GAMS_CORS_PROXY') or None
+    if proxy:
+        endpoint = urllib.parse.urlsplit(proxy)
+        loopback = endpoint.hostname in ('localhost', '::1') or bool(
+            re.fullmatch(r'127(?:\.\d{1,3}){3}', endpoint.hostname or ''))
+        if (re.search(r'[\x00-\x20\\?#]', proxy) or not endpoint.hostname
+                or endpoint.username is not None or endpoint.password is not None
+                or endpoint.scheme not in ('http', 'https')
+                or (endpoint.scheme == 'http' and not loopback)):
+            raise ValueError('GAMS_CORS_PROXY requires an HTTPS or loopback HTTP endpoint without credentials, query or fragment')
+        endpoint.port  # Validate a supplied numeric port before exporting the URL.
+    (SITE / 'browser-environment.json').write_text(json.dumps({'corsProxy': proxy}) + '\n')
     # Keep every shared Host module and asset canonical. Only the platform
     # transport/menu and the experiment landing page are replaced below.
     host = ROOT / 'cmd/app/src'

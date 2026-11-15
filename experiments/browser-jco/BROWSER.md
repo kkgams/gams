@@ -25,6 +25,30 @@ Click **Open Project — grant browser filesystem**. The source is an import loc
 
 On subsequent visits, omit `source` to reopen the persisted Project. Expand **Browser Host** for **Save Project**, **Checkpoint and close**, **Force stop**, and **Reload**. Close waits for guest shutdown and a storage checkpoint; a failed/timed-out close retains the worker and permits retry. Force stop can lose/partially persist changes. Reload is required to reopen a stopped session. Finish operations before closing/reloading; page unload cannot await persistence.
 
+## Optional download relay
+
+Start the independent `server.cors-proxy` checkout locally:
+
+```sh
+# In server.cors-proxy/
+nix develop --command make serve
+# http://127.0.0.1:8787/download
+```
+
+Then build/serve GAMS with its public relay endpoint:
+
+```sh
+# In gams/
+GAMS_CORS_PROXY=http://127.0.0.1:8787/download \
+  nix develop --command make -C experiments/browser-jco serve
+```
+
+`GAMS_CORS_PROXY` is a **build-time browser setting**, exported to `browser-environment.json`, not a shell environment read by Chrome. Rebuild when setting/changing/unsetting it. Unset or empty disables the relay. Use an absolute HTTPS endpoint, or loopback HTTP for development, without credentials/query/fragment. This public asset must not contain secrets. The startup options display the selected endpoint.
+
+Configured cross-origin downloads use `endpoint?url=<encoded original URL>`. Same-origin bootstrap/assets remain direct. Original URLs still determine resource identity, relative references, progress labels, OPFS caches and saved `$file` expressions. Relay failure is an error, not a trigger for a second direct download. Existing OPFS caches can still be used when the relay is offline.
+
+The relay has exact origin/host allowlists; its development defaults allow the normal GAMS origin on port 8093 and GitHub release infrastructure. For another GAMS port/domain, configure `CORS_PROXY_ALLOWED_ORIGINS` on the relay. Other resource hosts require `CORS_PROXY_ALLOWED_HOSTS`, including every redirect destination. No server-side cache, `gams.json` proxy field, automatic organization endpoint or Cloudflare deployment is implemented yet. GAMS builds/runs independently of the relay repository when this setting is unset.
+
 ## URL settings
 
 Names match applicable Native flags; there are no process environment variables in browser mode.
@@ -58,7 +82,7 @@ Jco caches generated JS, core Wasm, export/import metadata and integrity hashes 
 
 ## Current compatibility limits
 
-- **R7 — CORS:** Downloads use ordinary browser Fetch. Resource/Project servers must allow the browser origin. Direct GitHub Release fetch was blocked in Chrome; use an explicitly configured same-origin/CORS-enabled mirror. No hidden proxy or GitHub URL rewrite is provided. Browser Fetch also cannot reproduce Native's intermediate-redirect inspection/five-hop policy.
+- **R7 — CORS:** Direct downloads use ordinary browser Fetch and require upstream CORS permission. Direct GitHub Release fetch was blocked in Chrome; use the explicit optional relay or a same-origin/CORS-enabled mirror. There is no hidden fallback or GitHub-specific URL rewrite. The relay checks every redirect; direct browser Fetch cannot reproduce Native's intermediate-redirect inspection/five-hop policy.
 - **R8 — Plugin ABI:** Host adapters currently cover `gams:fs/fs@1.2.0`, `gams:layout/layout@1.0.0` and the tested random interfaces. Layout field names/options and filesystem byte/result shapes preserve the Native JSON boundary. Arbitrary WIT schemas, opaque resources, component-to-component linking and component-to-View imports are not implemented; missing imports/unknown ABIs reject rather than pretending compatibility.
 - **R9 — Execution scope:** Components are singleton instances in one worker; its commands are ordered. This milestone does not implement worker-per-plugin concurrency, Native shell/process execution, native IPC, picked folders, WebDAV or full GAMS command parity.
 
@@ -77,5 +101,6 @@ Real Chrome 145 on macOS, using unchanged checksum-verified releases served from
 | **B7 — Startup failure** | Selecting missing config failed visibly without falling back; checkpointed close still succeeded before components existed. |
 | **B8 — Local Unit import** | A configured bare local FS component path imported from the explicit HTTP Project folder and loaded alongside cached Units. |
 | **B9 — First-run Files Project** | A fresh origin with no OPFS namespace booted from bare `/browser.html`, with no console errors or cross-origin startup requests. Actual Files View upload worked. An edited config and uploaded file survived reopening with the bootstrap source unavailable; two Jco cache hits and zero retranspilations. A rejected remote GitHub download did not disable Files operations. |
+| **B10 — Optional relay** | Direct Chrome GitHub fetch failed; `runtime.download()` through local relay returned the 55,491-byte FS component with its published SHA-256. Real Files View ZIP installation/extraction worked; cache metadata and Project Save retained its original GitHub URL. Reopening with the relay stopped reused the installed resource and both Jco caches. |
 
-All 112 experiment Node tests and three static-server tests passed; the prior 113 existing Host JS tests remain unchanged. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.
+All 121 experiment Node tests and three static-server tests passed; the prior 113 existing Host JS tests remain unchanged. Native Node tests supplement these browser checks: storage coherence/failures, resolver/ZIP/cache/Save contracts, startup parsing, supported ABI conversion, transport lifecycle and worker shutdown retry. The existing Native JS tests cover the extracted menu's unchanged behavior; Native GUI was not relaunched for this milestone. Other browsers and unsupported plugin ABIs are not verified.

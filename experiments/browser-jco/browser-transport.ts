@@ -1,5 +1,14 @@
 import { parseBrowserOptions } from './browser-options.ts';
 
+const environmentResponse = await fetch('/browser-environment.json', {cache:'no-store',credentials:'omit'});
+if (!environmentResponse.ok) throw new Error(`Browser environment could not load: HTTP ${environmentResponse.status}. Rebuild the web assets.`);
+const environment = await environmentResponse.json();
+if (!environment || typeof environment !== 'object' || Array.isArray(environment) ||
+    Object.keys(environment).length !== 1 || !Object.hasOwn(environment,'corsProxy')) {
+  throw new Error('Malformed browser build environment.');
+}
+export function getStartupOptions() { return parseBrowserOptions(location.href,environment); }
+
 type Progress = { onmessage(snapshot: unknown): void };
 type Pending = { resolve(value:unknown):void; reject(error:Error):void; timer:ReturnType<typeof setTimeout>; progress?:Progress };
 class BrowserSession {
@@ -67,7 +76,7 @@ export async function invokeCommand(command:string,args:any = {}) {
   if (stopped) throw new Error('Browser Host was stopped. Reload to reopen.');
   if (command === 'runtime_project') {
     if (session) throw new Error('Browser Host already has a Project session.');
-    const options = parseBrowserOptions(location.href);
+    const options = getStartupOptions();
     session = new BrowserSession();
     return await session.request(command,{...args,options});
   }

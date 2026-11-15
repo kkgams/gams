@@ -303,3 +303,108 @@ test('bare browser startup imports missing default config once and never overwri
   await assert.rejects(new BrowserProject(store,startup,{download:offline}).load(),SyntaxError);
   assert.equal(text(await store.read('/projects/default/gams.json')),'invalid JSON');
 });
+
+const corsProxy = 'http://127.0.0.1:8787/download';
+function fakeBrowser(t, fetcher) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', {configurable:true, value:{href:'https://host.test/browser.html', origin:'https://host.test'}});
+  t.after(() => { if (previous) Object.defineProperty(globalThis, 'location', previous); else delete globalThis.location; });
+  return t.mock.method(globalThis, 'fetch', fetcher);
+}
+function fetchResponse(url, body = new Uint8Array([0,255,42]), init = {}) {
+  const response = new Response(body, init); Object.defineProperty(response, 'url', {value:url}); return response;
+}
+
+test('fetch routes cross-origin with exactly one encoded URL parameter and bypasses same-origin', async t => {
+  const calls = [];
+  fakeBrowser(t, async (url, init) => {
+    calls.push(url); assert.equal(init.mode, 'cors'); assert.equal(init.credentials, 'omit');
+    assert.ok(init.signal instanceof AbortSignal); assert.equal(init.headers, undefined);
+    return fetchResponse(url);
+  });
+  const project = new BrowserProject(new FakeStore(), {...options, corsProxy});
+  const original = 'https://cdn.test/folder/%E2%9C%93.bin?a=1&url=https%3A%2F%2Fother.test%2Fx&value=a+b';
+  assert.deepEqual(await project.download(original), new Uint8Array([0,255,42]));
+  const relay = new URL(calls[0]); assert.equal(relay.origin+relay.pathname, corsProxy);
+  assert.deepEqual([...relay.searchParams], [['url', original]]);
+  assert.equal(calls[0], corsProxy+'?'+new URLSearchParams({url:original}));
+  await project.download('https://host.test/browser-default/gams.json');
+  await project.download('https://host.test/widgets/asset.bin?q=1');
+  await new BrowserProject(new FakeStore(), options).download(original);
+  assert.deepEqual(calls.slice(1), ['https://host.test/browser-default/gams.json','https://host.test/widgets/asset.bin?q=1',original]);
+});
+
+test('constructor and original URL validation precede routing; injected transport receives original URLs', async t => {
+  const mock = fakeBrowser(t, () => assert.fail('custom download must not fetch'));
+  for (const value of ['relative', 'http://remote.test/download', 'https://relay.test/?x=1', false, 12]) assert.throws(() => new BrowserProject(new FakeStore(), {...options, corsProxy:value}), /corsProxy/);
+  const calls = [];
+  const project = new BrowserProject(new FakeStore(), {...options, corsProxy}, {download:async url => {calls.push(url); return bytes('custom');}});
+  for (const source of ['http://remote.test/a', 'file:///a', 'https://user:password@cdn.test/a', 'https://cdn.test/a#x']) await assert.rejects(project.download(source));
+  assert.deepEqual(calls, []); assert.equal(text(await project.download('https://cdn.test/a')), 'custom');
+  assert.deepEqual(calls, ['https://cdn.test/a']); assert.equal(mock.mock.callCount(), 0);
+});
+
+test('relay errors never retry directly and redirects retain endpoint; direct redirects retain URL policy', async t => {
+  let handler; const mock = fakeBrowser(t, (url, init) => handler(url, init));
+  const project = new BrowserProject(new FakeStore(), {...options, corsProxy}); const original = 'https://cdn.test/a';
+  for (const [reply, expected] of [
+    [() => {throw new TypeError('network CORS failure');}, /network CORS failure/],
+    [url => fetchResponse(url, 'missing', {status:404}), /HTTP 404/],
+    [url => fetchResponse(url, 'upstream error', {status:502}), /HTTP 502/],
+    [() => fetchResponse('http://127.0.0.1:8788/download'), /changed endpoint/],
+    [() => fetchResponse('http://127.0.0.1:8787/other'), /changed endpoint/],
+    [() => fetchResponse(original), /changed endpoint/],
+  ]) {
+    handler = reply; const count = mock.mock.callCount(); await assert.rejects(project.download(original), expected);
+    assert.equal(mock.mock.callCount(), count+1); assert.ok(mock.mock.calls.at(-1).arguments[0].startsWith(corsProxy+'?url='));
+  }
+  handler = url => fetchResponse(url); await project.download(original);
+  const direct = new BrowserProject(new FakeStore(), options);
+  handler = () => fetchResponse('http://127.0.0.1/final'); await assert.rejects(direct.download(original), /downgrade/);
+  handler = () => fetchResponse('https://user:password@cdn.test/final'); await assert.rejects(direct.download(original), /credentials/);
+  handler = () => fetchResponse('https://other.test/final'); assert.deepEqual(await direct.download(original), new Uint8Array([0,255,42]));
+});
+
+test('relay fetch preserves size bounds, body requirement, empty bytes and timeout', async t => {
+  let handler; const mock = fakeBrowser(t, (url, init) => handler(url, init));
+  const project = new BrowserProject(new FakeStore(), {...options, corsProxy});
+  for (const length of ['67108865', '-1', 'not-a-number']) {
+    handler = url => fetchResponse(url, 'x', {headers:{'content-length':length}});
+    await assert.rejects(project.download('https://cdn.test/a'), /64 MiB/);
+  }
+  handler = url => fetchResponse(url, null); await assert.rejects(project.download('https://cdn.test/a'), /no body/);
+  let cancelled = false;
+  handler = url => fetchResponse(url, new ReadableStream({pull(controller) { controller.enqueue(new Uint8Array(33*1024*1024)); }, cancel() { cancelled = true; }}));
+  await assert.rejects(project.download('https://cdn.test/a'), /64 MiB/); assert.equal(cancelled, true);
+  handler = url => fetchResponse(url, new Uint8Array()); assert.deepEqual(await project.download('https://cdn.test/empty'), new Uint8Array());
+  t.mock.timers.enable({apis:['setTimeout']}); handler = () => new Promise(() => {});
+  const pending = project.download('https://cdn.test/slow'); t.mock.timers.tick(120_000);
+  await assert.rejects(pending, /timeout/); assert.equal(mock.mock.calls.at(-1).arguments[1].signal.aborted, true);
+});
+
+test('relay JSON resolution, relative files, cache markers, progress and Save retain original URL identities', async t => {
+  const root = 'https://cdn.test/folder/main.json?rev=1', nested = 'https://cdn.test/folder/nested/data.json', asset = 'https://cdn.test/folder/nested/asset.bin';
+  const files = {[root]:bytes({nested:{$ref:'nested/data.json'}}), [nested]:bytes({name:'before',file:{$file:'asset.bin'}}), [asset]:new Uint8Array([0,255,42])};
+  const calls = [];
+  fakeBrowser(t, async relay => {
+    const parsed = new URL(relay); assert.equal(parsed.origin+parsed.pathname, corsProxy);
+    const original = parsed.searchParams.get('url'); calls.push(original); assert.ok(Object.hasOwn(files, original), original);
+    return fetchResponse(relay, files[original]);
+  });
+  const original = {data:{$ref:root}}, store = await new FakeStore().seed(original);
+  const project = new BrowserProject(store, {...options, corsProxy}); const {config} = await project.load();
+  assert.deepEqual(calls, [root,nested,asset]);
+  const hash = createHash('sha256').update(asset).digest('hex');
+  assert.equal(config.data.nested.file, `gams_modules/${hash}/asset.bin`);
+  assert.deepEqual(await store.read(`/shared/modules/${hash}/asset.bin`), files[asset]);
+  assert.deepEqual(project.progress.resources.map(event => event.resource), calls);
+  for (const url of calls) {
+    const key = createHash('sha256').update(url).digest('hex');
+    assert.equal(JSON.parse(text(await store.read(`/shared/modules/${key}/.gams-resource.json`))).url, url);
+  }
+  assert.deepEqual(await project.prepareConfig(config), original); config.data.nested.name = 'after';
+  assert.deepEqual(await project.prepareConfig(config), {data:{nested:{name:'after',file:{$file:asset}}}});
+  const reopened = new BrowserProject(store, {...options, corsProxy:'https://different-relay.test/download'}, {download:offline});
+  assert.equal((await reopened.load()).config.data.nested.name, 'before');
+  assert.ok(reopened.progress.resources.every(event => event.cached)); assert.equal(calls.length, 3);
+});

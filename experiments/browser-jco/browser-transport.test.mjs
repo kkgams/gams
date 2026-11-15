@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 let moduleId = 0;
-async function transport(t, href = 'http://127.0.0.1:8093/browser.html') {
+async function transport(t, href = 'http://127.0.0.1:8093/browser.html', environment = {corsProxy:null}) {
   const workers = [], timers = new Map();
   let timerId = 0;
   class Worker {
@@ -18,6 +18,11 @@ async function transport(t, href = 'http://127.0.0.1:8093/browser.html') {
   const originals = new Map();
   for (const [name, value] of Object.entries({
     Worker, location: { href },
+    fetch: async (url, options) => {
+      assert.equal(url, '/browser-environment.json');
+      assert.equal(options.cache, 'no-store');
+      return {ok:true,json:async()=>environment};
+    },
     setTimeout: (callback, delay) => { const id = ++timerId; timers.set(id, { callback, delay }); return id; },
     clearTimeout: id => timers.delete(id),
   })) {
@@ -252,4 +257,16 @@ test('unsupported, duplicate or malformed event registration and unsolicited Vie
   await assert.rejects(h.api.invokeCommand('runtime_call_view_response', {}), /No browser component-to-View callback is pending/);
   assert.throws(() => h.api.createProgressChannel(null), /Progress callback must be a function/);
   assert.equal(h.workers.length, 0);
+});
+
+test('browser build environment supplies the proxy to the worker and startup display',async t=>{
+  const h=await transport(t,'http://127.0.0.1:8093/browser.html',{corsProxy:'http://127.0.0.1:8787/download'});
+  assert.equal(h.api.getStartupOptions().corsProxy,'http://127.0.0.1:8787/download');
+  const opening=h.api.invokeCommand('runtime_project');
+  assert.equal(h.worker().messages.at(-1).args.options.corsProxy,'http://127.0.0.1:8787/download');
+  h.worker().reply({result:{config:{}}});await opening;
+});
+
+test('missing build-environment fields fail instead of silently disabling proxy configuration',async t=>{
+  await assert.rejects(transport(t,'http://127.0.0.1:8093/browser.html',{}),/Malformed browser build environment/);
 });

@@ -1,5 +1,4 @@
-import { parseBrowserOptions } from './browser-options.ts';
-import { closeBrowserSession, forceStopBrowserSession, hasBrowserSession } from '/browser-transport.js';
+import { closeBrowserSession, forceStopBrowserSession, hasBrowserSession, getStartupOptions } from '/browser-transport.js';
 
 const app = document.getElementById('app');
 if (!app) throw new Error('Browser Host requires #app.');
@@ -16,14 +15,14 @@ controls.innerHTML = `<summary>Browser Host</summary><fieldset><legend>Session</
 document.body.appendChild(controls);
 app.innerHTML = `<article><h1>GAMS browser Host</h1><p>The canonical GAMS frontend runs against a browser Host worker, Jco and OPFS. No native backend is required.</p>
 <p>With no Project parameters, Open initializes the default Files workspace if its config is missing. Its released Units come from this HTTP server, so you can upload files before investigating remote CORS. Existing configs are not overwritten.</p>
-<p>For another Project, use URL parameters: <code>?source=/project/&amp;cwd=/projects/example&amp;config=gams.json</code>. Explicit Project/config selections never fall back to the default. Remote sources must permit browser CORS.</p>
+<p>For another Project, use URL parameters: <code>?source=/project/&amp;cwd=/projects/example&amp;config=gams.json</code>. Explicit Project/config selections never fall back to the default. Remote downloads need CORS permission or the configured download relay.</p>
 <p>One instance only. Concurrent instances are unsupported; there are no Host writer locks.</p><pre id="browser-options"></pre></article>`;
 const open = document.getElementById('browser-open') as HTMLButtonElement;
 const close = document.getElementById('browser-close') as HTMLButtonElement;
 const force = document.getElementById('browser-force') as HTMLButtonElement;
 const state = document.getElementById('browser-state')!;
 let options;
-try {options=parseBrowserOptions(location.href);document.getElementById('browser-options')!.textContent=JSON.stringify(options,null,2);}
+try {options=getStartupOptions();document.getElementById('browser-options')!.textContent=JSON.stringify(options,null,2);}
 catch(error){open.disabled=true;state.textContent=String(error);}
 open.addEventListener('click',async()=>{
   open.disabled=true;close.disabled=false;force.disabled=false;
