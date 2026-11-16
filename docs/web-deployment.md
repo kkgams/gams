@@ -7,7 +7,7 @@ status: reference
 
 The browser app is a separate, root-hosted Cloudflare Pages site. The existing GitHub Pages promo and documentation deployment stays unchanged. Both use this repository and the `release` branch; no second source repository is required.
 
-Use the site's root URL, not a subfolder. Released Views import Host modules from `/core/`, `/util/` and `/widgets/`. The browser Host currently supports FS, layout and the tested random plugin interfaces. Arbitrary plugin interfaces, component linking and Native shell/process integrations are not supported; select Projects accordingly.
+Use the site's root URL, not a subfolder. Released Views import Host modules from `/core/`, `/util/` and `/widgets/`. The browser Host supports FS, layout, Tile Detect, the tested random interfaces, selected Image resource operations and SQL connection/statement/error operations. See `cmd/web/README.md` for exact interfaces and limits. Arbitrary plugin interfaces, component linking and Native shell/process integrations are not supported; select Projects accordingly.
 
 ## Build and preview
 

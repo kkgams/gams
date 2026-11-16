@@ -12,6 +12,7 @@ const encode = text => new TextEncoder().encode(text);
 test('components receive isolated CLI environment/exit bindings; unrelated imports stay denied', async () => {
   const configurations = [];
   const cliInstances = [];
+  const filesystems = [];
   let disposed = 0;
   globalThis.__browserCliTest = {
     createCli(config) {
@@ -20,7 +21,8 @@ test('components receive isolated CLI environment/exit bindings; unrelated impor
       cliInstances.push(cli);
       return cli;
     },
-    createFilesystem() {
+    createFilesystem(config) {
+      filesystems.push(config);
       return { types: {}, preopens: {}, dispose: async () => { disposed++; } };
     },
   };
@@ -55,6 +57,10 @@ test('components receive isolated CLI environment/exit bindings; unrelated impor
       assert.equal(bindings.get(names[0]), cli.environment);
       assert.equal(bindings.get(names[1]), cli.exit);
       assert.deepEqual(configurations.at(-1), { environment: {}, arguments: [], initialCwd: '/project' });
+      const { preopens } = filesystems.at(-1);
+      assert.deepEqual(Object.keys(preopens).sort(), ['.', '/project', 'gams_modules']);
+      assert.equal(preopens['.'], preopens['/project']); // C/WASI relative paths share the Project tree.
+      assert.notEqual(preopens.gams_modules, preopens['/project']);
       await components.close();
     }
     assert.notEqual(cliInstances[0], cliInstances[1]);

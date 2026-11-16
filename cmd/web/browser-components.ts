@@ -2,7 +2,9 @@ import { assertComponent, instantiateComponent, type TranspiledComponent } from 
 import { prepareFilesystemCall, filesystemHostValue } from './files-call.ts';
 import { prepareTileDetectCall } from './tile-detect-call.ts';
 import { prepareImageCall } from './image-call.ts';
+import { prepareSqlCall, sqlHostValue } from './sql-call.ts';
 import { BrowserResources } from './browser-resources.ts';
+import { projectFilesystemAdapter } from './browser-filesystem.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
@@ -138,7 +140,9 @@ export class BrowserComponents {
     // Injected native tests need no package ecosystem; real instances have isolated FS handles.
     if (!required.length && this.injection.instantiate) return { imports, dispose: async () => {} };
     const { createFilesystem, InMemoryFilesystemAdapter } = await import('@bytecodealliance/preview2-shim/filesystem');
-    const fs = createFilesystem({ adapter: new InMemoryFilesystemAdapter(), preopens: { '/project': this.store.entry(this.cwd), 'gams_modules': this.store.entry(this.modulesDir) } });
+    const root = this.store.entry(this.cwd);
+    // C/WASI libc resolves relative paths through a dot preopen, not initialCwd.
+    const fs = createFilesystem({ adapter: projectFilesystemAdapter(new InMemoryFilesystemAdapter()), preopens: { '.': root, '/project': root, 'gams_modules': this.store.entry(this.modulesDir) } });
     try {
       const shim = await import('@bytecodealliance/preview2-shim');
       const cli = shim.cli.createCli({ environment: {}, arguments: [], initialCwd: '/project' });
@@ -159,9 +163,9 @@ export class BrowserComponents {
   }
   async invoke(target: string, args: unknown[]): Promise<unknown> {
     this.assertOpen();
-    const match = /^(?:(?:gams|wasi):)?([a-z][a-z0-9-]*\/[a-z][a-z0-9-]*)(?:@[^:]+)?::([a-z][a-z0-9-]*)$/.exec(target);
+    const match = /^(?:(gams|wasi):)?([a-z][a-z0-9-]*\/[a-z][a-z0-9-]*)(@[^:]+)?::([a-z][a-z0-9-]*|\[(?:static|method)\][a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)$/.exec(target);
     if (!match || !Array.isArray(args)) throw new Error(`Invalid or unsupported resource target: ${target}`);
-    const [, short, method] = match;
+    const [, namespace, short, version, method] = match;
     const candidates: Array<{ instance: Instance; name: string }> = [];
     for (const instance of this.instances.values()) for (const name of instance.info.exports) if (stripVersion(name).replace(/^[^:]+:/, '') === short) candidates.push({ instance, name });
     if (candidates.length !== 1) throw new Error(`${candidates.length ? 'Ambiguous' : 'Missing'} exported interface: ${short}`);
@@ -169,9 +173,12 @@ export class BrowserComponents {
     // Jco metadata has only function/instance, not result schemas. Never guess unknown ABIs.
     const tileDetect = name === 'gams:tile-detect/tile-detect@1.0.0';
     const image = name === 'gams:image/image@1.0.0';
-    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect || image;
+    const sql = name === 'wasi:sql/types@0.2.0-draft' || name === 'wasi:sql/readwrite@0.2.0-draft';
+    if (sql && ((namespace && namespace !== 'wasi') || (version && !name.endsWith(version)))) throw new Error(`Unsupported SQL interface: ${target}`);
+    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect || image || sql;
     const raw = name === 'gams:random/seeded-random@1.0.0' || name === 'wasi:random/random@0.2.0';
     if (!result && !raw) throw new Error(`No Host ABI adapter for ${name}; arbitrary WIT schemas are unsupported`);
+    const sqlCall = sql ? prepareSqlCall(short, method, args, (ref, kind) => this.resources.borrow(ref, instance, kind)) : undefined;
     let values = args;
     let ownedImage = false;
     if (image) {
@@ -190,14 +197,19 @@ export class BrowserComponents {
     else if (method === 'set-seed' || method === 'get-random-bytes') values = args.map(u64);
     const owner = Object.hasOwn(instance.bindings, name) ? instance.bindings[name] : undefined;
     const fn = owner && typeof owner === 'object' && Object.hasOwn(owner, camel(method)) ? owner[camel(method)] : undefined;
-    if (typeof fn !== 'function') throw new Error(`Missing callable export: ${target}`);
+    if (!sqlCall && typeof fn !== 'function') throw new Error(`Missing callable export: ${target}`);
     try {
-      const value = await fn(...values);
+      const value = sqlCall ? await sqlCall.call(owner) : await (fn as (...values: unknown[]) => unknown)(...values);
+      if (sqlCall) {
+        const host = sqlCall.resource ? this.resources.own(instance, stripVersion(name), sqlCall.resource, value) : sqlHostValue(method, value);
+        return sqlCall.result ? { ok: host } : host;
+      }
       const host = ownedImage ? this.resources.own(instance, stripVersion(name), 'image', value) : hostValue(value, short === 'layout/layout' || tileDetect || image, tileDetect);
       return result ? { ok: host } : host;
     } catch (error) {
       const util = instance.bindings._util as { isComponentError(error: unknown): boolean } | undefined;
-      if (!result || !util || !util.isComponentError(error)) throw error;
+      if (!result || (sqlCall && !sqlCall.result) || !util || !util.isComponentError(error)) throw error;
+      if (sqlCall) return { err: this.resources.own(instance, stripVersion(name), 'error', (error as { payload: unknown }).payload) };
       return { err: hostValue((error as { payload: unknown }).payload, short === 'layout/layout' || tileDetect, tileDetect) };
     }
   }
