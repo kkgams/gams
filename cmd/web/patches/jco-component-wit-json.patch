@@ -1,0 +1,321 @@
+diff --git a/crates/wasm-tools-component/Cargo.toml b/crates/wasm-tools-component/Cargo.toml
+index 428b2aeb..2e9090b0 100644
+--- a/crates/wasm-tools-component/Cargo.toml
++++ b/crates/wasm-tools-component/Cargo.toml
+@@ -6,11 +6,12 @@ edition = "2024"
+
+ [lib]
+ crate-type = ["cdylib"]
+-test = false
+ doctest = false
+
+ [dependencies]
+ anyhow = { workspace = true }
++serde = { workspace = true }
++serde_json = { workspace = true }
+ wasm-encoder = { workspace = true }
+ wasm-metadata = { workspace = true, features = [ "oci" ] }
+ wasmparser = { workspace = true }
+@@ -18,4 +19,4 @@ wasmprinter = { workspace = true, features = ["component-model"] }
+ wat = { workspace = true }
+ wit-bindgen = { workspace = true, features = ["macros"] }
+ wit-component = { workspace = true }
+-wit-parser = { workspace = true }
++wit-parser = { workspace = true, features = ["serde"] }
+diff --git a/crates/wasm-tools-component/src/lib.rs b/crates/wasm-tools-component/src/lib.rs
+index fcbc6487..2b1776a9 100644
+--- a/crates/wasm-tools-component/src/lib.rs
++++ b/crates/wasm-tools-component/src/lib.rs
+@@ -73,6 +73,29 @@ impl Guest for WasmToolsJs {
+         Ok(printer.output.to_string())
+     }
+
++    fn component_wit_json(binary: Vec<u8>) -> Result<String, String> {
++        if !wasmparser::Parser::is_component(&binary) {
++            return Err("Expected a WebAssembly component".into());
++        }
++        let decoded = wit_component::decode(&binary)
++            .map_err(|error| format!("Failed to decode wit component\n{error:?}"))?;
++        let DecodedWasm::Component(resolve, world) = decoded else {
++            return Err("Expected an executable component, not a WIT package".into());
++        };
++
++        #[derive(serde::Serialize)]
++        struct ComponentWitJson<'a> {
++            world: usize,
++            resolve: &'a Resolve,
++        }
++
++        serde_json::to_string(&ComponentWitJson {
++            world: world.index(),
++            resolve: &resolve,
++        })
++        .map_err(|error| format!("Failed to serialize WIT type graph: {error}"))
++    }
++
+     fn component_wit_metadata_for_world(
+         wit: WitSpecifier,
+         maybe_world_name: Option<String>,
+@@ -354,3 +377,6 @@ fn interface_metadata(
+         }),
+     }))
+ }
++
++#[cfg(test)]
++mod tests;
+diff --git a/crates/wasm-tools-component/src/tests.rs b/crates/wasm-tools-component/src/tests.rs
+new file mode 100644
+index 00000000..50bb058d
+--- /dev/null
++++ b/crates/wasm-tools-component/src/tests.rs
+@@ -0,0 +1,114 @@
++use super::*;
++use serde_json::Value;
++
++const WIT: &str = r#"
++    package test:type-graph@1.0.0;
++    interface types {
++        resource item {
++            create: static func() -> result<item, string>;
++            size: func() -> u32;
++        }
++        record row { label: string, bytes: option<list<u8>> }
++        variant cell { text(string), missing }
++        inspect: func(value: borrow<item>) -> row;
++        consume: func(value: own<item>) -> cell;
++    }
++    interface api {
++        use types.{item, row};
++        inspect: func(value: borrow<item>) -> result<row, string>;
++    }
++    world test { export types; export api; }
++"#;
++
++fn component() -> Vec<u8> {
++    let module = WasmToolsJs::component_embed(EmbedOpts {
++        binary: None,
++        wit_source: Some(WIT.into()),
++        wit_path: None,
++        string_encoding: None,
++        dummy: Some(true),
++        world: Some("test".into()),
++        metadata: None,
++        features: None,
++    })
++    .unwrap();
++    WasmToolsJs::component_new(module, None).unwrap()
++}
++
++#[test]
++fn component_wit_json_preserves_the_full_decoded_graph() {
++    let bytes = component();
++    let actual: Value =
++        serde_json::from_str(&WasmToolsJs::component_wit_json(bytes.clone()).unwrap()).unwrap();
++    let DecodedWasm::Component(resolve, world) = wit_component::decode(&bytes).unwrap() else {
++        panic!("expected a component");
++    };
++    assert_eq!(actual["world"], world.index());
++    assert_eq!(actual["resolve"], serde_json::to_value(&resolve).unwrap());
++    assert!(
++        actual["resolve"]["worlds"][world.index()]["exports"]
++            .as_object()
++            .unwrap()
++            .len()
++            >= 2
++    );
++
++    let types = &actual["resolve"]["types"];
++    let interfaces = actual["resolve"]["interfaces"].as_array().unwrap();
++    let interface = interfaces
++        .iter()
++        .find(|value| value["name"] == "types")
++        .unwrap();
++    let borrowed = interface["functions"]["inspect"]["params"][0]["type"]
++        .as_u64()
++        .unwrap() as usize;
++    let owned = interface["functions"]["consume"]["params"][0]["type"]
++        .as_u64()
++        .unwrap() as usize;
++    assert!(types[borrowed]["kind"]["handle"].get("borrow").is_some());
++    assert!(types[owned]["kind"]["handle"].get("own").is_some());
++    assert!(
++        interface["functions"]["[static]item.create"]["kind"]
++            .get("static")
++            .is_some()
++    );
++    assert!(
++        interface["functions"]["[method]item.size"]["kind"]
++            .get("method")
++            .is_some()
++    );
++
++    let api = interfaces
++        .iter()
++        .find(|value| value["name"] == "api")
++        .unwrap();
++    let alias = api["types"]["item"].as_u64().unwrap() as usize;
++    assert_eq!(types[alias]["kind"]["type"], interface["types"]["item"]);
++}
++
++#[test]
++fn component_wit_json_rejects_invalid_binaries_and_wit_packages() {
++    assert!(WasmToolsJs::component_wit_json(vec![]).is_err());
++    let malformed = vec![0, 97, 115, 109, 13, 0, 1, 0, 0xff];
++    assert!(WasmToolsJs::component_wit_json(malformed).is_err());
++    assert!(WasmToolsJs::component_wit_json(wat::parse_str("(module)").unwrap()).is_err());
++
++    let mut package_type = wasm_encoder::ComponentType::new();
++    package_type
++        .ty()
++        .component(&wasm_encoder::ComponentType::new());
++    package_type.export(
++        "test:empty/empty",
++        wasm_encoder::ComponentTypeRef::Component(0),
++    );
++    let mut types = wasm_encoder::ComponentTypeSection::new();
++    types.component(&package_type);
++    let mut exports = wasm_encoder::ComponentExportSection::new();
++    exports.export("empty", wasm_encoder::ComponentExportKind::Type, 0, None);
++    let mut package = wasm_encoder::Component::new();
++    package.section(&types).section(&exports);
++    let error = WasmToolsJs::component_wit_json(package.finish()).unwrap_err();
++    assert!(error.contains("not a WIT package"));
++    // Declared input errors must not poison later metadata calls.
++    assert!(WasmToolsJs::component_wit_json(component()).is_ok());
++}
+diff --git a/crates/wasm-tools-component/wit/wasm-tools.wit b/crates/wasm-tools-component/wit/wasm-tools.wit
+index 230863cc..38aca468 100644
+--- a/crates/wasm-tools-component/wit/wasm-tools.wit
++++ b/crates/wasm-tools-component/wit/wasm-tools.wit
+@@ -19,6 +19,13 @@ interface tools {
+   /// Extract a *.wit interface from a component, optionally providing a document name to extract
+   component-wit: func(binary: list<u8>) -> result<string, string>;
+
++  /// Decode an executable component's full WIT type graph as JSON.
++  /// The object contains `world` (the selected world index) and `resolve`
++  /// (the wit-parser Resolve serialization, as in wasm-tools component wit --json).
++  /// The Resolve JSON format follows the bundled wit-parser version; consumers
++  /// should pin the tool version. WIT packages and malformed binaries are errors.
++  component-wit-json: func(binary: list<u8>) -> result<string, string>;
++
+   /// Simple representation of semantic versions
+   // see: https://docs.rs/semver/1.0.28/semver/struct.Version.html
+   record semver-version {
+diff --git a/packages/jco-transpile/src/index.ts b/packages/jco-transpile/src/index.ts
+index 9643e6fa..6b0bf274 100644
+--- a/packages/jco-transpile/src/index.ts
++++ b/packages/jco-transpile/src/index.ts
+@@ -1,5 +1,5 @@
+ export { generateHostTypes, generateGuestTypes, unpackWit } from './typegen.js';
+ export { transpile, transpileBytes } from './transpile.js';
+-export { componentWitMetadataForWorld } from './wasm-tools.js';
++export { componentWitJson, componentWitMetadataForWorld } from './wasm-tools.js';
+ export { createComponent, createWorld } from './script.js';
+ export { writeFiles } from './common.js';
+diff --git a/packages/jco-transpile/src/wasm-tools-component.ts b/packages/jco-transpile/src/wasm-tools-component.ts
+index 03086663..2e1d4d8d 100644
+--- a/packages/jco-transpile/src/wasm-tools-component.ts
++++ b/packages/jco-transpile/src/wasm-tools-component.ts
+@@ -44,6 +44,7 @@ export const tools: typeof ToolsNamespace = {
+     print: call('print'),
+     componentNew: call('componentNew'),
+     componentWit: call('componentWit'),
++    componentWitJson: call('componentWitJson'),
+     componentWitMetadataForWorld: call('componentWitMetadataForWorld'),
+     componentEmbed: call('componentEmbed'),
+     metadataShow: call('metadataShow'),
+diff --git a/packages/jco-transpile/src/wasm-tools.ts b/packages/jco-transpile/src/wasm-tools.ts
+index 437c6120..69da0978 100644
+--- a/packages/jco-transpile/src/wasm-tools.ts
++++ b/packages/jco-transpile/src/wasm-tools.ts
+@@ -72,6 +72,21 @@ export async function componentWit(bytes: Uint8Array): Promise<string> {
+     return tools.componentWit(bytes);
+ }
+
++/**
++ * Decode the full WIT type graph of an executable component as JSON.
++ *
++ * The object contains `world` (the selected world index) and `resolve`
++ * (wit-parser's Resolve serialization). The graph format follows the bundled
++ * wit-parser version; pin the tool version when consuming it.
++ *
++ * @param bytes - WebAssembly component bytes (not an encoded WIT package)
++ * @returns JSON containing the selected world and complete type graph
++ */
++export async function componentWitJson(bytes: Uint8Array): Promise<string> {
++    await $init;
++    return tools.componentWitJson(bytes);
++}
++
+ /**
+  * Embed WIT metadata in a given WebAssembly binary
+  *
+diff --git a/packages/jco-transpile/test/wit-json.ts b/packages/jco-transpile/test/wit-json.ts
+new file mode 100644
+index 00000000..e94c73f1
+--- /dev/null
++++ b/packages/jco-transpile/test/wit-json.ts
+@@ -0,0 +1,51 @@
++import { assert, suite, test } from 'vitest';
++
++import { componentEmbed, componentNew, componentWitJson, parse } from '../src/wasm-tools.js';
++
++const WIT = `
++    package test:type-graph;
++    interface api {
++        resource item;
++        inspect: func(value: borrow<item>) -> option<list<u8>>;
++        consume: func(value: own<item>);
++    }
++    world test { export api; }
++`;
++
++type TypeGraph = {
++    world: number;
++    resolve: {
++        worlds: Array<{ exports: Record<string, unknown> }>;
++        interfaces: Array<{
++            name: string;
++            functions: Record<string, { params: Array<{ type: number }> }>;
++        }>;
++        types: Array<{ kind: { handle?: { own?: number; borrow?: number } } }>;
++    };
++};
++
++suite('Component WIT JSON', () => {
++    test('exposes the selected world and distinguishes owned and borrowed resource inputs', async () => {
++        const module = await componentEmbed({ witSource: WIT, world: 'test', dummy: true });
++        const component = await componentNew(module);
++        const graph = JSON.parse(await componentWitJson(component)) as TypeGraph;
++
++        assert.isNumber(graph.world);
++        assert.isNotEmpty(graph.resolve.worlds[graph.world].exports);
++        const api = graph.resolve.interfaces.find((entry) => entry.name === 'api');
++        if (!api) throw new Error('missing api interface');
++        const borrowed = api.functions.inspect.params[0].type;
++        const owned = api.functions.consume.params[0].type;
++        assert.property(graph.resolve.types[borrowed].kind.handle, 'borrow');
++        assert.property(graph.resolve.types[owned].kind.handle, 'own');
++    });
++
++    test('rejects malformed binaries and core modules without poisoning later calls', async () => {
++        await assert.rejects(componentWitJson(new Uint8Array()));
++        const malformed = new Uint8Array([0, 97, 115, 109, 13, 0, 1, 0, 0xff]);
++        await assert.rejects(componentWitJson(malformed));
++        await assert.rejects(componentWitJson(await parse('(module)')));
++        const component = await componentNew(await componentEmbed({ witSource: WIT, world: 'test', dummy: true }));
++        assert.isObject(JSON.parse(await componentWitJson(component)));
++    });
++});
+diff --git a/packages/jco/src/api.ts b/packages/jco/src/api.ts
+index db61f4c7..57ba0ba9 100644
+--- a/packages/jco/src/api.ts
++++ b/packages/jco/src/api.ts
+@@ -5,6 +5,7 @@ export {
+     print,
+     parse,
+     componentWit,
++    componentWitJson,
+     componentNew,
+     componentEmbed,
+     metadataAdd,
