@@ -33,24 +33,30 @@ def prepare_compiler(site):
         if actual != dep['integrity']:
             raise ValueError(f'Integrity mismatch: {archive}')
         target = BUILD / 'dependencies' / name
+        subprocess.run(['python3', str(ROOT / 'scripts/package-host.py'), 'clean', str(target)], check=True)
         target.mkdir(parents=True, exist_ok=True)
         with tarfile.open(fileobj=io.BytesIO(data)) as bundle:
             bundle.extractall(target, filter='data')
         deps[name] = target / 'package'
     vendor = site / 'vendor'
     vendor.mkdir(parents=True, exist_ok=True)
-    for wasm in (deps['jco-transpile'] / 'vendor').glob('js-component-bindgen-component.core*.wasm'):
-        shutil.copy2(wasm, vendor / wasm.name)
+    for pattern in ('js-component-bindgen-component.core*.wasm', 'wasm-tools.core*.wasm'):
+        for wasm in (deps['jco-transpile'] / 'vendor').glob(pattern):
+            shutil.copy2(wasm, vendor / wasm.name)
     for name, package in deps.items():
         notices = vendor / 'licenses' / name
         notices.mkdir(parents=True, exist_ok=True)
         license_path = SOURCE / 'LICENSE-JCO' if name == 'jco' else package / 'LICENSE'
         shutil.copy2(license_path, notices / 'LICENSE')
         shutil.copy2(package / 'package.json', notices / 'upstream-package.json')
+        if name == 'jco-transpile':
+            shutil.copytree(package / 'vendor/licenses', notices / 'dependencies', dirs_exist_ok=True)
+            shutil.copy2(package / 'gams-compiler.json', notices / 'gams-compiler.json')
     shim = deps['preview2-shim']
     return [
         f"--alias:@bytecodealliance/jco/component={deps['jco']}/dist/browser.js",
         f"--alias:@bytecodealliance/jco-transpile/component={deps['jco-transpile']}/dist/component.js",
+        f"--alias:@bytecodealliance/jco-transpile/wasm-tools={deps['jco-transpile']}/dist/wasm-tools.js",
         f'--alias:@bytecodealliance/preview2-shim/instantiation={shim}/dist/common/instantiation.js',
         f'--alias:@bytecodealliance/preview2-shim/filesystem={shim}/dist/browser/filesystem.js',
         f'--alias:@bytecodealliance/preview2-shim={shim}/dist/browser/index.js',
@@ -84,6 +90,7 @@ def build(site=SITE):
     aliases = prepare_compiler(site)
     for source, output, extra in (
         ('browser-worker.ts', 'vendor/browser-worker.js', ['--external:node:*', '--external:/util/*', *aliases]),
+        ('component-schema.ts', 'vendor/component-schema.js', ['--external:node:*', *aliases]),
         ('browser-transport.ts', 'browser-transport.js', ['--external:/core/*']),
         ('browser-launch.ts', 'browser-launch.js', ['--external:/app.js', '--external:/browser-transport.js', '--external:/core/*']),
         ('browser-menu.ts', 'core/menu/native.js', []),

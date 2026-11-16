@@ -30,6 +30,9 @@ GENERATED = (
     "vendor/js-component-bindgen-component.core2.wasm",
     "vendor/js-component-bindgen-component.core3.wasm",
     "vendor/js-component-bindgen-component.core4.wasm",
+    "vendor/component-schema.js", "vendor/wasm-tools.core.wasm",
+    "vendor/wasm-tools.core2.wasm", "vendor/wasm-tools.core3.wasm",
+    "vendor/wasm-tools.core4.wasm",
 )
 HEADERS = "/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n" + ''.join(
     f"\n/{name}\n  Content-Type: application/wasm\n"
@@ -98,6 +101,13 @@ def asset_plan(root):
         for name in ("LICENSE", "upstream-package.json"):
             relative = f"vendor/licenses/{dependency}/{name}"
             add(site / relative, relative)
+
+    compiler_notices = site / 'vendor/licenses/jco-transpile'
+    add(compiler_notices / 'gams-compiler.json', 'vendor/licenses/jco-transpile/gams-compiler.json')
+    add(compiler_notices / 'dependencies/patched-wasm-tools/LICENSE',
+        'vendor/licenses/jco-transpile/dependencies/patched-wasm-tools/LICENSE')
+    for source in tree_files(compiler_notices / 'dependencies'):
+        add(source, source.relative_to(site).as_posix())
 
     # Project Units are installed from their configured releases by the browser.
     add(site / "browser-default/gams.json", "browser-default/gams.json")

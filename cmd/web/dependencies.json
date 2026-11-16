@@ -7,9 +7,9 @@
   },
   {
     "name": "@bytecodealliance/jco-transpile",
-    "version": "0.24.0",
-    "url": "https://registry.npmjs.org/@bytecodealliance/jco-transpile/-/jco-transpile-0.24.0.tgz",
-    "integrity": "sha512-ISCXvZc+TOX07L+V9WhO7tg8zv1zj9Ll48tT0tKZTUo5O5Cxwn2tCSAMvDtA6Ni6V0baosB3XCaBVFkLNpuBSA=="
+    "version": "0.24.0-gams.1",
+    "url": "https://github.com/kkgams/jco/releases/download/gams-v0.24.0-1/jco-transpile.tgz",
+    "integrity": "sha512-S2z0EGSaHRPxPJN+saNnFgEtrSW6D3lcPOgsKZ/+WZwBOKQ9X8ntXKIak5XPomB6gCpPd4qgvJegBdFJ/8laPQ=="
   },
   {
     "name": "@bytecodealliance/preview2-shim",

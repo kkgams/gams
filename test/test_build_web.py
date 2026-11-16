@@ -45,6 +45,8 @@ class BuildWebTests(unittest.TestCase):
         for dependency in ('jco', 'jco-transpile', 'preview2-shim'):
             for name in ('LICENSE', 'upstream-package.json'):
                 self.site_put(f'vendor/licenses/{dependency}/{name}', name.encode())
+        self.site_put('vendor/licenses/jco-transpile/gams-compiler.json', b'{"source":"compiler"}')
+        self.site_put('vendor/licenses/jco-transpile/dependencies/patched-wasm-tools/LICENSE', b'compiler terms')
         release = 'https://github.com/kkgams'
         self.config = {
             'plugins': [
@@ -92,6 +94,70 @@ class BuildWebTests(unittest.TestCase):
                               (self.output / '_headers').read_text())
         self.assertIn('404', (self.output / '404.html').read_text())
         self.assertNotIn('<script', (self.output / '404.html').read_text())
+
+    def test_prepares_pinned_compiler_assets_without_stale_dependency_files(self):
+        import base64
+        import hashlib
+        import io
+        import tarfile
+        from unittest.mock import patch
+
+        spec = importlib.util.spec_from_file_location('compiler_build', ROOT / 'cmd/web/build.py')
+        compiler = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(compiler)
+        source = self.root / 'cmd/web'
+        build = self.root / 'build.nosync/web-build'
+        self.put('cmd/web/LICENSE-JCO', b'frontend terms')
+        dependencies = []
+        for name in ('jco', 'jco-transpile', 'preview2-shim'):
+            files = {'package/LICENSE': b'original terms', 'package/package.json': b'{}'}
+            if name == 'jco-transpile':
+                files.update({
+                    'package/vendor/js-component-bindgen-component.core.wasm': b'bindgen',
+                    'package/vendor/wasm-tools.core.wasm': b'metadata compiler',
+                    'package/vendor/licenses/patched-wasm-tools/LICENSE': b'original Rust terms',
+                    'package/gams-compiler.json': b'{"source":"fork"}',
+                })
+            data = io.BytesIO()
+            with tarfile.open(fileobj=data, mode='w:gz') as archive:
+                for path, contents in files.items():
+                    info = tarfile.TarInfo(path)
+                    info.size = len(contents)
+                    archive.addfile(info, io.BytesIO(contents))
+            payload = data.getvalue()
+            (build / f'{name}-test.tgz').write_bytes(payload)
+            dependencies.append({'name': f'@bytecodealliance/{name}', 'version': 'test',
+                                 'url': 'https://invalid.example/never-requested',
+                                 'integrity': 'sha512-' + base64.b64encode(hashlib.sha512(payload).digest()).decode()})
+        self.put('cmd/web/dependencies.json', json.dumps(dependencies).encode())
+        stale = self.put('build.nosync/web-build/dependencies/jco-transpile/package/obsolete.js', b'stale')
+        with patch.multiple(compiler, ROOT=self.root, SOURCE=source, BUILD=build):
+            aliases = compiler.prepare_compiler(self.site)
+        self.assertFalse(stale.exists())
+        self.assertEqual((self.site / 'vendor/wasm-tools.core.wasm').read_bytes(), b'metadata compiler')
+        self.assertEqual((self.site / 'vendor/js-component-bindgen-component.core.wasm').read_bytes(), b'bindgen')
+        notices = self.site / 'vendor/licenses/jco-transpile'
+        self.assertEqual((notices / 'dependencies/patched-wasm-tools/LICENSE').read_bytes(), b'original Rust terms')
+        self.assertEqual((notices / 'gams-compiler.json').read_bytes(), b'{"source":"fork"}')
+        self.assertTrue(any('jco-transpile/wasm-tools=' in alias for alias in aliases))
+
+    def test_requires_schema_runtime_and_preserves_all_compiler_notices(self):
+        relative = 'vendor/licenses/jco-transpile/dependencies/patched-wasm-tools/serde/LICENSE-MIT'
+        self.site_put(relative, b'original dependency terms')
+        web.assemble(self.root)
+        self.assertEqual((self.output / relative).read_bytes(), b'original dependency terms')
+        for name in ('vendor/component-schema.js', 'vendor/wasm-tools.core4.wasm',
+                     'vendor/licenses/jco-transpile/dependencies/patched-wasm-tools/LICENSE'):
+            with self.subTest(name=name):
+                source = self.site / name
+                contents = source.read_bytes()
+                source.unlink()
+                try:
+                    with self.assertRaisesRegex(ValueError, 'Missing required'):
+                        web.assemble(self.root)
+                    self.assertEqual((self.output / relative).read_bytes(), b'original dependency terms')
+                finally:
+                    source.write_bytes(contents)
 
     def test_does_not_publish_experiment_or_canonical_nonruntime_files(self):
         for name in ('index.html', 'files.html', 'files-host.js', 'files-transport.js', 'ui.js',

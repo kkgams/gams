@@ -8,7 +8,7 @@ import { projectFilesystemAdapter } from './browser-filesystem.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
-const IDENTITY = { schema: 1, jco: '1.42.0', backend: '0.24.0', shim: '0.31.1', options: OPTIONS };
+const IDENTITY = { schema: 1, jco: '1.42.0', backend: '0.24.0', backendBuild: 'kkgams/jco@gams-v0.24.0-1', shim: '0.31.1', options: OPTIONS };
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 type Handle = { handle: string; path: string; imports: string[]; exports: string[] };

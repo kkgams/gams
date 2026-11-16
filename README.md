@@ -100,6 +100,8 @@ Runtime, shared component helpers, dependency pins and static server. `make web`
 stages production assets in `build.nosync/web-build/site/`, reuses compiler
 dependencies under `build.nosync/web-build/`, then assembles the publishable
 root-hosted app in `build.nosync/web/`. It does not build diagnostics.
+Web builds download verified compiler artifacts from `kkgams/jco`; they do not
+compile Jco or require a sibling checkout.
 See [web deployment](docs/web-deployment.md) for the dedicated
 `nix develop .#web` toolchain, GitHub Actions variables and Cloudflare Pages setup.
 
