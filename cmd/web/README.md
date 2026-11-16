@@ -70,6 +70,8 @@ Duplicate, empty and unknown settings fail explicitly. `cwd` is **not** an HTTP-
 
 The isolated OPFS namespace is `gams-browser-host-v1`, separate from the older fixed Files/component experiment. Config loading and Unit installation do not depend on a filesystem plugin. After preparation, all explicitly configured components load once. The real filesystem provider reads JS/theme bytes and performs Project Save through WASI. Host operations and WASI descriptors reference the **same tree**, so downloads made after plugin startup are immediately visible without re-instantiation. `/project` maps CWD; `gams_modules` aliases the selected modules directory even when outside CWD.
 
+Components receive isolated WASI CLI interfaces with an empty environment, no process arguments and initial CWD `/project`. These values do not expose the machine's shell environment or browser URL. `wasi:cli/exit` throws a component exit error (including status 0) instead of returning or closing the worker/session; callers must handle the failed operation. Other unsupported imports still reject.
+
 No Host writer locks or lock files are used. **One user / one instance only.** Concurrent instances/external writers are unsupported and can lose data when whole-tree checkpoints reconcile stale snapshots. Memory scales with all data in this namespace; checkpoints are not transactions or physical-media fsync. Quota, browser eviction and clearing site data still apply. Symlink persistence and prototype-sensitive path segments are unsupported. `make clean` deletes build output, not browser data.
 
 ## Resources and caches

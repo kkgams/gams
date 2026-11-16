@@ -129,13 +129,13 @@ export class BrowserComponents {
     const fs = createFilesystem({ adapter: new InMemoryFilesystemAdapter(), preopens: { '/project': this.store.entry(this.cwd), 'gams_modules': this.store.entry(this.modulesDir) } });
     try {
       const shim = await import('@bytecodealliance/preview2-shim');
-      const cli = shim.cli.createCli({ initialCwd: '/project' });
+      const cli = shim.cli.createCli({ environment: {}, arguments: [], initialCwd: '/project' });
       const allowed = new Map<string, unknown>([
         ['wasi:filesystem/types', fs.types], ['wasi:filesystem/preopens', fs.preopens],
         ['wasi:io/error', shim.io.error], ['wasi:io/poll', shim.io.poll], ['wasi:io/streams', shim.io.streams],
         ['wasi:clocks/monotonic-clock', shim.clocks.monotonicClock], ['wasi:clocks/wall-clock', shim.clocks.wallClock],
         ['wasi:random/random', shim.random.random], ['wasi:random/insecure', shim.random.insecure], ['wasi:random/insecure-seed', shim.random.insecureSeed],
-        ...['stdin', 'stdout', 'stderr', 'terminal-input', 'terminal-output', 'terminal-stdin', 'terminal-stdout', 'terminal-stderr'].map(name => [`wasi:cli/${name}`, cli[camel(name)]] as [string, unknown]),
+        ...['environment', 'exit', 'stdin', 'stdout', 'stderr', 'terminal-input', 'terminal-output', 'terminal-stdin', 'terminal-stdout', 'terminal-stderr'].map(name => [`wasi:cli/${name}`, cli[camel(name)]] as [string, unknown]),
       ]);
       for (const name of required) {
         const base = stripVersion(name);
