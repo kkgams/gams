@@ -1070,6 +1070,22 @@
         color: var(--intent-fg);
     }
 
+    /* Generic drag state: callers supply valid placeholder structure for their
+       container (rows, cells, grids, cards); no tag-specific styling is needed. */
+    [draggable="true"] {
+        cursor: grab;
+    }
+
+    [aria-grabbed="true"] {
+        cursor: grabbing;
+        opacity: 0.45;
+    }
+
+    [data-drag-ghost="true"] {
+        outline: 1px dashed var(--border-focus);
+        outline-offset: -2px;
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
      TABLES
      ═══════════════════════════════════════════════════════════════════════════ */

@@ -255,6 +255,31 @@ grid normally. Preserve focus when activation rerenders cells. Focus outlines,
 hover, disabled and selected appearance belong to shared CSS/themes, never
 View-specific CSS or `data-*` styling hooks.
 
+## Drag and drop
+
+Drag state is element-independent: the same attributes apply to table rows,
+cells, grid items, cards and other documented elements. Preserve each container's
+valid structure; a table-row placeholder contains cells, while a grid placeholder
+uses the grid's item structure.
+
+- `[draggable="true"]` - an item enabled for native drag and drop.
+- `[aria-grabbed="true"]` - the source item during an active drag. Restore its previous attribute value when the drag ends or is cancelled; this state is separate from selection.
+- `[data-drag-ghost="true"]` - a temporary insertion placeholder or drag preview. This is an explicit generic styling hook, not a View-specific `data-*` selector. Give decorative placeholders `aria-hidden="true"` and no focusable descendants.
+
+Shared Host CSS owns the grab cursor, grabbed-source opacity and dashed ghost
+outline. Themes may refine these generic selectors without restricting them to
+`tr`, `td` or another tag. Views must not add local drag CSS or inline placeholder
+sizing. Placeholder content can describe before/after/inside placement without
+adding another styling attribute.
+
+Keep the displayed drop target stable while hovering its placeholder. Validate
+before committing, reject invalid targets, and commit a completed drop as one
+undo operation. Cancel transient drag state on Escape, drag end, document/list
+replacement, disconnect and drops outside the accepted target. Provide keyboard
+or button alternatives for both reordering and parenting, and preserve focus and
+selection after committing. Native drag attributes alone do not implement these
+behaviors or keyboard access.
+
 ## Cards / app windows
 
 GAMS themes may treat `blockquote` as an app-level card/window primitive rather than general prose quotation.
