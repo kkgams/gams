@@ -142,3 +142,59 @@ test('clearCache preserves unrelated files and refuses unfamiliar content in cac
   await f.store.remove(`/cache/${key}/personal.txt`);await f.manager.clearCache();
   assert.deepEqual(await f.store.list('/cache'),['personal.txt']);
 });
+
+test('Tile Detect typed records, numeric lists and lossless hashes round-trip at Runtime boundary', async () => {
+  const name='gams:tile-detect/tile-detect@1.0.0';
+  const hash=18446744073709551615n;
+  const extracted={tilebank:[{id:1,sourceIndex:0,hash}],tilemap:{width:2,height:1,tileW:8,tileH:8,data:Uint32Array.of(1,1)}};
+  const calls=[];
+  const f=await fixture([name],{[name]:{
+    detectSize:(...args)=>{calls.push(args);return {tileW:8,tileH:8,confidence:0.5};},
+    extract:(...args)=>{calls.push(args);return extracted;},
+    exportTileset:(...args)=>{calls.push(args);return {data:Uint8Array.of(0,128,255),width:8,height:8,cols:1,rows:1};},
+    toTilemap:(...args)=>{calls.push(args);return {layers:[{width:2,data:Uint32Array.of(1,1),props:[['name','extracted']]}],props:[['tileWidth','8']]};},
+  }});
+  await f.manager.add(['plugin.wasm']);
+  assert.deepEqual(await f.manager.invoke('tile-detect/tile-detect::detect-size',[[0,128,255],4,128]),{ok:{'tile-w':8,'tile-h':8,confidence:0.5}});
+  const input={'source-data':[0,128,255],'tile-w':8,'tile-h':8,tolerance:0,'skip-nth-pixel':1};
+  const {ok:output}=await f.manager.invoke('tile-detect/tile-detect::extract',[input]);
+  assert.deepEqual(output,{tilebank:[{id:1,'source-index':0,hash:hash.toString()}],tilemap:{width:2,height:1,'tile-w':8,'tile-h':8,data:[1,1]}});
+  const exported=await f.manager.invoke('tile-detect/tile-detect::export-tileset',[{tilebank:output.tilebank,'source-data':[0,128,255],'source-cols':2,'tile-w':8,'tile-h':8}]);
+  assert.deepEqual(exported,{ok:{data:[0,128,255],width:8,height:8,cols:1,rows:1}});
+  assert.deepEqual(await f.manager.invoke('tile-detect/tile-detect::to-tilemap',[output]),{ok:{layers:[{width:2,data:[1,1],props:[['name','extracted']]}],props:[['tileWidth','8']]}});
+  assert.deepEqual(calls,[
+    [Uint8Array.of(0,128,255),4,128],
+    [{sourceData:Uint8Array.of(0,128,255),tileW:8,tileH:8,tolerance:0,skipNthPixel:1}],
+    [{tilebank:extracted.tilebank,sourceData:Uint8Array.of(0,128,255),sourceCols:2,tileW:8,tileH:8}],
+    [extracted],
+  ]);
+  assert.deepEqual(input['source-data'],[0,128,255]);
+});
+
+test('Tile Detect declared errors stay results, traps propagate and invalid calls never reach guest', async () => {
+  const name='gams:tile-detect/tile-detect@1.0.0';let calls=0;
+  const f=await fixture([name],{[name]:{
+    detectSize:()=>{calls++;throw {declared:true,payload:'failed to load image'};},
+    extract:()=>{calls++;throw new Error('guest trap');},
+  }});
+  await f.manager.add(['plugin.wasm']);
+  assert.deepEqual(await f.manager.invoke('tile-detect/tile-detect::detect-size',[[],4,128]),{err:'failed to load image'});
+  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::extract',[{'source-data':[],'tile-w':0,'tile-h':8,tolerance:0,'skip-nth-pixel':1}]),/guest trap/);
+  const invalid=[
+    ['detect-size',[[256],4,128]],['detect-size',[[1],-1,128]],['detect-size',[[1],4]],
+    ['extract',[{'source-data':[],'tile-w':8}]],['to-string',[]],
+    ['to-tilemap',[{tilebank:[{id:1,'source-index':0,hash:9007199254740992}],tilemap:{width:1,height:1,'tile-w':8,'tile-h':8,data:[1]}}]],
+    ['to-tilemap',[{tilebank:[],tilemap:{width:1,height:1,'tile-w':8,'tile-h':8,data:[4294967296]}}]],
+  ];
+  for(const [method,args] of invalid)await assert.rejects(f.manager.invoke(`tile-detect/tile-detect::${method}`,args));
+  assert.equal(calls,2);
+  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::[constructor]tile',[]),/resource/);
+});
+
+test('Tile Detect support does not grant a different interface ABI version',async()=>{
+  const name='gams:tile-detect/tile-detect@2.0.0';let calls=0;
+  const f=await fixture([name],{[name]:{detectSize:()=>calls++}});
+  await f.manager.add(['plugin.wasm']);
+  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::detect-size',[[],4,128]),/No Host ABI adapter/);
+  assert.equal(calls,0);
+});

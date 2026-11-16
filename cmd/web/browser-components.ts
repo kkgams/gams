@@ -1,5 +1,6 @@
 import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime.ts';
 import { prepareFilesystemCall, filesystemHostValue } from './files-call.ts';
+import { prepareTileDetectCall } from './tile-detect-call.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
@@ -155,7 +156,8 @@ export class BrowserComponents {
     if (candidates.length !== 1) throw new Error(`${candidates.length ? 'Ambiguous' : 'Missing'} exported interface: ${short}`);
     const { instance, name } = candidates[0];
     // Jco metadata has only function/instance, not result schemas. Never guess unknown ABIs.
-    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0';
+    const tileDetect = name === 'gams:tile-detect/tile-detect@1.0.0';
+    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect;
     const raw = name === 'gams:random/seeded-random@1.0.0' || name === 'wasi:random/random@0.2.0';
     if (!result && !raw) throw new Error(`No Host ABI adapter for ${name}; resources and arbitrary result schemas are unsupported`);
     let values = args;
@@ -167,17 +169,18 @@ export class BrowserComponents {
         normalizePath(path);
         if (path === '/project/gams_modules' || path.startsWith('/project/gams_modules/')) values[index] = path.slice('/project/'.length);
       }
-    } else if (short === 'layout/layout') values = args.map(layoutInput);
+    } else if (tileDetect) values = prepareTileDetectCall(method, args);
+    else if (short === 'layout/layout') values = args.map(layoutInput);
     else if (method === 'set-seed' || method === 'get-random-bytes') values = args.map(u64);
     const owner = Object.hasOwn(instance.bindings, name) ? instance.bindings[name] : undefined;
     const fn = owner && typeof owner === 'object' && Object.hasOwn(owner, camel(method)) ? owner[camel(method)] : undefined;
     if (typeof fn !== 'function') throw new Error(`Missing callable export: ${target}`);
     try {
-      const host = hostValue(await fn(...values), short === 'layout/layout'); return result ? { ok: host } : host;
+      const host = hostValue(await fn(...values), short === 'layout/layout' || tileDetect, tileDetect); return result ? { ok: host } : host;
     } catch (error) {
       const util = instance.bindings._util as { isComponentError(error: unknown): boolean } | undefined;
       if (!result || !util || !util.isComponentError(error)) throw error;
-      return { err: hostValue((error as { payload: unknown }).payload, short === 'layout/layout') };
+      return { err: hostValue((error as { payload: unknown }).payload, short === 'layout/layout' || tileDetect, tileDetect) };
     }
   }
   async diagnostics() { return { ...this.counts, cacheDir: this.cacheDir, instances: [...this.instances.values()].map(instance => this.info(instance)), closed: this.closed }; }
@@ -232,8 +235,8 @@ function layoutInput(value: unknown): unknown {
   }
   return value;
 }
-function hostValue(value: unknown, layout: boolean): unknown {
-  const plain = filesystemHostValue(value); if (!layout) return plain;
+function hostValue(value: unknown, witFields: boolean, uint32Lists = false): unknown {
+  const plain = filesystemHostValue(value, uint32Lists); if (!witFields) return plain;
   function fields(value: unknown): unknown {
     if (Array.isArray(value)) return value.map(fields);
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, field]) => [kebab(key), fields(field)]));

@@ -52,7 +52,7 @@ export function prepareFilesystemCall(target: string, args: unknown[]): { name: 
 }
 
 // Convert only the WIT payload; the worker owns the Runtime response envelope.
-export function filesystemHostValue(value: unknown): unknown {
+export function filesystemHostValue(value: unknown, uint32Lists = false): unknown {
   const ancestors = new Set<object>();
   function convert(value: unknown): unknown {
     if (value === undefined || value === null) return null;
@@ -65,7 +65,7 @@ export function filesystemHostValue(value: unknown): unknown {
       return value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)
         ? Number(value) : value.toString();
     }
-    if (value instanceof Uint8Array) return Array.from(value);
+    if (value instanceof Uint8Array || (uint32Lists && value instanceof Uint32Array)) return Array.from(value);
     if (typeof value !== 'object') throw new Error('Unsupported filesystem result');
     if (ancestors.has(value)) throw new Error('Cyclic filesystem result');
     const prototype = Object.getPrototypeOf(value);

@@ -115,3 +115,10 @@ test('reject unsupported and nonfinite payloads, nested invalid values and cycle
   const specialKey = JSON.parse('{"__proto__":{"value":3}}');
   assert.deepEqual(filesystemHostValue(specialKey), specialKey);
 });
+
+test('u32 WIT result lists require the explicit domain-adapter opt-in',()=>{
+  const value={data:Uint32Array.of(0,4294967295)};
+  assert.throws(()=>filesystemHostValue(value),/record/);
+  assert.deepEqual(filesystemHostValue(value,true),{data:[0,4294967295]});
+  assert.throws(()=>filesystemHostValue(new Uint16Array([1]),true),/record/);
+});
