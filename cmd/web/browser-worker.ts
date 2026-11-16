@@ -43,6 +43,7 @@ async function handle({ id, command, args }: { id:number;command:string;args:any
         case 'runtime_add_plugins': result = await components.add(args.paths, args.reload); break;
         case 'runtime_load_from_bytes': result = await components.loadFromBytes(Uint8Array.from(args.bytes), args.path); break;
         case 'runtime_invoke': result = await components.invoke(args.target, args.args); break;
+        case 'runtime_release_resource': await components.releaseResource(args.resource); result = null; break;
         case 'runtime_resolve_file': result = await project.resolveFile(args.source); break;
         case 'runtime_download': result = Array.from(await project.download(args.url, progress => postMessage({event:'download-progress', id, progress}))); break;
         case 'runtime_prepare_config': result = await project.prepareConfig(args.config); break;

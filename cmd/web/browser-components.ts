@@ -1,6 +1,8 @@
 import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime.ts';
 import { prepareFilesystemCall, filesystemHostValue } from './files-call.ts';
 import { prepareTileDetectCall } from './tile-detect-call.ts';
+import { prepareImageCall } from './image-call.ts';
+import { BrowserResources } from './browser-resources.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
@@ -31,6 +33,7 @@ function validateOutput(output: TranspiledComponent): void {
 export class BrowserComponents {
   onEvent?: (event: Record<string, unknown>) => void;
   private instances = new Map<string, Instance>();
+  private resources = new BrowserResources();
   private compiler?: Promise<NonNullable<Injection['transpile']>>;
   private counts = { cacheHits: 0, cacheMisses: 0, transpilations: 0 };
   private closed = false;
@@ -70,8 +73,16 @@ export class BrowserComponents {
     let bindings;
     try { bindings = await (this.injection.instantiate ?? instantiateComponent)(output, capabilities.imports); }
     catch (error) { await capabilities.dispose(); throw error; }
-    if (previous) await this.dispose(previous);
     const instance: Instance = { info: { handle: `browser-component-${this.nextHandle++}`, path, imports: [...output.imports], exports: output.exports.map(([name]) => name) }, bindings, dispose: capabilities.dispose };
+    if (previous) {
+      this.instances.delete(path);
+      try { await this.dispose(previous); }
+      catch (error) {
+        try { await this.dispose(instance); }
+        catch (cleanupError) { throw new AggregateError([error, cleanupError], `Component replacement cleanup failed: ${String(error)}; ${String(cleanupError)}`); }
+        throw error;
+      }
+    }
     this.instances.set(path, instance); this.onEvent?.({ event: 'component-loaded', path, key });
     return this.info(instance);
   }
@@ -157,11 +168,16 @@ export class BrowserComponents {
     const { instance, name } = candidates[0];
     // Jco metadata has only function/instance, not result schemas. Never guess unknown ABIs.
     const tileDetect = name === 'gams:tile-detect/tile-detect@1.0.0';
-    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect;
+    const image = name === 'gams:image/image@1.0.0';
+    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect || image;
     const raw = name === 'gams:random/seeded-random@1.0.0' || name === 'wasi:random/random@0.2.0';
-    if (!result && !raw) throw new Error(`No Host ABI adapter for ${name}; resources and arbitrary result schemas are unsupported`);
+    if (!result && !raw) throw new Error(`No Host ABI adapter for ${name}; arbitrary WIT schemas are unsupported`);
     let values = args;
-    if (short === 'fs/fs') {
+    let ownedImage = false;
+    if (image) {
+      const call = prepareImageCall(method, args, ref => this.resources.borrow(ref, instance, 'image'));
+      values = call.values; ownedImage = call.resource;
+    } else if (short === 'fs/fs') {
       const call = prepareFilesystemCall(`${short}::${method}`, args); values = [...call.values];
       for (const index of method === 'rename' ? [0, 1] : [0]) {
         const path = values[index] as string;
@@ -176,14 +192,19 @@ export class BrowserComponents {
     const fn = owner && typeof owner === 'object' && Object.hasOwn(owner, camel(method)) ? owner[camel(method)] : undefined;
     if (typeof fn !== 'function') throw new Error(`Missing callable export: ${target}`);
     try {
-      const host = hostValue(await fn(...values), short === 'layout/layout' || tileDetect, tileDetect); return result ? { ok: host } : host;
+      const value = await fn(...values);
+      const host = ownedImage ? this.resources.own(instance, stripVersion(name), 'image', value) : hostValue(value, short === 'layout/layout' || tileDetect || image, tileDetect);
+      return result ? { ok: host } : host;
     } catch (error) {
       const util = instance.bindings._util as { isComponentError(error: unknown): boolean } | undefined;
       if (!result || !util || !util.isComponentError(error)) throw error;
       return { err: hostValue((error as { payload: unknown }).payload, short === 'layout/layout' || tileDetect, tileDetect) };
     }
   }
-  async diagnostics() { return { ...this.counts, cacheDir: this.cacheDir, instances: [...this.instances.values()].map(instance => this.info(instance)), closed: this.closed }; }
+  async releaseResource(ref: unknown): Promise<void> {
+    this.assertOpen(); await this.resources.release(ref);
+  }
+  async diagnostics() { return { ...this.counts, jsonResourceRefs: this.resources.size, cacheDir: this.cacheDir, instances: [...this.instances.values()].map(instance => this.info(instance)), closed: this.closed }; }
   async clearCache(): Promise<void> {
     this.assertOpen();
     let names: string[];
@@ -205,11 +226,28 @@ export class BrowserComponents {
   }
   async close(): Promise<void> {
     if (this.closed) return;
-    for (const [path, instance] of this.instances) { await this.dispose(instance); this.instances.delete(path); } this.closed = true;
+    this.closed = true;
+    const errors: unknown[] = [];
+    for (const [path, instance] of this.instances) {
+      this.instances.delete(path);
+      try { await this.dispose(instance); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, `Component shutdown failed: ${errors.map(String).join('; ')}`);
   }
   private async dispose(instance: Instance): Promise<void> {
     const util = instance.bindings._util as { whenIdle(): Promise<void>; stop(): void } | undefined;
-    if (util) { await util.whenIdle(); util.stop(); } await instance.dispose();
+    const errors: unknown[] = [];
+    // Drop public resources while their guest is live, then stop it and release WASI handles.
+    // One failed destructor must not skip the other resources or teardown phases.
+    for (const cleanup of [
+      async () => { if (util) await util.whenIdle(); },
+      () => this.resources.releaseOwner(instance),
+      () => { if (util) util.stop(); },
+      () => instance.dispose(),
+    ]) {
+      try { await cleanup(); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, `Component teardown failed (${instance.info.path}): ${errors.map(String).join('; ')}`);
   }
   private info(instance: Instance): Handle { return { ...instance.info, imports: [...instance.info.imports], exports: [...instance.info.exports] }; }
   private sourcePath(path: string): string {
