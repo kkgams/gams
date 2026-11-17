@@ -11,7 +11,7 @@ const CALLS = new Map<string, { name: string; arity: number }>([
   ['fs/fs::rename', { name: 'rename', arity: 2 }],
 ]);
 
-function projectPath(value: unknown): string {
+export function projectPath(value: unknown): string {
   if (typeof value !== 'string' || value === '' || /[\\\0]/.test(value)) {
     throw new Error('Expected a nonempty Project path without backslashes or NUL');
   }

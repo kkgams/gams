@@ -20,6 +20,14 @@ export class BrowserResources {
     if (entry.kind !== kind) throw new Error(`Wrong resource kind: expected ${kind}, got ${entry.kind}`);
     return entry.value;
   }
+  consume(ref: unknown, owner: object, kind: string): object {
+    const value = this.borrow(ref, owner, kind);
+    const { id } = this.resolve(ref);
+    // Ownership transfers to the guest. Its lowering/destructor now owns cleanup,
+    // even if the call traps; the public reference must never be reused or dropped.
+    this.entries.delete(id);
+    return value;
+  }
   async release(ref: unknown): Promise<void> {
     const { id, entry } = this.resolve(ref);
     // Destructors may consume their handle before trapping. Never allow reuse or a second drop.

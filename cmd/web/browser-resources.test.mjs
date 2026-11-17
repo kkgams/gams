@@ -30,3 +30,15 @@ test('invalid resource input rejects and failed destructors consume handles with
   await assert.rejects(registry.releaseOwner(owner),error=>error instanceof AggregateError&&error.errors[0].message==='destructor trap');
   assert.equal(drops,2);assert.equal(registry.size,0);await assert.rejects(registry.release(ref),/Unknown/);
 });
+test('consumed ownership invalidates the public handle without calling its destructor', async()=>{
+  const registry=new BrowserResources(),owner={};let drops=0;
+  const value=resource(()=>drops++),ref=registry.own(owner,'probe:resource/api','canonical-kind',value);
+  assert.throws(()=>registry.consume(ref,{},'canonical-kind'),/another component/);
+  assert.throws(()=>registry.consume(ref,owner,'wrong'),/kind/);
+  assert.equal(registry.size,1);
+  assert.equal(registry.consume(ref,owner,'canonical-kind'),value);
+  assert.equal(registry.size,0);assert.equal(drops,0);
+  assert.throws(()=>registry.borrow(ref,owner,'canonical-kind'),/Unknown/);
+  await assert.rejects(registry.release(ref),/Unknown/);
+  await registry.releaseOwner(owner);assert.equal(drops,0);
+});

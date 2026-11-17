@@ -2,16 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BrowserComponents } from './browser-components.ts';
 import { BrowserStore } from './browser-storage.ts';
+import { testSchema, unfamiliarSchema } from './test-schemas.mjs';
 const bytes = Uint8Array.from([0,97,115,109,13,0,1,0]);
 const encode = text => new TextEncoder().encode(text);
 const options = { cwd: '/work', modulesDir: '/external/modules', pluginCacheDir: '/cache' };
 const fsName = 'gams:fs/fs@1.2.0';
 const layoutName = 'gams:layout/layout@1.0.0';
-async function fixture(names = [fsName], bindings = {}) {
+async function fixture(names = [fsName], bindings = {}, schema = () => testSchema(names)) {
   const store = new BrowserStore({dir:{}});
   await store.mkdir('/work'); await store.mkdir('/external/modules'); await store.write('/work/plugin.wasm', bytes);
   let transpilations = 0, instantiations = 0, stops = 0;
   const injection = {
+    schema,
     transpile: async () => { transpilations++; return { files: [['component.js',encode('bindings')], ['component.core.wasm',bytes]], imports: [], exports: names.map(name => [name,'instance']) }; },
     instantiate: async () => { instantiations++; return { ...bindings, _util: { isComponentError: error => error?.declared === true, whenIdle: async () => {}, stop: () => stops++ } }; },
   };
@@ -69,29 +71,34 @@ test('fs modules alias, unchanged write payloads, declared errors versus traps',
   assert.deepEqual(await f.manager.invoke('fs/fs::read-text',['a']),{err:'missing'});
   await assert.rejects(f.manager.invoke('fs/fs::stat',['a']),/trap/);
   await assert.rejects(f.manager.invoke('fs/fs::list',['../bad']),/parent/);
-  await assert.rejects(f.manager.invoke('fs/fs::to-string',[]),/Unsupported/);
+  await assert.rejects(f.manager.invoke('fs/fs::to-string',[]),/Unsupported|Missing|schema|method|function/i);
 });
 test('layout WIT field names, options, u64 generation and error records', async () => {
   let request;
+  const config={'max-areas':8,'max-handles':8,'min-panel-size':1,'handle-half-size':2};
+  const document={'screen-w':1,'screen-h':1,config,generation:1,areas:[],handles:[],preview:null};
+  const guestConfig={maxAreas:8,maxHandles:8,minPanelSize:1,handleHalfSize:2};
+  const guestDocument={screenW:1,screenH:1,config:guestConfig,generation:1n,areas:[],handles:[],preview:undefined};
   const f=await fixture([layoutName],{[layoutName]:{
-    resizeScreen:value=>{request=value;return {document:{screenW:10,generation:2n,preview:undefined},info:{action:'resize-screen',generation:2n}};},
+    resizeScreen:value=>{request=value;return {document:{...guestDocument,screenW:10,generation:2n},info:{action:'resize-screen',generation:2n}};},
     initScreen:()=>{throw {declared:true,payload:{code:'invalid-arg',message:'bad'}};},
   }});
   await f.manager.add(['plugin.wasm']);
-  assert.deepEqual(await f.manager.invoke('layout/layout::resize-screen',[{document:{'screen-w':1,generation:1,preview:null},'handle-half-size':2}]),
-    {ok:{document:{'screen-w':10,generation:2,preview:null},info:{action:'resize-screen',generation:2}}});
-  assert.deepEqual(request,{document:{screenW:1,generation:1n,preview:undefined},handleHalfSize:2});
-  assert.deepEqual(await f.manager.invoke('layout/layout::init-screen',[{}]),{err:{code:'invalid-arg',message:'bad'}});
+  assert.deepEqual(await f.manager.invoke('layout/layout::resize-screen',[{document,w:10,h:1,'handle-half-size':2}]),
+    {ok:{document:{...document,'screen-w':10,generation:2},info:{action:'resize-screen',generation:2}}});
+  assert.deepEqual(request,{document:guestDocument,w:10,h:1,handleHalfSize:2});
+  assert.deepEqual(await f.manager.invoke('layout/layout::init-screen',[{w:1,h:1,config,'root-content-id':'root'}]),{err:{code:'invalid-arg',message:'bad'}});
 });
-test('raw values stay raw; unknown ABIs, resources, inherited exports and ambiguity reject', async () => {
+
+test('raw values stay raw; missing schema methods, inherited exports and ambiguity reject', async () => {
   const name='gams:random/seeded-random@1.0.0'; let seed;
-  const f=await fixture([name,'gams:other/api@1.0.0'],{[name]:{getSeed:()=>7n,setSeed:value=>{seed=value;}}});
+  const f=await fixture([name],{[name]:{getSeed:()=>7n,setSeed:value=>{seed=value;}}});
   await f.manager.add(['plugin.wasm']);
   assert.equal(await f.manager.invoke('random/seeded-random::get-seed',[]),7);
   assert.equal(await f.manager.invoke('random/seeded-random::set-seed',[42]),null); assert.equal(seed,42n);
-  await assert.rejects(f.manager.invoke('other/api::run',[]),/No Host ABI adapter/);
-  await assert.rejects(f.manager.invoke('random/seeded-random::to-string',[]),/Missing callable/);
-  await assert.rejects(f.manager.invoke('random/seeded-random::[constructor]foo',[]),/resource/);
+  await assert.rejects(f.manager.invoke('random/seeded-random::run',[]),/schema|method|function|Unsupported|Missing/i);
+  await assert.rejects(f.manager.invoke('random/seeded-random::to-string',[]),/Missing|schema|method|function|Unsupported/i);
+  await assert.rejects(f.manager.invoke('random/seeded-random::[constructor]foo',[]),/resource|schema|method|function|Unsupported|Missing/i);
   await f.manager.loadFromBytes(bytes,'second');
   await assert.rejects(f.manager.invoke('random/seeded-random::get-seed',[]),/Ambiguous/);
 });
@@ -188,13 +195,76 @@ test('Tile Detect declared errors stay results, traps propagate and invalid call
   ];
   for(const [method,args] of invalid)await assert.rejects(f.manager.invoke(`tile-detect/tile-detect::${method}`,args));
   assert.equal(calls,2);
-  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::[constructor]tile',[]),/resource/);
+  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::[constructor]tile',[]),/resource|schema|method|function|Unsupported|Missing/i);
 });
 
-test('Tile Detect support does not grant a different interface ABI version',async()=>{
-  const name='gams:tile-detect/tile-detect@2.0.0';let calls=0;
+test('Tile Detect requires the requested namespace and version to match its schema',async()=>{
+  const name='gams:tile-detect/tile-detect@1.0.0';let calls=0;
   const f=await fixture([name],{[name]:{detectSize:()=>calls++}});
   await f.manager.add(['plugin.wasm']);
-  await assert.rejects(f.manager.invoke('tile-detect/tile-detect::detect-size',[[],4,128]),/No Host ABI adapter/);
+  await assert.rejects(f.manager.invoke('tile-detect/tile-detect@2.0.0::detect-size',[[],4,128]));
+  await assert.rejects(f.manager.invoke('other:tile-detect/tile-detect::detect-size',[[],4,128]));
   assert.equal(calls,0);
+});
+
+test('schema is extracted once and durably hashed; offline cache never initializes extractor',async()=>{
+  let extractions=0;
+  const f=await fixture([fsName],{[fsName]:{list:()=>[]}},async source=>{assert.deepEqual(source,bytes);extractions++;return testSchema([fsName]);});
+  const instantiate=f.injection.instantiate;
+  f.injection.instantiate=(output,...args)=>{assert.ok(output.files.every(([name])=>name!=='schema.json'));return instantiate(output,...args);};
+  await f.manager.add(['plugin.wasm']);await f.manager.add(['plugin.wasm'],true);
+  assert.equal(extractions,1);
+  const [key]=await f.store.list('/cache');
+  const manifest=JSON.parse(new TextDecoder().decode(await f.store.read(`/cache/${key}/manifest.json`)));
+  assert.equal(manifest.identity.schema,2);
+  const schemaFile=manifest.files.find(file=>file.name==='schema.json');assert.ok(schemaFile);
+  const schemaBytes=await f.store.read(`/cache/${key}/schema.json`);
+  assert.equal(schemaFile.hash,Buffer.from(await crypto.subtle.digest('SHA-256',schemaBytes)).toString('hex'));
+  await f.manager.close();
+  const restarted=new BrowserComponents(f.store,options,{instantiate:f.injection.instantiate,schema:()=>assert.fail('cached schema must not be re-extracted'),transpile:()=>assert.fail('cached bindings must not be recompiled')});
+  await restarted.add(['plugin.wasm']);assert.deepEqual(await restarted.invoke('fs/fs::list',['.']),{ok:[]});await restarted.close();
+});
+
+test('complete cache rejects changed or missing schema instead of falling back',async()=>{
+  const f=await fixture();await f.manager.add(['plugin.wasm']);await f.manager.close();
+  const [key]=await f.store.list('/cache');
+  await f.store.write(`/cache/${key}/schema.json`,encode('{}'));
+  const next=new BrowserComponents(f.store,options,f.injection);
+  await assert.rejects(next.add(['plugin.wasm']),/Corrupt/);
+  await f.store.remove(`/cache/${key}/schema.json`);
+  await assert.rejects(next.add(['plugin.wasm']),/ENOENT/);
+  assert.equal(f.counts().transpilations,1);assert.equal(f.counts().instantiations,1);
+});
+
+test('missing, malformed and mismatched extracted schemas never instantiate or mark complete',async()=>{
+  for(const schema of [()=>undefined,()=>({world:0,resolve:{}}),()=>unfamiliarSchema()]){
+    const f=await fixture([fsName],{},schema);await f.store.mkdir('/cache');
+    await assert.rejects(f.manager.add(['plugin.wasm']));assert.equal(f.counts().instantiations,0);
+    for(const key of await f.store.list('/cache'))assert.ok(!(await f.store.list(`/cache/${key}`)).includes('complete'));
+  }
+});
+
+test('unfamiliar schema drives generic operation and exact namespace/version resolution',async()=>{
+  const names=['acme:metrics/counter@2.3.0','other:metrics/counter@2.3.0','acme:metrics/counter@3.0.0'];
+  const calls=[];
+  const f=await fixture(names,Object.fromEntries(names.map((name,index)=>[name,{nextValue:value=>{calls.push([name,value]);return value+BigInt(index+1);}}])),()=>unfamiliarSchema(names));
+  await f.manager.add(['plugin.wasm']);
+  assert.equal(await f.manager.invoke('acme:metrics/counter@2.3.0::next-value',['18446744073709551610']),'18446744073709551611');
+  assert.equal(await f.manager.invoke('other:metrics/counter::next-value',[1]),3);
+  assert.equal(await f.manager.invoke('acme:metrics/counter@3.0.0::next-value',[1]),4);
+  await assert.rejects(f.manager.invoke('metrics/counter::next-value',[1]),/Ambiguous/i);
+  await assert.rejects(f.manager.invoke('acme:metrics/counter@9.0.0::next-value',[1]));
+  await assert.rejects(f.manager.invoke('unknown:metrics/counter::next-value',[1]));
+  await assert.rejects(f.manager.invoke('acme:metrics/counter@2.3.0::missing',[1]));
+  assert.equal(calls.length,3);assert.equal(calls[0][1],18446744073709551610n);
+});
+
+test('valid uppercase WIT identifiers pass target selection without changing their public spelling',async()=>{
+  const name='ACME:METRICS/API@1.0.0',schema=unfamiliarSchema([name]);
+  const fn=schema.resolve.interfaces[0].functions['next-value'];fn.name='HTTP';
+  schema.resolve.interfaces[0].functions={HTTP:fn};
+  const f=await fixture([name],{[name]:{http:v=>v+1n}},()=>schema);
+  await f.manager.add(['plugin.wasm']);
+  assert.equal(await f.manager.invoke('ACME:METRICS/API@1.0.0::HTTP',[41]),42);
+  await f.manager.close();
 });

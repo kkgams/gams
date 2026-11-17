@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BrowserComponents} from './browser-components.ts';
 import {BrowserStore} from './browser-storage.ts';
+import {testSchema} from './test-schemas.mjs';
 const types='wasi:sql/types@0.2.0-draft', readwrite='wasi:sql/readwrite@0.2.0-draft';
 const component=Uint8Array.from([0,97,115,109,13,0,1,0]);
 const dispose=Symbol.dispose||Symbol.for('dispose');
@@ -9,6 +10,7 @@ async function fixture(){
   const store=new BrowserStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/sql.wasm',component);
   const events=[];let calls=0;
   const manager=new BrowserComponents(store,{cwd:'/work',modulesDir:'/modules',pluginCacheDir:'/cache'},{
+    schema:()=>testSchema([types,readwrite]),
     transpile:()=>({files:[['component.js',new TextEncoder().encode('sql')]],imports:[],exports:[[types,'instance'],[readwrite,'instance']]}),
     instantiate:()=>{
       class Resource{constructor(kind){this.kind=kind;}[dispose](){events.push(`drop:${this.kind}`);}}
@@ -61,4 +63,17 @@ test('SQL replacement and shutdown destroy connection, statement and error refs 
   await manager.add(['sql.wasm'],true);assert.deepEqual(events,['drop:connection','drop:statement','drop:error','stop']);
   await assert.rejects(manager.invoke('sql/readwrite::query',[c,c]),/unknown resource/i);
   await open(manager);await prepare(manager);await manager.close();assert.deepEqual(events.slice(4),['drop:connection','drop:statement','stop']);assert.equal((await manager.diagnostics()).jsonResourceRefs,0);
+});
+
+test('generic SQL schema preserves every declared cell variant and rejects malformed output',async()=>{
+  const {WitCallSchema}=await import('./wit-call.ts');
+  const schema=new WitCallSchema(testSchema([types,readwrite]));
+  const variants=[['int32',-2147483648],['int64',-9223372036854775808n],['uint32',4294967295],['uint64',18446744073709551615n],['float',1.25],['double',2.5],['str','café ✓'],['boolean',true],['date','2026-11-16'],['time','12:34'],['timestamp','2026-11-16T12:34:00Z'],['binary',new Uint8Array([0,128,255])],['null']];
+  const resources={borrow:()=>({}),consume:()=>assert.fail('unexpected own'),own:()=>assert.fail('unexpected resource output')};
+  const bindings={[readwrite]:{query:()=>variants.map(([tag,val])=>({fieldName:tag,value:tag==='null'?{tag}:{tag,val}}))}};
+  assert.deepEqual(await schema.invoke(readwrite,'query',[{},{}],bindings,resources),{ok:variants.map(([tag,val])=>({'field-name':tag,value:{case:tag,value:tag==='null'?null:typeof val==='bigint'?val.toString():val instanceof Uint8Array?Array.from(val):val}}))});
+  for(const cells of [null,{},[null],[{}],[{fieldName:'x',value:{tag:'unknown',val:1}}],[{fieldName:'x',value:{tag:'str'}}],[{fieldName:'x',value:{tag:'double',val:Infinity}}]]){
+    bindings[readwrite].query=()=>cells;
+    await assert.rejects(schema.invoke(readwrite,'query',[{},{}],bindings,resources));
+  }
 });

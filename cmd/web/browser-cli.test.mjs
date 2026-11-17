@@ -3,6 +3,7 @@ import { registerHooks } from 'node:module';
 import test from 'node:test';
 import { BrowserComponents } from './browser-components.ts';
 import { BrowserStore } from './browser-storage.ts';
+import { unfamiliarSchema } from './test-schemas.mjs';
 
 const bytes = Uint8Array.from([0,97,115,109,13,0,1,0]);
 const encode = text => new TextEncoder().encode(text);
@@ -43,6 +44,7 @@ test('components receive isolated CLI environment/exit bindings; unrelated impor
     const store = new BrowserStore({ dir: {} });
     await store.mkdir('/project'); await store.mkdir('/modules');
     return new BrowserComponents(store, { cwd: '/project', modulesDir: '/modules', pluginCacheDir: '/cache' }, {
+      schema: () => unfamiliarSchema([]),
       transpile: async () => ({ imports, exports: [], files: [['component.js', encode('test')]] }),
       instantiate,
     });

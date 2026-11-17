@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BrowserComponents} from './browser-components.ts';
 import {BrowserStore} from './browser-storage.ts';
+import {testSchema} from './test-schemas.mjs';
 const name='gams:image/image@1.0.0';
 const component=Uint8Array.from([0,97,115,109,13,0,1,0]);
 const dispose=Symbol.dispose||Symbol.for('dispose');
@@ -9,6 +10,7 @@ async function fixture({failDrop=false,failReload=false,failStopGeneration=0}={}
   const store=new BrowserStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/image.wasm',component);
   const events=[];let generation=0;
   const manager=new BrowserComponents(store,{cwd:'/work',modulesDir:'/modules',pluginCacheDir:'/cache'},{
+    schema:()=>testSchema([name]),
     transpile:()=>({files:[['component.js',new TextEncoder().encode('image')]],imports:[],exports:[[name,'instance']]}),
     instantiate:()=>{const owner=++generation;if(failReload&&owner===2)throw Error('new component failed');class Image{constructor(w,h){this.w=w;this.h=h;}[dispose](){events.push(`drop:${owner}`);if(failDrop)throw Error('destructor trap');}}
       return {[name]:{create:(w,h)=>{if(w===0)throw{declared:true,payload:'invalid dimensions'};if(w===99)throw Error('image trap');return new Image(w,h);},crop:(image,rect)=>{assert.ok(image instanceof Image);return new Image(rect.x1-rect.x0,rect.y1-rect.y0);},info:image=>({width:image.w,height:image.h,pixelFormat:'rgba8'}),export:()=>new Uint8Array([0,127,255])},_util:{whenIdle:async()=>{events.push(`idle:${owner}`);},stop:()=>{events.push(`stop:${owner}`);if(owner===failStopGeneration)throw Error('stop failed');},isComponentError:e=>e.declared===true}};},

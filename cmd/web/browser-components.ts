@@ -1,22 +1,20 @@
 import { assertComponent, instantiateComponent, type TranspiledComponent } from './runtime.ts';
-import { prepareFilesystemCall, filesystemHostValue } from './files-call.ts';
-import { prepareTileDetectCall } from './tile-detect-call.ts';
-import { prepareImageCall } from './image-call.ts';
-import { prepareSqlCall, sqlHostValue } from './sql-call.ts';
+import { projectPath } from './files-call.ts';
+import { WitCallSchema } from './wit-call.ts';
 import { BrowserResources } from './browser-resources.ts';
 import { projectFilesystemAdapter } from './browser-filesystem.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
-const IDENTITY = { schema: 1, jco: '1.42.0', backend: '0.24.0', backendBuild: 'kkgams/jco@gams-v0.24.0-1', shim: '0.31.1', options: OPTIONS };
+const IDENTITY = { schema: 2, jco: '1.42.0', backend: '0.24.0', backendBuild: 'kkgams/jco@gams-v0.24.0-1', shim: '0.31.1', options: OPTIONS };
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 type Handle = { handle: string; path: string; imports: string[]; exports: string[] };
-type Instance = { info: Handle; bindings: Record<string, unknown>; dispose(): Promise<void> };
-type Injection = { transpile?: (bytes: Uint8Array, options: typeof OPTIONS) => Promise<TranspiledComponent> | TranspiledComponent; instantiate?: typeof instantiateComponent };
+type Instance = { info: Handle; bindings: Record<string, unknown>; schema: WitCallSchema; dispose(): Promise<void> };
+type Artifacts = { output: TranspiledComponent; schema: WitCallSchema };
+type Injection = { transpile?: (bytes: Uint8Array, options: typeof OPTIONS) => Promise<TranspiledComponent> | TranspiledComponent; schema?: (bytes: Uint8Array) => unknown | Promise<unknown>; instantiate?: typeof instantiateComponent };
 const stripVersion = (name: string) => name.replace(/@[^@/]+$/, '');
 const camel = (name: string) => name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-const kebab = (name: string) => name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
 const absent = (error: unknown) => (error as { code?: string })?.code === 'ENOENT';
 async function hash(bytes: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
@@ -27,11 +25,19 @@ function safeFile(name: string): boolean {
 function validateOutput(output: TranspiledComponent): void {
   if (!Array.isArray(output.imports) || !output.imports.every(name => typeof name === 'string') ||
       !Array.isArray(output.exports) || !output.exports.every(pair => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && ['instance', 'function'].includes(pair[1])) ||
-      !Array.isArray(output.files) || !output.files.every(pair => Array.isArray(pair) && pair.length === 2 && safeFile(pair[0]) && pair[1] instanceof Uint8Array) ||
+      !Array.isArray(output.files) || !output.files.every(pair => Array.isArray(pair) && pair.length === 2 && safeFile(pair[0]) && pair[0] !== 'schema.json' && pair[1] instanceof Uint8Array) ||
       new Set(output.files.map(([name]) => name)).size !== output.files.length || !output.files.some(([name]) => name === 'component.js')) throw new Error('Invalid Jco artifacts');
 }
 
-/** Worker-owned singleton components; cache contains JS/core Wasm, never native code. */
+function validateSchemaExports(output: TranspiledComponent, schema: WitCallSchema): void {
+  const names = output.exports.map(([name]) => name);
+  if (schema.exports.some(name => !names.includes(name)) ||
+      names.some(name => name.includes(':') && name.includes('/') && !schema.exports.includes(name))) {
+    throw new Error('Component schema exports do not match Jco artifacts');
+  }
+}
+
+/** Worker-owned singleton components; cache contains JS/core Wasm/schema, never native code. */
 export class BrowserComponents {
   onEvent?: (event: Record<string, unknown>) => void;
   private instances = new Map<string, Instance>();
@@ -70,12 +76,12 @@ export class BrowserComponents {
     const prefix = encoder.encode(JSON.stringify(IDENTITY));
     const keyed = new Uint8Array(prefix.length + bytes.length); keyed.set(prefix); keyed.set(bytes, prefix.length);
     const key = await hash(keyed);
-    const output = await this.artifacts(bytes, key);
+    const { output, schema } = await this.artifacts(bytes, key);
     const capabilities = await this.capabilities(output.imports);
     let bindings;
     try { bindings = await (this.injection.instantiate ?? instantiateComponent)(output, capabilities.imports); }
     catch (error) { await capabilities.dispose(); throw error; }
-    const instance: Instance = { info: { handle: `browser-component-${this.nextHandle++}`, path, imports: [...output.imports], exports: output.exports.map(([name]) => name) }, bindings, dispose: capabilities.dispose };
+    const instance: Instance = { info: { handle: `browser-component-${this.nextHandle++}`, path, imports: [...output.imports], exports: output.exports.map(([name]) => name) }, bindings, schema, dispose: capabilities.dispose };
     if (previous) {
       this.instances.delete(path);
       try { await this.dispose(previous); }
@@ -88,7 +94,7 @@ export class BrowserComponents {
     this.instances.set(path, instance); this.onEvent?.({ event: 'component-loaded', path, key });
     return this.info(instance);
   }
-  private async artifacts(bytes: Uint8Array, key: string): Promise<TranspiledComponent> {
+  private async artifacts(bytes: Uint8Array, key: string): Promise<Artifacts> {
     const dir = `${this.cacheDir}/${key}`;
     let complete: Uint8Array | undefined;
     try { complete = await this.store.read(`${dir}/complete`); } catch (error) { if (!absent(error)) throw error; }
@@ -105,15 +111,23 @@ export class BrowserComponents {
         if (await hash(data) !== file.hash) throw new Error(`Corrupt plugin cache artifact: ${file.name}`);
         files.push([file.name, data]);
       }
-      const output = { files, imports: manifest.imports, exports: manifest.exports }; validateOutput(output);
-      this.counts.cacheHits++; return output;
+      if (new Set(files.map(([name]) => name)).size !== files.length) throw new Error('Duplicate plugin cache artifacts');
+      const schemaBytes = files.find(([name]) => name === 'schema.json')?.[1];
+      if (!schemaBytes) throw new Error('Missing plugin cache schema');
+      const schema = new WitCallSchema(JSON.parse(decoder.decode(schemaBytes)));
+      const output = { files: files.filter(([name]) => name !== 'schema.json'), imports: manifest.imports, exports: manifest.exports }; validateOutput(output); validateSchemaExports(output, schema);
+      this.counts.cacheHits++; return { output, schema };
     }
     this.counts.cacheMisses++; this.onEvent?.({ event: 'component-transpiling', key });
-    const output = await (await this.transpiler())(bytes, OPTIONS); validateOutput(output); this.counts.transpilations++;
+    const rawSchema = await this.extractSchema(bytes);
+    const schema = new WitCallSchema(rawSchema);
+    const output = await (await this.transpiler())(bytes, OPTIONS); validateOutput(output); validateSchemaExports(output, schema); this.counts.transpilations++;
     try { await this.store.remove(dir); } catch (error) { if (!absent(error)) throw error; }
     await this.store.mkdir(dir);
     const files = [];
-    for (const [name, data] of output.files) { await this.store.write(`${dir}/${name}`, data); files.push({ name, hash: await hash(data) }); }
+    for (const [name, data] of [...output.files, ['schema.json', encoder.encode(JSON.stringify(rawSchema))] as [string, Uint8Array]]) {
+      await this.store.write(`${dir}/${name}`, data); files.push({ name, hash: await hash(data) });
+    }
     const manifest = encoder.encode(JSON.stringify({ identity: IDENTITY, imports: output.imports, exports: output.exports, files }));
     await this.store.write(`${dir}/manifest.json`, manifest);
     await this.store.flush(); // Artifacts durable before marker exists.
@@ -124,7 +138,12 @@ export class BrowserComponents {
       await this.store.remove(`${dir}/complete`);
       throw error;
     }
-    return output;
+    return { output, schema };
+  }
+  private async extractSchema(bytes: Uint8Array): Promise<unknown> {
+    if (this.injection.schema) return this.injection.schema(bytes);
+    const { componentWitJson } = await import('./component-schema.ts');
+    return JSON.parse(await componentWitJson(bytes));
   }
   private async transpiler(): Promise<NonNullable<Injection['transpile']>> {
     if (this.injection.transpile) return this.injection.transpile;
@@ -163,55 +182,36 @@ export class BrowserComponents {
   }
   async invoke(target: string, args: unknown[]): Promise<unknown> {
     this.assertOpen();
-    const match = /^(?:(gams|wasi):)?([a-z][a-z0-9-]*\/[a-z][a-z0-9-]*)(@[^:]+)?::([a-z][a-z0-9-]*|\[(?:static|method)\][a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)$/.exec(target);
+    const match = /^(?:([A-Za-z][A-Za-z0-9-]*):)?([A-Za-z][A-Za-z0-9-]*\/[A-Za-z][A-Za-z0-9-]*)(@[^:]+)?::([A-Za-z][A-Za-z0-9-]*|\[(?:static|method)\][A-Za-z][A-Za-z0-9-]*\.[A-Za-z][A-Za-z0-9-]*|\[constructor\][A-Za-z][A-Za-z0-9-]*)$/.exec(target);
     if (!match || !Array.isArray(args)) throw new Error(`Invalid or unsupported resource target: ${target}`);
     const [, namespace, short, version, method] = match;
     const candidates: Array<{ instance: Instance; name: string }> = [];
-    for (const instance of this.instances.values()) for (const name of instance.info.exports) if (stripVersion(name).replace(/^[^:]+:/, '') === short) candidates.push({ instance, name });
-    if (candidates.length !== 1) throw new Error(`${candidates.length ? 'Ambiguous' : 'Missing'} exported interface: ${short}`);
-    const { instance, name } = candidates[0];
-    // Jco metadata has only function/instance, not result schemas. Never guess unknown ABIs.
-    const tileDetect = name === 'gams:tile-detect/tile-detect@1.0.0';
-    const image = name === 'gams:image/image@1.0.0';
-    const sql = name === 'wasi:sql/types@0.2.0-draft' || name === 'wasi:sql/readwrite@0.2.0-draft';
-    if (sql && ((namespace && namespace !== 'wasi') || (version && !name.endsWith(version)))) throw new Error(`Unsupported SQL interface: ${target}`);
-    const result = name === 'gams:fs/fs@1.2.0' || name === 'gams:layout/layout@1.0.0' || tileDetect || image || sql;
-    const raw = name === 'gams:random/seeded-random@1.0.0' || name === 'wasi:random/random@0.2.0';
-    if (!result && !raw) throw new Error(`No Host ABI adapter for ${name}; arbitrary WIT schemas are unsupported`);
-    const sqlCall = sql ? prepareSqlCall(short, method, args, (ref, kind) => this.resources.borrow(ref, instance, kind)) : undefined;
-    let values = args;
-    let ownedImage = false;
-    if (image) {
-      const call = prepareImageCall(method, args, ref => this.resources.borrow(ref, instance, 'image'));
-      values = call.values; ownedImage = call.resource;
-    } else if (short === 'fs/fs') {
-      const call = prepareFilesystemCall(`${short}::${method}`, args); values = [...call.values];
-      for (const index of method === 'rename' ? [0, 1] : [0]) {
-        const path = values[index] as string;
-        // BrowserStore and guest FS must reject the same inherited-object segments.
-        normalizePath(path);
-        if (path === '/project/gams_modules' || path.startsWith('/project/gams_modules/')) values[index] = path.slice('/project/'.length);
-      }
-    } else if (tileDetect) values = prepareTileDetectCall(method, args);
-    else if (short === 'layout/layout') values = args.map(layoutInput);
-    else if (method === 'set-seed' || method === 'get-random-bytes') values = args.map(u64);
-    const owner = Object.hasOwn(instance.bindings, name) ? instance.bindings[name] : undefined;
-    const fn = owner && typeof owner === 'object' && Object.hasOwn(owner, camel(method)) ? owner[camel(method)] : undefined;
-    if (!sqlCall && typeof fn !== 'function') throw new Error(`Missing callable export: ${target}`);
-    try {
-      const value = sqlCall ? await sqlCall.call(owner) : await (fn as (...values: unknown[]) => unknown)(...values);
-      if (sqlCall) {
-        const host = sqlCall.resource ? this.resources.own(instance, stripVersion(name), sqlCall.resource, value) : sqlHostValue(method, value);
-        return sqlCall.result ? { ok: host } : host;
-      }
-      const host = ownedImage ? this.resources.own(instance, stripVersion(name), 'image', value) : hostValue(value, short === 'layout/layout' || tileDetect || image, tileDetect);
-      return result ? { ok: host } : host;
-    } catch (error) {
-      const util = instance.bindings._util as { isComponentError(error: unknown): boolean } | undefined;
-      if (!result || (sqlCall && !sqlCall.result) || !util || !util.isComponentError(error)) throw error;
-      if (sqlCall) return { err: this.resources.own(instance, stripVersion(name), 'error', (error as { payload: unknown }).payload) };
-      return { err: hostValue((error as { payload: unknown }).payload, short === 'layout/layout' || tileDetect, tileDetect) };
+    for (const instance of this.instances.values()) for (const name of instance.info.exports) {
+      if (stripVersion(name).replace(/^[^:]+:/, '') !== short ||
+          (namespace && !name.startsWith(`${namespace}:`)) || (version && !name.endsWith(version))) continue;
+      candidates.push({ instance, name });
     }
+    if (candidates.length !== 1) throw new Error(`${candidates.length ? 'Ambiguous' : 'Missing'} exported interface: ${target}`);
+    const { instance, name } = candidates[0];
+    let values = args;
+    // Filesystem paths are a Host semantic policy, not a property of WIT strings.
+    // Keep this boundary explicit; generic conversion must not rewrite payload text.
+    if (name === 'gams:fs/fs@1.2.0') {
+      const pathMethods = ['read-file', 'read-text', 'write-file', 'write-text', 'list', 'stat', 'create-dir', 'remove-file', 'remove-dir', 'rename'];
+      if (!pathMethods.includes(method)) throw new Error(`Unsupported filesystem target: ${target}`);
+      values = [...args];
+      for (const index of method === 'rename' ? [0, 1] : [0]) {
+        const path = projectPath(values[index]);
+        normalizePath(path);
+        values[index] = path === '/project/gams_modules' || path.startsWith('/project/gams_modules/') ? path.slice('/project/'.length) : path;
+      }
+    }
+    return instance.schema.invoke(name, method, values, instance.bindings, {
+      borrow: (ref, kind) => this.resources.borrow(ref, instance, kind),
+      consume: (ref, kind) => this.resources.consume(ref, instance, kind),
+      own: (kind, value) => this.resources.own(instance, stripVersion(name), kind, value),
+      release: ref => this.resources.release(ref),
+    });
   }
   async releaseResource(ref: unknown): Promise<void> {
     this.assertOpen(); await this.resources.release(ref);
@@ -227,7 +227,7 @@ export class BrowserComponents {
       const directory = `${this.cacheDir}/${name}`;
       if (await this.store.stat(directory) !== 'directory') throw new Error('Refusing non-directory plugin cache entry');
       for (const file of await this.store.list(directory)) {
-        if (!(file === 'manifest.json' || file === 'complete' || /^component(?:\.core\d*)?\.(?:js|wasm)$/.test(file)) || await this.store.stat(`${directory}/${file}`) !== 'file') {
+        if (!(file === 'manifest.json' || file === 'complete' || file === 'schema.json' || /^component(?:\.core\d*)?\.(?:js|wasm)$/.test(file)) || await this.store.stat(`${directory}/${file}`) !== 'file') {
           throw new Error(`Refusing unfamiliar plugin cache artifact: ${file}`);
         }
       }
@@ -271,26 +271,4 @@ export class BrowserComponents {
     return normalizePath(path, this.cwd);
   }
   private assertOpen(): void { if (this.closed) throw new Error('BrowserComponents is closed'); }
-}
-function u64(value: unknown): bigint {
-  if (!(typeof value === 'bigint' || (typeof value === 'number' && Number.isSafeInteger(value)) || (typeof value === 'string' && /^\d+$/.test(value)))) throw new Error('Expected lossless u64');
-  const integer = BigInt(value); if (integer < 0n || integer > 18446744073709551615n) throw new Error('Expected u64 in range'); return integer;
-}
-function layoutInput(value: unknown): unknown {
-  if (value === null) return undefined;
-  if (Array.isArray(value)) return value.map(layoutInput);
-  if (value && typeof value === 'object') {
-    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new Error('Expected layout record');
-    return Object.fromEntries(Object.entries(value).map(([key, field]) => [camel(key), key === 'generation' ? u64(field) : layoutInput(field)]));
-  }
-  return value;
-}
-function hostValue(value: unknown, witFields: boolean, uint32Lists = false): unknown {
-  const plain = filesystemHostValue(value, uint32Lists); if (!witFields) return plain;
-  function fields(value: unknown): unknown {
-    if (Array.isArray(value)) return value.map(fields);
-    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, field]) => [kebab(key), fields(field)]));
-    return value;
-  }
-  return fields(plain);
 }
