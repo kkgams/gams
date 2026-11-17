@@ -283,7 +283,7 @@ deploy-web:
 # Tauri writes these generated SDK schemas at a fixed source-tree location.
 TAURI_SCHEMA_FILES := $(addprefix $(TAURI_SRC_DIR)/gen/schemas/,acl-manifests.json capabilities.json desktop-schema.json macOS-schema.json windows-schema.json linux-schema.json)
 
-# Only declared recreatable outputs; unrelated files/logs under build.nosync stay.
-# Tracked paths and symlink ancestors are refused before deleting anything.
+# Entire build/tool/Unit-cache directories are disposable, including unmarked downloads.
+# Tracked paths and symlinks are refused before deleting anything.
 clean:
-	python3 scripts/package-host.py clean "$(BUILD_DIR)/app" "$(BUILD_DIR)/browser-jco" "$(BUILD_DIR)/web" "$(BUILD_DIR)/web-build" "$(BUILD_DIR)/web-tools" "$(BUILD_DIR)/game-icons" "$(BUILD_DIR)/native-notices" "$(BUILD_DIR)/cargo" "$(BUILD_DIR)/ci-tools" "$(BUILD_DIR)/tmp" "$(BUILD_DIR)/pycache" "$(DOCS_SOURCE)" "$(BUILD_DIR)/docs" "$(BUILD_DIR)/site" "$(BUILD_DIR)/wiki-$(WIKI_VERSION)" "$(BUILD_DIR)/wiki-$(WIKI_VERSION).mk" $(foreach platform,macos-aarch64 windows-x86_64 linux-x86_64,"$(BUILD_DIR)/GAMS-$(platform).$(if $(findstring linux,$(platform)),tar.gz,zip)" "$(BUILD_DIR)/SHA256SUMS-$(platform)") $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")
+	python3 scripts/package-host.py clean "$(BUILD_DIR)" tools gams_modules $(foreach schema,$(TAURI_SCHEMA_FILES),"$(schema)")

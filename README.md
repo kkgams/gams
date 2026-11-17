@@ -63,7 +63,7 @@ rejects Nix-store-linked Linux binaries, so use the native system SDK for packag
 | `make test-rust` | Run only Rust tests; use `RUST_TEST_ARGS="--release --target <triple>"` for optimized native tests. |
 | `make build` | Compile the native release executable without an archive. |
 | `make package` | Build the selected platform application and its archive/checksum through incremental file targets. |
-| `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
+| `make clean` | Remove all of `build.nosync/`, `tools/`, `gams_modules/` and known generated Tauri schemas; refuse tracked files and symlinks. |
 | `make docs` | Build the portable wiki under `build.nosync/docs/`. |
 | `make serve-docs DOCS_PORT=8080` | Preview the prepared wiki; restart after source edits. |
 | `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.6.0. |
@@ -90,8 +90,11 @@ directory; their native folder picker is not implemented.
 Make-managed build, package, temporary, documentation and cache output lives
 under `build.nosync/`. Tauri itself also emits capability schemas at its fixed
 `cmd/app/src-tauri/gen/schemas/` location. `clean`
-removes only its known generated schema files, preserving unrelated files. `clean` preserves authored assets/configuration, unrelated
-files and downloaded Project Units in `gams_modules/`. Those Units may include user-managed local content.
+removes only its known generated schema files, preserving unrelated files there.
+The entire `build.nosync/`, `tools/` and `gams_modules/` directories are disposable,
+including unmarked downloads and local tool backups. Do not store authored files
+or irreplaceable data in these directories. Other paths are preserved; tracked
+files and symlinks in deletion targets cause cleanup to stop before any deletion.
 
 The production [browser Host](cmd/web/README.md) serves the canonical frontend
 and loads `gams.json` Projects using URL startup settings and OPFS; see its

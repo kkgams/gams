@@ -1,6 +1,7 @@
 /build.nosync/
 /docs/assets/game-icons.woff2
 /gams_modules/
+/tools/
 __pycache__/
 *.pyc
 /.dev-tools/

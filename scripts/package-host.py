@@ -27,11 +27,12 @@ SCHEMA_FILES = {
 }
 
 
-def checked_output(path, *, allow_schema_files=False):
+def checked_output(path, *, allow_schema_files=False, allow_clean_roots=False):
     """Output must stay inside this checkout, without traversing directory links."""
     path = Path(os.path.abspath(path))
     managed_output = path.is_relative_to(ROOT / "build.nosync") and path != ROOT / "build.nosync"
-    if not managed_output and not (allow_schema_files and path in SCHEMA_FILES):
+    clean_root = allow_clean_roots and path in {ROOT / name for name in ("build.nosync", "tools", "gams_modules")}
+    if not managed_output and not clean_root and not (allow_schema_files and path in SCHEMA_FILES):
         raise ValueError(f"Not an approved generated output path: {path}")
     for parent in (path, *path.parents):
         if parent == ROOT:
@@ -147,7 +148,7 @@ def checksum(args):
 
 
 def clean(args):
-    paths = [checked_output(path, allow_schema_files=True) for path in args.paths]
+    paths = [checked_output(path, allow_schema_files=True, allow_clean_roots=True) for path in args.paths]
     tracked = subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"]).decode().split("\0")
     for path in paths:
         if path in SCHEMA_FILES and path.exists() and not path.is_file():
@@ -155,7 +156,10 @@ def clean(args):
         relative = path.relative_to(ROOT).as_posix()
         if any(name == relative or name.startswith(relative + "/") for name in tracked):
             raise ValueError(f"Refusing to clean tracked path: {relative}")
-    # shutil.rmtree never follows directory symlinks within the generated tree.
+        if path.is_dir():
+            for child in path.rglob("*"):
+                if child.is_symlink():
+                    raise ValueError(f"Refusing symlink in clean path: {child}")
     for path in paths:
         if path.is_dir():
             shutil.rmtree(path)

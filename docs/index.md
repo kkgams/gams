@@ -76,7 +76,7 @@ connect clients to a session.
 | `make test` | Run native Rust, JavaScript and Python tooling tests; does not create release packages. |
 | `make build` | Compile the native release executable without an archive. |
 | `make package` | Build the selected platform application and its archive/checksum through incremental file targets. |
-| `make clean` | Remove declared generated output/caches; refuse tracked files and directory-symlink traversal. |
+| `make clean` | Remove all of `build.nosync/`, `tools/`, `gams_modules/` and known generated Tauri schemas; refuse tracked files and symlinks. |
 | `make docs` | Build the portable wiki under `build.nosync/docs/`. |
 | `make serve-docs DOCS_PORT=8080` | Preview the prepared wiki; restart after source edits. |
 | `make validate-docs` | Validate wiki content using pinned justgook/wiki v1.6.0. |
