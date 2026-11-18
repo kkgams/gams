@@ -28,8 +28,9 @@ export class BrowserResources {
     this.entries.delete(id);
     return value;
   }
-  async release(ref: unknown): Promise<void> {
+  async release(ref: unknown, activeOwners: ReadonlySet<object> = new Set()): Promise<void> {
     const { id, entry } = this.resolve(ref);
+    if (activeOwners.has(entry.owner)) throw new Error('Cannot release a resource while its component is active');
     // Destructors may consume their handle before trapping. Never allow reuse or a second drop.
     this.entries.delete(id);
     await entry.drop();

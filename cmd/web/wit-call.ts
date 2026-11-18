@@ -32,6 +32,7 @@ type Use = { ref: unknown; kind: string; own: boolean; value: unknown };
 /** Validates the actual pinned componentWitJson Resolve graph, not source WIT. */
 export class WitCallSchema {
   readonly exports: string[];
+  readonly imports: string[];
   private resolve: Obj;
   private world: Obj;
   constructor(raw: unknown) {
@@ -124,6 +125,7 @@ export class WitCallSchema {
         else fail(`Unknown WIT world item: ${pair[0][0]}`);
       }
     }
+    this.imports = Object.entries(this.world.imports).map(([key, item]) => (item as Obj).interface ? this.interfaceName((item as Obj).interface.id) : key);
     this.exports = Object.entries(this.world.exports).map(([key, item]) => (item as Obj).interface ? this.exportName(key, item as Obj) : key);
     if (new Set(this.exports).size !== this.exports.length) fail('Duplicate WIT exports');
   }
@@ -132,16 +134,16 @@ export class WitCallSchema {
     return at < 0 ? `${pkg}/${iface.name}` : `${pkg.slice(0, at)}/${iface.name}${pkg.slice(at)}`;
   }
   private exportName(key: string, item: Obj): string { return key.startsWith('interface-') ? this.interfaceName(item.interface.id) : key; }
-  interface(name: string): Obj {
-    const entry = Object.entries(this.world.exports).find(([key, item]) => (item as Obj).interface && this.exportName(key, item as Obj) === name);
-    if (!entry) fail(`Missing WIT exported interface: ${name}; world functions are unsupported`);
+  interface(name: string, side: 'imports' | 'exports' = 'exports'): Obj {
+    const entry = Object.entries(this.world[side]).find(([key, item]) => (item as Obj).interface && (side === 'imports' ? this.interfaceName((item as Obj).interface.id) : this.exportName(key, item as Obj)) === name);
+    if (!entry) fail(`Missing WIT ${side} interface: ${name}; world functions are unsupported`);
     return this.resolve.interfaces[(entry![1] as Obj).interface.id];
   }
   private deref(type: Type): Type {
     while (typeof type === 'number' && this.resolve.types[type].kind.type !== undefined) type = this.resolve.types[type].kind.type;
     return type;
   }
-  private kind(type: Type): any { type = this.deref(type); return typeof type === 'string' ? type : this.resolve.types[type].kind; }
+  kind(type: Type): any { type = this.deref(type); return typeof type === 'string' ? type : this.resolve.types[type].kind; }
   private resourceId(type: number): number {
     const id = this.deref(type);
     if (typeof id !== 'number' || this.resolve.types[id].kind !== 'resource') return fail('Handle must reference a resource');
@@ -288,7 +290,7 @@ export class WitCallSchema {
     }
   }
   /** Full bindings include Jco's _util classifier. Only outermost results throw. */
-  async invoke(name: string, method: string, args: unknown[], bindings: Record<string, unknown>, resources: WitResources): Promise<unknown> {
+  async invoke(name: string, method: string, args: unknown[], bindings: Record<string, unknown>, resources: WitResources, onGuestFailure?: () => void): Promise<unknown> {
     const iface = this.interface(name); const fn = Object.hasOwn(iface.functions, method) ? iface.functions[method] : undefined;
     if (!fn) fail(`Missing WIT function: ${method}`);
     if (!Array.isArray(args) || args.length !== fn.params.length) fail(`Expected ${fn.params.length} WIT arguments`);
@@ -325,7 +327,10 @@ export class WitCallSchema {
     try { value = await (construct ? Reflect.construct(callable, values) : callable.apply(receiver, values)); }
     catch (error) {
       const util = bindings._util as { isComponentError(error: unknown): boolean } | undefined;
-      if (!result?.result || !util || !util.isComponentError(error)) throw error;
+      if (!result?.result || !util || !util.isComponentError(error)) {
+        onGuestFailure?.();
+        throw error;
+      }
       const ty = result.result.err;
       return { err: ty === null ? null : await this.host(ty, (error as Obj).payload, resources) };
     }

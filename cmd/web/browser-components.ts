@@ -5,14 +5,17 @@ import { BrowserResources } from './browser-resources.ts';
 import { projectFilesystemAdapter } from './browser-filesystem.ts';
 import { normalizePath, type BrowserStore } from './browser-storage.ts';
 
-const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0 } as const;
-const IDENTITY = { schema: 2, jco: '1.42.0', backend: '0.24.0', backendBuild: 'kkgams/jco@gams-v0.24.0-1', shim: '0.31.1', options: OPTIONS };
+const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0, bindgenEnableWasmExnref: true } as const;
+const RUNTIME = 'gams:runtime/runtime@1.0.0';
+const CALLBACK_OPTIONS = { asyncMode: { tag: 'jspi', val: { imports: ['gams:runtime/runtime#call'], exports: ['*'] } } } as const;
+type CompileOptions = typeof OPTIONS | (typeof OPTIONS & typeof CALLBACK_OPTIONS);
+const IDENTITY = { callbacks: CALLBACK_OPTIONS, schema: 2, jco: '1.42.0', backend: '0.24.0', backendBuild: 'kkgams/jco@gams-v0.24.0-1', shim: '0.31.1', options: OPTIONS };
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 type Handle = { handle: string; path: string; imports: string[]; exports: string[] };
 type Instance = { info: Handle; bindings: Record<string, unknown>; schema: WitCallSchema; dispose(): Promise<void> };
 type Artifacts = { output: TranspiledComponent; schema: WitCallSchema };
-type Injection = { transpile?: (bytes: Uint8Array, options: typeof OPTIONS) => Promise<TranspiledComponent> | TranspiledComponent; schema?: (bytes: Uint8Array) => unknown | Promise<unknown>; instantiate?: typeof instantiateComponent };
+type Injection = { transpile?: (bytes: Uint8Array, options: CompileOptions) => Promise<TranspiledComponent> | TranspiledComponent; schema?: (bytes: Uint8Array) => unknown | Promise<unknown>; instantiate?: typeof instantiateComponent };
 const stripVersion = (name: string) => name.replace(/@[^@/]+$/, '');
 const camel = (name: string) => name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 const absent = (error: unknown) => (error as { code?: string })?.code === 'ENOENT';
@@ -40,6 +43,8 @@ function validateSchemaExports(output: TranspiledComponent, schema: WitCallSchem
 /** Worker-owned singleton components; cache contains JS/core Wasm/schema, never native code. */
 export class BrowserComponents {
   onEvent?: (event: Record<string, unknown>) => void;
+  callView?: (target: string, args: string) => Promise<string>;
+  private active = new Set<Instance>();
   private instances = new Map<string, Instance>();
   private resources = new BrowserResources();
   private compiler?: Promise<NonNullable<Injection['transpile']>>;
@@ -77,7 +82,7 @@ export class BrowserComponents {
     const keyed = new Uint8Array(prefix.length + bytes.length); keyed.set(prefix); keyed.set(bytes, prefix.length);
     const key = await hash(keyed);
     const { output, schema } = await this.artifacts(bytes, key);
-    const capabilities = await this.capabilities(output.imports);
+    const capabilities = await this.capabilities(output.imports, schema);
     let bindings;
     try { bindings = await (this.injection.instantiate ?? instantiateComponent)(output, capabilities.imports); }
     catch (error) { await capabilities.dispose(); throw error; }
@@ -121,7 +126,8 @@ export class BrowserComponents {
     this.counts.cacheMisses++; this.onEvent?.({ event: 'component-transpiling', key });
     const rawSchema = await this.extractSchema(bytes);
     const schema = new WitCallSchema(rawSchema);
-    const output = await (await this.transpiler())(bytes, OPTIONS); validateOutput(output); validateSchemaExports(output, schema); this.counts.transpilations++;
+    const options = schema.imports.includes(RUNTIME) ? { ...OPTIONS, ...CALLBACK_OPTIONS } : OPTIONS;
+    const output = await (await this.transpiler())(bytes, options); validateOutput(output); validateSchemaExports(output, schema); this.counts.transpilations++;
     try { await this.store.remove(dir); } catch (error) { if (!absent(error)) throw error; }
     await this.store.mkdir(dir);
     const files = [];
@@ -154,10 +160,32 @@ export class BrowserComponents {
     })();
     return this.compiler;
   }
-  private async capabilities(required: string[]): Promise<{ imports: Map<string, unknown>; dispose(): Promise<void> }> {
+  private async capabilities(required: string[], schema: WitCallSchema): Promise<{ imports: Map<string, unknown>; dispose(): Promise<void> }> {
     const imports = new Map<string, unknown>();
-    // Injected native tests need no package ecosystem; real instances have isolated FS handles.
-    if (!required.length && this.injection.instantiate) return { imports, dispose: async () => {} };
+    for (const name of required) if (stripVersion(name) === stripVersion(RUNTIME)) {
+      // Jco strips this import's version. Never infer its ABI from that key.
+      const declared = schema.imports.filter(item => stripVersion(item) === stripVersion(RUNTIME));
+      if (declared.length !== 1 || declared[0] !== RUNTIME || name !== stripVersion(RUNTIME) && name !== RUNTIME) throw new Error(`Missing or denied WIT import: ${name}`);
+      const functions = schema.interface(RUNTIME, 'imports').functions;
+      const call = functions.call;
+      const result = call && call.result !== null && call.result !== undefined ? schema.kind(call.result) : null;
+      if (Object.keys(functions).length !== 1 || !call || call.kind !== 'freestanding' || call.params.length !== 2 ||
+          !call.params.every((p: { type: string | number }) => schema.kind(p.type) === 'string') ||
+          !result?.result || result.result.ok === null || result.result.err === null || schema.kind(result.result.ok) !== 'string' || schema.kind(result.result.err) !== 'string') throw new Error('Missing or denied Runtime import ABI: expected call(string, string) -> result<string, string>');
+      if (!this.injection.instantiate && (typeof WebAssembly.Suspending !== 'function' || typeof WebAssembly.promising !== 'function')) throw new Error('Runtime callbacks require WebAssembly JSPI support.');
+      imports.set(name, { call: async (target: string, args: string) => {
+        try { return await this.callback(target, args); }
+        catch (error) {
+          // A core trap must remain a trap. Other router failures are the
+          // declared WIT string error, not arbitrary JS exceptions in the guest.
+          if (error instanceof WebAssembly.RuntimeError) throw error;
+          const message = error instanceof Error ? error.message : String(error);
+          throw Object.assign(new Error(message), { payload: message });
+        }
+      } });
+    }
+    const wasi = required.filter(name => !imports.has(name));
+    if (!wasi.length) return { imports, dispose: async () => {} };
     const { createFilesystem, InMemoryFilesystemAdapter } = await import('@bytecodealliance/preview2-shim/filesystem');
     const root = this.store.entry(this.cwd);
     // C/WASI libc resolves relative paths through a dot preopen, not initialCwd.
@@ -172,7 +200,7 @@ export class BrowserComponents {
         ['wasi:random/random', shim.random.random], ['wasi:random/insecure', shim.random.insecure], ['wasi:random/insecure-seed', shim.random.insecureSeed],
         ...['environment', 'exit', 'stdin', 'stdout', 'stderr', 'terminal-input', 'terminal-output', 'terminal-stdin', 'terminal-stdout', 'terminal-stderr'].map(name => [`wasi:cli/${name}`, cli[camel(name)]] as [string, unknown]),
       ]);
-      for (const name of required) {
+      for (const name of wasi) {
         const base = stripVersion(name);
         if (!allowed.has(base)) throw new Error(`Missing or denied WIT import: ${name}`);
         imports.set(name, allowed.get(base));
@@ -180,7 +208,30 @@ export class BrowserComponents {
     } catch (error) { await fs.dispose(); throw error; }
     return { imports, dispose: () => fs.dispose() };
   }
-  async invoke(target: string, args: unknown[]): Promise<unknown> {
+  private async callback(target: string, args: string): Promise<string> {
+    this.assertOpen();
+    if (typeof target !== 'string' || typeof args !== 'string') throw new Error('Runtime call target and args must be strings');
+    const values = JSON.parse(args);
+    if (!Array.isArray(values)) throw new Error('Runtime call args must be a JSON array');
+    if (target.includes('::')) {
+      let guestFailed = false;
+      try { return JSON.stringify(await this.invoke(target, values, () => { guestFailed = true; })); }
+      catch (error) {
+        // Include non-core guest failures (for example WASI exit). They must
+        // abort the linked caller, not masquerade as a recoverable router error.
+        if (!guestFailed || error instanceof WebAssembly.RuntimeError) throw error;
+        throw new WebAssembly.RuntimeError(error instanceof Error ? error.message : String(error), { cause: error });
+      }
+    }
+    // Dotted names reach only the shared Runtime's registered UI plugins.
+    if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+$/.test(target) || ['constructor','__proto__','prototype'].includes(target.split('.').at(-1)!)) throw new Error(`Missing or denied Runtime target: ${target}`);
+    if (!this.callView) throw new Error('View callback bridge is not ready');
+    const result = await this.callView(target, args);
+    if (typeof result !== 'string') throw new Error('View callback must return a JSON string');
+    JSON.parse(result);
+    return result;
+  }
+  async invoke(target: string, args: unknown[], onGuestFailure?: () => void): Promise<unknown> {
     this.assertOpen();
     const match = /^(?:([A-Za-z][A-Za-z0-9-]*):)?([A-Za-z][A-Za-z0-9-]*\/[A-Za-z][A-Za-z0-9-]*)(@[^:]+)?::([A-Za-z][A-Za-z0-9-]*|\[(?:static|method)\][A-Za-z][A-Za-z0-9-]*\.[A-Za-z][A-Za-z0-9-]*|\[constructor\][A-Za-z][A-Za-z0-9-]*)$/.exec(target);
     if (!match || !Array.isArray(args)) throw new Error(`Invalid or unsupported resource target: ${target}`);
@@ -206,15 +257,19 @@ export class BrowserComponents {
         values[index] = path === '/project/gams_modules' || path.startsWith('/project/gams_modules/') ? path.slice('/project/'.length) : path;
       }
     }
-    return instance.schema.invoke(name, method, values, instance.bindings, {
-      borrow: (ref, kind) => this.resources.borrow(ref, instance, kind),
-      consume: (ref, kind) => this.resources.consume(ref, instance, kind),
-      own: (kind, value) => this.resources.own(instance, stripVersion(name), kind, value),
-      release: ref => this.resources.release(ref),
-    });
+    if (this.active.has(instance)) throw new Error(`Component is already active; cyclic reentrant call denied: ${target}`);
+    this.active.add(instance);
+    try {
+      return await instance.schema.invoke(name, method, values, instance.bindings, {
+        borrow: (ref, kind) => this.resources.borrow(ref, instance, kind),
+        consume: (ref, kind) => this.resources.consume(ref, instance, kind),
+        own: (kind, value) => this.resources.own(instance, stripVersion(name), kind, value),
+        release: ref => this.resources.release(ref),
+      }, onGuestFailure);
+    } finally { this.active.delete(instance); }
   }
   async releaseResource(ref: unknown): Promise<void> {
-    this.assertOpen(); await this.resources.release(ref);
+    this.assertOpen(); await this.resources.release(ref, this.active);
   }
   async diagnostics() { return { ...this.counts, jsonResourceRefs: this.resources.size, cacheDir: this.cacheDir, instances: [...this.instances.values()].map(instance => this.info(instance)), closed: this.closed }; }
   async clearCache(): Promise<void> {

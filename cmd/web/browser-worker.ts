@@ -10,10 +10,52 @@ let stopped = false;
 let activeId = 0;
 // Ordering within this one session is not a cross-instance filesystem lock.
 let queue = Promise.resolve();
-self.onmessage = ({ data }) => { queue = queue.then(() => handle(data)); };
-async function handle({ id, command, args }: { id:number;command:string;args:any }) {
+type Request = { id:number; command:string; args:any; callbackId?:string };
+type Callback = { resolve(value:string):void; reject(error:Error):void; queue:Promise<void> };
+const callbacks = new Map<string,Callback>();
+let nextCallback = 1;
+self.onmessage = ({ data }) => { void dispatch(data); };
+function dispatch(data: Request): Promise<void> {
+  // Replies must not wait behind the guest currently awaiting that reply.
+  if (data.command === 'runtime_call_view_response') return handle(data);
+  if (data.callbackId !== undefined) {
+    const pending = callbacks.get(data.callbackId);
+    if (!pending || !['runtime_invoke','runtime_release_resource','runtime_resolve_file','runtime_download','runtime_prepare_config','runtime_resolution_progress','runtime_diagnostics'].includes(data.command)) {
+      postMessage({id:data.id,error:!pending ? 'Unknown Runtime callback context' : 'Denied command during Runtime callback'});
+      return Promise.resolve();
+    }
+    // Each callback has a serial nested lane. Ordinary commands stay queued.
+    return pending.queue = pending.queue.then(() => handle(data));
+  }
+  return queue = queue.then(() => handle(data));
+}
+function callView(target: string, args: string): Promise<string> {
+  const id = `view-call:${nextCallback++}`;
+  return new Promise((resolve,reject) => {
+    callbacks.set(id,{resolve,reject,queue:Promise.resolve()});
+    postMessage({event:'call-view',payload:{id,target,args}});
+  });
+}
+async function respond(args: any): Promise<void> {
+  const pending = callbacks.get(args.id);
+  if (!pending) throw new Error('Unknown Runtime callback response');
+  const ok = args.ok !== null && args.ok !== undefined;
+  const err = args.err !== null && args.err !== undefined;
+  if (ok === err) throw new Error('Runtime callback response requires exactly one of ok or err');
+  if (typeof (ok ? args.ok : args.err) !== 'string') throw new Error('Runtime callback response must be a string');
+  callbacks.delete(args.id);
+  await pending.queue;
+  if (err) pending.reject(new Error(args.err));
+  else pending.resolve(args.ok);
+}
+async function handle({ id, command, args }: Request) {
   const started = performance.now();
   try {
+    if (command === 'runtime_call_view_response') {
+      await respond(args);
+      postMessage({id,result:null,durationMs:performance.now()-started});
+      return; // Parent/nested operations own persistence; a reply mutates no files.
+    }
     if (stopped) {
       if (command !== 'runtime_shutdown') throw new Error('Browser Host session is stopped. Reload to reopen.');
       // A timed-out shutdown may finish after the caller stopped awaiting it.
@@ -37,6 +79,7 @@ async function handle({ id, command, args }: { id:number;command:string;args:any
       project.onProgress = snapshot => postMessage({ event:'resolution-progress', id:activeId, snapshot });
       result = await project.load();
       components = new BrowserComponents(store, options);
+      components.callView = callView;
     } else {
       if (!project || !store || !components) throw new Error('Browser Host Project is not ready.');
       switch (command) {

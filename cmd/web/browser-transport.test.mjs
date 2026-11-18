@@ -270,3 +270,201 @@ test('browser build environment supplies the proxy to the worker and startup dis
 test('missing build-environment fields fail instead of silently disabling proxy configuration',async t=>{
   await assert.rejects(transport(t,'http://127.0.0.1:8093/browser.html',{}),/Malformed browser build environment/);
 });
+
+const flushCallbacks = () => new Promise(resolve => setImmediate(resolve));
+const callbackPayload = id => ({ id, target: 'view/editor::update', args: '["hello"]' });
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test('call-view dispatch is asynchronous and response waits for its own numbered acknowledgement', async t => {
+  const h = await transport(t);
+  await h.open();
+  const events = [];
+  let completed = false;
+  await h.api.listenEvent('gams-runtime-call-view', async event => {
+    events.push(event);
+    await h.api.invokeCommand('runtime_call_view_response', { id: event.payload.id, ok: '"done"', err: null });
+    completed = true;
+  });
+  await h.api.invokeCommand('runtime_call_view_ready');
+  const parent = h.api.invokeCommand('runtime_invoke', { target: 'plugin::run', args: [] });
+  const parentId = h.worker().messages.at(-1).id;
+  const payload = callbackPayload('view-1');
+  h.worker().emit({ event: 'call-view', payload });
+  assert.deepEqual(events, []);
+  await flushCallbacks();
+  assert.deepEqual(events, [{ payload }]);
+  const response = h.worker().messages.at(-1);
+  assert.deepEqual(response, { id: 3, command: 'runtime_call_view_response', args: { id: 'view-1', ok: '"done"', err: null } });
+  assert.equal(completed, false);
+  h.worker().emit({ id: parentId, result: { ok: null } });
+  await parent;
+  assert.equal(completed, false);
+  h.worker().emit({ id: response.id, result: null });
+  await flushCallbacks();
+  assert.equal(completed, true);
+  await assert.rejects(h.api.invokeCommand('runtime_call_view_response', response.args), /No browser component-to-View callback is pending/);
+  assert.equal(h.timers.size, 0);
+});
+
+for (const state of ['missing', 'not ready', 'throwing', 'rejecting', 'no response']) {
+  test(`call-view ${state} listener reports an acknowledged callback error`, async t => {
+    const h = await transport(t);
+    await h.open();
+    let calls = 0;
+    if (state !== 'missing') {
+      await h.api.listenEvent('gams-runtime-call-view', () => {
+        calls++;
+        if (state === 'throwing') throw new Error('listener threw');
+        if (state === 'rejecting') return Promise.reject(new Error('listener rejected'));
+      });
+      if (state !== 'not ready') await h.api.invokeCommand('runtime_call_view_ready');
+    }
+    h.worker().emit({ event: 'call-view', payload: callbackPayload('failed') });
+    await flushCallbacks();
+    const response = h.worker().messages.at(-1);
+    assert.equal(response.command, 'runtime_call_view_response');
+    assert.equal(response.args.id, 'failed');
+    assert.equal(response.args.ok, null);
+    assert.match(response.args.err, /missing or not ready|listener threw|listener rejected|settled without a response/);
+    assert.equal(calls, state === 'missing' || state === 'not ready' ? 0 : 1);
+    h.worker().reply({ result: null });
+    await flushCallbacks();
+    assert.equal(h.timers.size, 0);
+    await assert.rejects(h.api.invokeCommand('runtime_call_view_response', response.args), /No browser component-to-View callback is pending/);
+  });
+}
+
+test('nested invoke/release tag only envelopes while the topmost callback awaits its reply', async t => {
+  const h = await transport(t);
+  await h.open();
+  const gates = new Map(['outer', 'inner'].map(id => [id, deferred()]));
+  await h.api.listenEvent('gams-runtime-call-view', async ({ payload }) => {
+    await gates.get(payload.id).promise;
+    await h.api.invokeCommand('runtime_call_view_response', { id: payload.id, ok: 'null', err: null });
+  });
+  await h.api.invokeCommand('runtime_call_view_ready');
+  async function nested(command, expected, args = { value: 1 }) {
+    const request = h.api.invokeCommand(command, args);
+    const envelope = h.worker().messages.at(-1);
+    assert.deepEqual(envelope.args, args);
+    assert.equal(envelope.callbackId, expected);
+    h.worker().reply({ result: null });
+    await request;
+  }
+  for (const id of ['outer', 'inner']) {
+    h.worker().emit({ event: 'call-view', payload: callbackPayload(id) });
+    await flushCallbacks();
+    await nested('runtime_invoke', id);
+    await nested('runtime_release_resource', id);
+    await nested('runtime_download', id);
+    await nested('runtime_prepare_config', id);
+    await nested('runtime_resolve_file', id);
+  }
+  gates.get('inner').resolve();
+  await flushCallbacks();
+  h.worker().reply({ result: null });
+  await flushCallbacks();
+  await nested('runtime_invoke', 'outer');
+  gates.get('outer').resolve();
+  await flushCallbacks();
+  h.worker().reply({ result: null });
+  await flushCallbacks();
+  await nested('runtime_release_resource', undefined);
+  await nested('runtime_invoke', undefined);
+  assert.equal(h.timers.size, 0);
+});
+
+for (const stop of ['force stop', 'worker failure']) {
+  test(`${stop} clears callbacks and late listener failures do not send stale responses`, async t => {
+    const h = await transport(t);
+    await h.open();
+    const gate = deferred();
+    let entered = 0;
+    await h.api.listenEvent('gams-runtime-call-view', async () => {
+      entered++;
+      await gate.promise;
+      throw new Error('late failure');
+    });
+    await h.api.invokeCommand('runtime_call_view_ready');
+    h.worker().emit({ event: 'call-view', payload: callbackPayload('stopped') });
+    await flushCallbacks();
+    const request = h.api.invokeCommand('runtime_release_resource', { ref: 'resource' });
+    assert.equal(h.worker().messages.at(-1).callbackId, 'stopped');
+    if (stop === 'force stop') h.api.forceStopBrowserSession();
+    else h.worker().onerror({ message: 'worker crashed' });
+    await assert.rejects(request, /force-stopped|worker failed/);
+    const count = h.worker().messages.length;
+    gate.resolve();
+    await flushCallbacks();
+    h.worker().emit({ event: 'call-view', payload: callbackPayload('after-stop') });
+    await flushCallbacks();
+    assert.equal(entered, 1);
+    assert.equal(h.worker().messages.length, count);
+    assert.equal(h.timers.size, 0);
+    await assert.rejects(h.api.invokeCommand('runtime_call_view_response', { id: 'stopped', ok: null, err: 'late' }), /No browser component-to-View callback is pending/);
+  });
+}
+
+test('stale callback IDs cannot respond and callback acknowledgement timeout ignores late reply', async t => {
+  const h = await transport(t);
+  await h.open();
+  await h.api.listenEvent('gams-runtime-call-view', async ({ payload }) => {
+    await h.api.invokeCommand('runtime_call_view_response', { id: payload.id, ok: 'null', err: null });
+  });
+  await h.api.invokeCommand('runtime_call_view_ready');
+  h.worker().emit({ event: 'call-view', payload: callbackPayload('timeout') });
+  await flushCallbacks();
+  const response = h.worker().messages.at(-1);
+  const count = h.worker().messages.length;
+  for (const id of ['unknown', 'timeout']) {
+    await assert.rejects(h.api.invokeCommand('runtime_call_view_response', { id, ok: null, err: 'stale' }), /No browser component-to-View callback is pending/);
+  }
+  assert.equal(h.worker().messages.length, count);
+  h.timeout();
+  await flushCallbacks();
+  h.worker().emit({ id: response.id, result: null });
+  assert.equal(h.timers.size, 0);
+  assert.equal(h.worker().messages.length, count);
+  await assert.rejects(h.api.invokeCommand('runtime_invoke', {}), /blocked\/closing/);
+});
+
+test('callback error acknowledgement failure is reported and releases callback tracking', async t => {
+  const errors=[];t.mock.method(console,'error',(...args)=>errors.push(args));
+  const h = await transport(t);
+  await h.open();
+  h.worker().emit({ event: 'call-view', payload: callbackPayload('failed-ack') });
+  await flushCallbacks();
+  h.worker().reply({ error: 'callback expired in worker' });
+  await flushCallbacks();
+  assert.equal(errors.length,1);assert.match(String(errors[0][1]),/callback expired/);
+  assert.equal(h.timers.size, 0);
+  await assert.rejects(h.api.invokeCommand('runtime_call_view_response', { id: 'failed-ack', ok: null, err: 'stale' }), /No browser component-to-View callback is pending/);
+});
+
+test('malformed response permits a valid error retry and replied contexts cannot tag new work',async t=>{
+  const h=await transport(t);await h.open();const gate=deferred();
+  await h.api.listenEvent('gams-runtime-call-view',async({payload})=>{
+    for(const response of [{ok:undefined,err:null},{ok:1,err:null},{ok:'x',err:'y'}])
+      await assert.rejects(h.api.invokeCommand('runtime_call_view_response',{id:payload.id,...response}),/exactly one string/);
+    await gate.promise;
+    await h.api.invokeCommand('runtime_call_view_response',{id:payload.id,ok:null,err:'invalid result'});
+  });await h.api.invokeCommand('runtime_call_view_ready');
+  h.worker().emit({event:'call-view',payload:callbackPayload('retry')});await flushCallbacks();
+  gate.resolve();await flushCallbacks();const reply=h.worker().messages.at(-1);
+  const request=h.api.invokeCommand('runtime_invoke',{target:'counter/next',args:[]});
+  assert.equal(h.worker().messages.at(-1).callbackId,undefined);h.worker().reply({result:2});await request;
+  h.worker().emit({id:reply.id,result:null});await flushCallbacks();assert.equal(h.timers.size,0);
+});
+
+test('graceful close still permits pending callback data operations and its response',async t=>{
+  const h=await transport(t);await h.open();const gate=deferred();
+  await h.api.listenEvent('gams-runtime-call-view',async({payload})=>{await gate.promise;await h.api.invokeCommand('runtime_call_view_response',{id:payload.id,ok:'null',err:null});});
+  await h.api.invokeCommand('runtime_call_view_ready');h.worker().emit({event:'call-view',payload:callbackPayload('closing')});await flushCallbacks();
+  const closing=h.api.closeBrowserSession();const closeId=h.worker().messages.at(-1).id;
+  const nested=h.api.invokeCommand('runtime_resolve_file',{source:'file'});assert.equal(h.worker().messages.at(-1).callbackId,'closing');h.worker().reply({result:'file'});await nested;
+  gate.resolve();await flushCallbacks();h.worker().reply({result:null});await flushCallbacks();h.worker().emit({id:closeId,result:{closed:true}});await closing;
+});

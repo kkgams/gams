@@ -1,0 +1,112 @@
+{
+  "world": 0,
+  "resolve": {
+    "worlds": [
+      {
+        "name": "root",
+        "imports": {
+          "interface-0": {
+            "interface": {
+              "id": 0
+            }
+          }
+        },
+        "exports": {
+          "interface-1": {
+            "interface": {
+              "id": 1
+            }
+          }
+        },
+        "package": 2
+      }
+    ],
+    "interfaces": [
+      {
+        "name": "runtime",
+        "types": {},
+        "functions": {
+          "call": {
+            "name": "call",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "target",
+                "type": "string"
+              },
+              {
+                "name": "args",
+                "type": "string"
+              }
+            ],
+            "result": 0
+          }
+        },
+        "package": 0
+      },
+      {
+        "name": "js",
+        "types": {},
+        "functions": {
+          "run": {
+            "name": "run",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "source",
+                "type": "string"
+              }
+            ],
+            "result": 1
+          }
+        },
+        "package": 1
+      }
+    ],
+    "types": [
+      {
+        "name": null,
+        "kind": {
+          "result": {
+            "ok": "string",
+            "err": "string"
+          }
+        },
+        "owner": null
+      },
+      {
+        "name": null,
+        "kind": {
+          "result": {
+            "ok": "string",
+            "err": "string"
+          }
+        },
+        "owner": null
+      }
+    ],
+    "packages": [
+      {
+        "name": "gams:runtime@1.0.0",
+        "interfaces": {
+          "runtime": 0
+        },
+        "worlds": {}
+      },
+      {
+        "name": "gams:js@1.0.0",
+        "interfaces": {
+          "js": 1
+        },
+        "worlds": {}
+      },
+      {
+        "name": "root:component",
+        "interfaces": {},
+        "worlds": {
+          "root": 0
+        }
+      }
+    ]
+  }
+}

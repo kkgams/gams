@@ -179,3 +179,11 @@ test("empty ZIP entry selects the root directory through the native boundary", a
   await runtime.ready
   assert.equal(await runtime.resolveFile({ url: "https://example.com/assets.zip", entry: "" }), "/modules/assets/content")
 })
+
+test('registered callback methods exclude inherited properties and fail after unregister',async()=>{
+  const {runtime}=await loadRuntime({config:{},configFile:'gams.json',modulesDir:'/modules'});await runtime.ready;
+  runtime.register({id:'view.callback',methods:{echo:(...args)=>({ok:args})}});
+  assert.deepEqual(await runtime.call('view.callback.echo','café',42),{ok:['café',42]});
+  await assert.rejects(runtime.call('view.callback.toString'),/does not implement/);
+  await runtime.unregister('view.callback');await assert.rejects(runtime.call('view.callback.echo'),/Unknown main-thread plugin/);
+});

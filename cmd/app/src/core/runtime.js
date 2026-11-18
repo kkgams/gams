@@ -271,7 +271,7 @@ export class Runtime {
             return await plugin.call(method, input, this.createMainContext(plugin.id))
         }
 
-        const fn = plugin.methods?.[method]
+        const fn = plugin.methods && Object.hasOwn(plugin.methods, method) ? plugin.methods[method] : null
         if (typeof fn !== "function") {
             throw new Error(`Main-thread plugin '${plugin.id}' does not implement method '${method}'`)
         }

@@ -42,3 +42,11 @@ test('consumed ownership invalidates the public handle without calling its destr
   await assert.rejects(registry.release(ref),/Unknown/);
   await registry.releaseOwner(owner);assert.equal(drops,0);
 });
+
+test('callback release cannot destroy an active owner resource or consume its reference',async()=>{
+  const registry=new BrowserResources(),owner={};let drops=0;
+  const ref=registry.own(owner,'returned/interface','kind',resource(()=>drops++));
+  const active=new Set([owner]);await assert.rejects(registry.release(ref,active),/component is active/);
+  assert.equal(drops,0);assert.equal(registry.size,1);assert.ok(registry.borrow(ref,owner,'kind'));
+  active.delete(owner);await registry.release(ref,active);assert.equal(drops,1);assert.equal(registry.size,0);
+});
