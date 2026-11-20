@@ -56,7 +56,7 @@
         <p class="intro">Tools that speak your game's language.<br>A workspace that feels like part of its world.</p>
         <div class="hero-actions">
           <a class="button" href="#download">DOWNLOAD GAMS</a>
-          <a class="text-link" href="#projects">EXPLORE WORKSPACES <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#projects">EXPLORE WORKSPACES</a>
         </div>
         <p class="hero-platform">macOS · Linux · Windows <span>FREE &amp; OPEN SOURCE</span></p>
       </div>
@@ -102,16 +102,6 @@
             <div class="project-copy"><h3>Create worlds from the inside.</h3><p>Districts, augmentations, and mission logic. Give your editors the same visual identity and vocabulary as the game you're creating.</p></div>
           </article>
         </div>
-        <h3>Try a workspace in your browser</h3>
-        <ul>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip">Launch fresh Tilemap demo</a> Paint terrain and move trees.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Faseprite.zip">Launch fresh Aseprite demo</a> Play a layered firefly animation.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fsql.zip">Launch fresh SQL demo</a> Query a sample item catalog.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fnodegraph.zip">Launch fresh Nodegraph demo</a> Change a parameter and generate a tree.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Fmarkov.zip">Launch fresh MarkovJunior demo</a> Grow an island with procedural rules.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Fbulletml.zip">Launch fresh BulletML demo</a> Play a spiral game pattern.</li>
-          <li><a class="text-link" href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Ftrack.zip">Launch fresh Track demo</a> Edit an SVG racing circuit.</li>
-        </ul>
         <a class="text-link" href="docs/">DISCOVER GAMS</a>
       </div>
     </section>
@@ -167,184 +157,245 @@
             <path class="art-rule" d="M196 103h24v48h44M196 151h68M196 199h24v-48"/><rect class="art-selection" x="264" y="103" width="144" height="96"/><path class="art-rule" d="M264 132h144M308 103v29"/>
             <text class="art-ink" x="282" y="158">GAME.RSPK</text><text x="282" y="182">PACKED ASSETS</text>
           </symbol>
+          <symbol id="unit-preview-bullet" viewBox="0 0 480 270">
+            <rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / BULLETML</text>
+            <path class="art-rule" d="M240 84v136m-120-68h240"/>
+            <g class="art-accent"><circle cx="240" cy="151" r="4"/><circle cx="255" cy="155" r="4"/><circle cx="266" cy="174" r="4"/><circle cx="254" cy="194" r="4"/><circle cx="226" cy="205" r="4"/><circle cx="194" cy="188" r="4"/><circle cx="182" cy="151" r="4"/><circle cx="207" cy="116" r="4"/><circle cx="251" cy="102" r="4"/><circle cx="297" cy="117" r="4"/><circle cx="319" cy="157" r="4"/></g>
+          </symbol>
+          <symbol id="unit-preview-track" viewBox="0 0 480 270">
+            <rect class="art-panel" x="48" y="35" width="384" height="200"/><path class="art-rule" d="M48 67h384"/><circle class="art-accent" cx="65" cy="51" r="3"/><text x="80" y="55">PROJECT / TRACK</text>
+            <path class="art-rule" d="M144 104h176q50 0 50 38t-48 42q-18 0-38-22t-45 7q-24 35-90 35-40 0-40-46 0-54 35-54Z" stroke-width="12" fill="none"/>
+            <g class="art-accent"><circle cx="144" cy="104" r="4"/><circle cx="320" cy="104" r="4"/><circle cx="370" cy="142" r="4"/><circle cx="322" cy="184" r="4"/><circle cx="149" cy="204" r="4"/></g>
+          </symbol>
         </defs></svg>
         <div class="unit-grid" aria-label="Explore Units">
-          <a class="unit-card" href="https://github.com/kkgams/view.files" aria-labelledby="unit-view-files unit-view-files-kind">
+          <article class="unit-card" aria-labelledby="unit-view-files">
             <div class="unit-label"><span class="unit-number">01</span><span>File browser</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-files"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Files artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-files"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Fi</span>
               <h3 id="unit-view-files">Files</h3>
               <p>Browse and manage your Project files, with open and save selection.</p>
-              <span class="unit-kind" id="unit-view-files-kind">View</span>
-              <span class="unit-explore">Explore Files</span>
+              <div class="unit-actions">
+                <a href="/app.html" aria-label="Try Files">Try</a>
+                <a href="https://github.com/kkgams/view.files" aria-label="Source: view.files">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.code" aria-labelledby="unit-view-code unit-view-code-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-code">
             <div class="unit-label"><span class="unit-number">02</span><span>Code editor</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Code artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Co</span>
               <h3 id="unit-view-code">Code</h3>
               <p>Edit source files without leaving your workspace.</p>
-              <span class="unit-kind" id="unit-view-code-kind">View</span>
-              <span class="unit-explore">Explore Code</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/view.code" aria-label="Source: view.code">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.animation" aria-labelledby="unit-view-animation unit-view-animation-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-animation">
             <div class="unit-label"><span class="unit-number">03</span><span>Animation tools</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-animation"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Animation artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-animation"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">An</span>
               <h3 id="unit-view-animation">Animation</h3>
               <p>Work with animation trees, parameters, playback, and blend spaces.</p>
-              <span class="unit-kind" id="unit-view-animation-kind">View</span>
-              <span class="unit-explore">Explore Animation</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/view.animation" aria-label="Source: view.animation">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.sql" aria-labelledby="unit-view-sql unit-view-sql-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-sql">
             <div class="unit-label"><span class="unit-number">04</span><span>Database browser</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview SQL artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Sq</span>
               <h3 id="unit-view-sql">SQL</h3>
               <p>Browse tables, edit rows, and inspect query results.</p>
-              <span class="unit-kind" id="unit-view-sql-kind">View</span>
-              <span class="unit-explore">Explore SQL</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fsql.zip" aria-label="Try SQL">Try</a>
+                <a href="https://github.com/kkgams/view.sql" aria-label="Source: view.sql">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.image" aria-labelledby="unit-view-image unit-view-image-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-image">
             <div class="unit-label"><span class="unit-number">05</span><span>Image editor</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Image &amp; Aseprite artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Im</span>
-              <h3 id="unit-view-image">Image</h3>
+              <h3 id="unit-view-image">Image &amp; Aseprite</h3>
               <p>Work with images, canvas edits, animation timelines, and exports.</p>
-              <span class="unit-kind" id="unit-view-image-kind">View</span>
-              <span class="unit-explore">Explore Image</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Faseprite.zip" aria-label="Try Aseprite">Try</a>
+                <a href="https://github.com/kkgams/view.image" aria-label="Source: view.image">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.tilemap" aria-labelledby="unit-view-tilemap unit-view-tilemap-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-tilemap">
             <div class="unit-label"><span class="unit-number">06</span><span>Tilemap editor</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Tilemap artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Ti</span>
               <h3 id="unit-view-tilemap">Tilemap</h3>
               <p>Paint tilemaps and extract tiles for your game worlds.</p>
-              <span class="unit-kind" id="unit-view-tilemap-kind">View</span>
-              <span class="unit-explore">Explore Tilemap</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip" aria-label="Try Tilemap">Try</a>
+                <a href="https://github.com/kkgams/view.tilemap" aria-label="Source: view.tilemap">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.world" aria-labelledby="unit-view-world unit-view-world-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-world">
             <div class="unit-label"><span class="unit-number">07</span><span>World editor</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview World artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-map"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Wo</span>
               <h3 id="unit-view-world">World</h3>
               <p>Build worlds and work with the objects inside them.</p>
-              <span class="unit-kind" id="unit-view-world-kind">View</span>
-              <span class="unit-explore">Explore World</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/view.world" aria-label="Source: view.world">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.character" aria-labelledby="unit-view-character unit-view-character-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-character">
             <div class="unit-label"><span class="unit-number">08</span><span>Character composer</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Character artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Ch</span>
               <h3 id="unit-view-character">Character</h3>
               <p>Browse a supplied equipment catalog and compose characters.</p>
-              <span class="unit-kind" id="unit-view-character-kind">View</span>
-              <span class="unit-explore">Explore Character</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/view.character" aria-label="Source: view.character">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/plugin.font" aria-labelledby="unit-plugin-font unit-plugin-font-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-plugin-font">
             <div class="unit-label"><span class="unit-number">09</span><span>Font atlases</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-font"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Font artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-font"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Ft</span>
               <h3 id="unit-plugin-font">Font</h3>
               <p>Generate distance-field font atlases and preview your typography.</p>
-              <span class="unit-kind" id="unit-plugin-font-kind">Plugin</span>
-              <span class="unit-explore">Explore Font</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/plugin.font" aria-label="Source: plugin.font">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/plugin.image" aria-labelledby="unit-plugin-image unit-plugin-image-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-plugin-image">
             <div class="unit-label"><span class="unit-number">10</span><span>Image processing</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Image artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-image"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Px</span>
               <h3 id="unit-plugin-image">Image</h3>
               <p>Crop, resize, transform, and export images through WASM.</p>
-              <span class="unit-kind" id="unit-plugin-image-kind">Plugin</span>
-              <span class="unit-explore">Explore Image</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/plugin.image" aria-label="Source: plugin.image">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/plugin.lua" aria-labelledby="unit-plugin-lua unit-plugin-lua-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-plugin-lua">
             <div class="unit-label"><span class="unit-number">11</span><span>Scripting</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Lua artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-code"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Lu</span>
               <h3 id="unit-plugin-lua">Lua</h3>
               <p>Run Lua scripts with access to the GAMS runtime.</p>
-              <span class="unit-kind" id="unit-plugin-lua-kind">Plugin</span>
-              <span class="unit-explore">Explore Lua</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fnodegraph.zip" aria-label="Try Lua in Node Graph">Try</a>
+                <a href="https://github.com/kkgams/plugin.lua" aria-label="Source: plugin.lua">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/plugin.sql" aria-labelledby="unit-plugin-sql unit-plugin-sql-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-plugin-sql">
             <div class="unit-label"><span class="unit-number">12</span><span>Database engine</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview SQL artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-sql"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Db</span>
               <h3 id="unit-plugin-sql">SQL</h3>
               <p>Bring SQL database capabilities to your Project.</p>
-              <span class="unit-kind" id="unit-plugin-sql-kind">Plugin</span>
-              <span class="unit-explore">Explore SQL</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fsql.zip" aria-label="Try SQL plugin">Try</a>
+                <a href="https://github.com/kkgams/plugin.sql" aria-label="Source: plugin.sql">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.ng" aria-labelledby="unit-view-ng unit-view-ng-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-ng">
             <div class="unit-label"><span class="unit-number">13</span><span>Node graph editor</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-nodes"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Node Graph artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-nodes"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Ng</span>
               <h3 id="unit-view-ng">Node Graph</h3>
               <p>Connect nodes and shape your Project logic in a visual graph.</p>
-              <span class="unit-kind" id="unit-view-ng-kind">View</span>
-              <span class="unit-explore">Explore Node Graph</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fnodegraph.zip" aria-label="Try Node Graph">Try</a>
+                <a href="https://github.com/kkgams/view.ng" aria-label="Source: view.ng">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/view.markov" aria-labelledby="unit-view-markov unit-view-markov-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-markov">
             <div class="unit-label"><span class="unit-number">14</span><span>Procedural generation</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-markov"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Markov artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-markov"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Mk</span>
               <h3 id="unit-view-markov">Markov</h3>
               <p>Explore rule-based generation and turn patterns into procedural worlds.</p>
-              <span class="unit-kind" id="unit-view-markov-kind">View</span>
-              <span class="unit-explore">Explore Markov</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Fmarkov.zip" aria-label="Try MarkovJunior">Try</a>
+                <a href="https://github.com/kkgams/view.markov" aria-label="Source: view.markov">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/plugin.respack" aria-labelledby="unit-plugin-respack unit-plugin-respack-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-plugin-respack">
             <div class="unit-label"><span class="unit-number">15</span><span>Resource packaging</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-respack"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview Resource Pack artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-respack"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">Rp</span>
               <h3 id="unit-plugin-respack">Resource Pack</h3>
               <p>Build resource packs from your Project assets for use in your game.</p>
-              <span class="unit-kind" id="unit-plugin-respack-kind">Plugin</span>
-              <span class="unit-explore">Explore Resource Pack</span>
+              <div class="unit-actions">
+                <a href="https://github.com/kkgams/plugin.respack" aria-label="Source: plugin.respack">Source</a>
+              </div>
             </div>
-          </a>
-          <a class="unit-card" href="https://github.com/kkgams/theme.the98" aria-labelledby="unit-theme-the98 unit-theme-the98-kind">
+          </article>
+          <article class="unit-card" aria-labelledby="unit-theme-the98">
             <div class="unit-label"><span class="unit-number">16</span><span>Classic desktop theme</span></div>
-            <div class="unit-art"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-theme"/></svg></div>
+            <button type="button" class="unit-art" aria-label="Preview The98 artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-theme"/></svg></button>
             <div class="unit-copy">
               <span class="unit-icon" aria-hidden="true">98</span>
               <h3 id="unit-theme-the98">The98</h3>
               <p>Give shared controls and Views a classic desktop feel.</p>
-              <span class="unit-kind" id="unit-theme-the98-kind">Theme</span>
-              <span class="unit-explore">Explore The98</span>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip" aria-label="Try The98 in Tilemap">Try</a>
+                <a href="https://github.com/kkgams/theme.gams" aria-label="Source: theme.gams">Source</a>
+              </div>
             </div>
-          </a>
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-bullet">
+            <div class="unit-label"><span class="unit-number">17</span><span>Pattern preview</span></div>
+            <button type="button" class="unit-art" aria-label="Preview BulletML artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-bullet"/></svg></button>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Bm</span>
+              <h3 id="unit-view-bullet">BulletML</h3>
+              <p>Play, pause, and step through BulletML game patterns.</p>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Fbulletml.zip" aria-label="Try BulletML">Try</a>
+                <a href="https://github.com/kkgams/view.bullet" aria-label="Source: view.bullet">Source</a>
+              </div>
+            </div>
+          </article>
+          <article class="unit-card" aria-labelledby="unit-view-track">
+            <div class="unit-label"><span class="unit-number">18</span><span>Circuit editor</span></div>
+            <button type="button" class="unit-art" aria-label="Preview Track artwork"><svg viewBox="0 0 480 270" aria-hidden="true" focusable="false"><use href="#unit-preview-track"/></svg></button>
+            <div class="unit-copy">
+              <span class="unit-icon" aria-hidden="true">Tr</span>
+              <h3 id="unit-view-track">Track</h3>
+              <p>Edit racing circuits and save them as SVG blueprints.</p>
+              <div class="unit-actions">
+                <a href="/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.3.0%2Ftrack.zip" aria-label="Try Track">Try</a>
+                <a href="https://github.com/kkgams/view.track" aria-label="Source: view.track">Source</a>
+              </div>
+            </div>
+          </article>
         </div>
         <a class="text-link" href="https://github.com/orgs/kkgams/repositories">EXPLORE MORE UNITS</a>
       </div>
@@ -497,11 +548,12 @@
     <button class="hero-preview-close" type="button" aria-label="Close workspace preview">Close · Esc</button>
     <figure>
       <div class="hero-preview-frame">
-        <button class="hero-preview-prev" type="button" aria-label="Previous workspace">←</button>
+        <button class="hero-preview-prev" type="button" aria-label="Previous workspace"><svg width="30" height="30" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5l-5 5 5 5"/></svg></button>
         <img class="hero-preview-image" alt="">
-        <button class="hero-preview-next" type="button" aria-label="Next workspace">→</button>
+        <div class="hero-preview-art" hidden></div>
+        <button class="hero-preview-next" type="button" aria-label="Next workspace"><svg width="30" height="30" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 5l5 5-5 5"/></svg></button>
       </div>
-      <figcaption><strong class="hero-preview-title"></strong><span class="hero-preview-count"></span><a class="hero-preview-link" href="images/projects/fantasy-rpg.png" target="_blank" rel="noopener">Open full-size image ↗</a></figcaption>
+      <figcaption><strong class="hero-preview-title"></strong><span class="hero-preview-count"></span><a class="hero-preview-link" href="images/projects/fantasy-rpg.png" target="_blank" rel="noopener"><span>Open full-size image</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 6h6m-2.5-2.5L8.5 6 6 8.5"/></svg></a></figcaption>
     </figure>
   </dialog>
   <script type="module" src="hero-workspaces.js"></script>

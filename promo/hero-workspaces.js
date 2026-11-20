@@ -1,18 +1,23 @@
 const wall = document.querySelector('.hero-wall');
+const units = document.querySelector('.unit-grid');
 const preview = document.querySelector('.hero-preview');
-if (!wall || !preview) throw new Error('Workspace gallery needs its wall and preview dialog.');
+if (!wall || !units || !preview) throw new Error('Promo previews need the hero wall, Unit grid, and dialog.');
 const workspaces = [...wall.querySelectorAll('a.hero-workspace')];
 if (workspaces.length !== 4) throw new Error('Workspace gallery needs four source images.');
+const unitArt = [...units.querySelectorAll('button.unit-art')];
+const art = preview.querySelector('.hero-preview-art');
 const image = preview.querySelector('.hero-preview-image');
 const title = preview.querySelector('.hero-preview-title');
 const count = preview.querySelector('.hero-preview-count');
 const fullSize = preview.querySelector('.hero-preview-link');
+const linkLabel = fullSize?.querySelector('span');
 const close = preview.querySelector('.hero-preview-close');
 const previous = preview.querySelector('.hero-preview-prev');
 const next = preview.querySelector('.hero-preview-next');
-if (!image || !title || !count || !fullSize || !close || !previous || !next) throw new Error('Workspace preview is incomplete.');
+if (!art || !image || !title || !count || !fullSize || !linkLabel || !close || !previous || !next) throw new Error('Workspace preview is incomplete.');
 const mobile = matchMedia('(max-width: 860px)');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+let gallery = workspaces;
 let selected = 0;
 
 function renderWall() {
@@ -52,33 +57,64 @@ function renderWall() {
   wall.replaceChildren(fragment);
 }
 
-function showWorkspace(index) {
-  selected = (index + workspaces.length) % workspaces.length;
-  const workspace = workspaces[selected];
-  image.src = workspace.href;
-  image.alt = workspace.querySelector('img').alt;
-  title.textContent = workspace.dataset.title;
-  count.textContent = `${selected + 1} / ${workspaces.length}`;
-  fullSize.href = workspace.href;
+function showPreview(index) {
+  selected = (index + gallery.length) % gallery.length;
+  const item = gallery[selected];
+  const isUnit = gallery === unitArt;
+  const type = isUnit ? 'Unit' : 'workspace';
+  preview.setAttribute('aria-label', `${type} preview`);
+  close.setAttribute('aria-label', `Close ${type} preview`);
+  previous.setAttribute('aria-label', `Previous ${type}`);
+  next.setAttribute('aria-label', `Next ${type}`);
+  count.textContent = `${selected + 1} / ${gallery.length}`;
+  image.hidden = isUnit;
+  art.hidden = !isUnit;
+  if (isUnit) {
+    const card = item.closest('.unit-card');
+    title.textContent = card.querySelector('h3').textContent;
+    art.replaceChildren(item.querySelector('svg').cloneNode(true));
+    const launch = card.querySelector('.unit-actions a[href^="/app.html"]');
+    fullSize.hidden = !launch;
+    if (launch) {
+      fullSize.href = launch.href;
+      linkLabel.textContent = 'Launch in GAMS';
+    } else {
+      fullSize.removeAttribute('href');
+    }
+  } else {
+    image.src = item.href;
+    image.alt = item.querySelector('img').alt;
+    title.textContent = item.dataset.title;
+    fullSize.href = item.href;
+    linkLabel.textContent = 'Open full-size image';
+    fullSize.hidden = false;
+  }
+}
+
+function openPreview(items, index) {
+  gallery = items;
+  showPreview(index);
+  preview.showModal();
+  close.focus();
 }
 
 wall.addEventListener('click', event => {
   const link = event.target.closest('a.hero-workspace');
   if (!link || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
-  showWorkspace(Number(link.dataset.workspace));
-  preview.showModal();
-  close.focus();
+  openPreview(workspaces, Number(link.dataset.workspace));
 });
+unitArt.forEach((button, index) => button.addEventListener('click', () => openPreview(unitArt, index)));
 close.addEventListener('click', () => preview.close());
-previous.addEventListener('click', () => showWorkspace(selected - 1));
-next.addEventListener('click', () => showWorkspace(selected + 1));
-image.addEventListener('click', () => preview.close());
-preview.addEventListener('click', event => { if (event.target === preview) preview.close(); });
+previous.addEventListener('click', () => showPreview(selected - 1));
+next.addEventListener('click', () => showPreview(selected + 1));
+preview.addEventListener('click', event => {
+  if (event.target === preview || event.target === image || art.contains(event.target)) preview.close();
+});
 preview.addEventListener('keydown', event => {
   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
   event.preventDefault();
-  showWorkspace(selected + (event.key === 'ArrowLeft' ? -1 : 1));
+  showPreview(selected + (event.key === 'ArrowLeft' ? -1 : 1));
 });
 window.addEventListener('resize', renderWall);
 reduced.addEventListener('change', renderWall);
