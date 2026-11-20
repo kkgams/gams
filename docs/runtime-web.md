@@ -17,7 +17,14 @@ is required.
 
 ## Open a showcase
 
-[Launch fresh Tilemap demo](https://gams.z0.lv/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip) to paint terrain and edit layers in a sample map. For Native GAMS, [download the ZIP](https://github.com/kkgams/showcases/releases/download/v0.1.0/tilemap.zip), unpack it, and open its `gams.json`.
+| Web demo | Try it | Native ZIP |
+| --- | --- | --- |
+| [Launch fresh Tilemap demo](https://gams.z0.lv/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip) | Paint terrain and move trees. | [Download](https://github.com/kkgams/showcases/releases/download/v0.1.0/tilemap.zip) |
+| [Launch fresh Aseprite demo](https://gams.z0.lv/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Faseprite.zip) | Play a layered firefly animation. | [Download](https://github.com/kkgams/showcases/releases/download/v0.2.0/aseprite.zip) |
+| [Launch fresh SQL demo](https://gams.z0.lv/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fsql.zip) | Run `SELECT name, price FROM items WHERE rarity = 'rare' ORDER BY price;`. | [Download](https://github.com/kkgams/showcases/releases/download/v0.2.0/sql.zip) |
+| [Launch fresh Nodegraph demo](https://gams.z0.lv/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.2.0%2Fnodegraph.zip) | Click Run, then select Settings, click Edit, and change the node count. Run again and inspect `tree-output.json` in Files. | [Download](https://github.com/kkgams/showcases/releases/download/v0.2.0/nodegraph.zip) |
+
+For Native GAMS, unpack the ZIP and open its `gams.json`.
 
 A **Launch fresh** showcase link imports the demo ZIP into a separate browser
 Project. Once the demo opens, reloading keeps your edits. Opening the fresh link
