@@ -1,9 +1,6 @@
 name: Deploy browser app to Cloudflare Pages
 
 on:
-  push:
-    branches: [release]
-  pull_request:
   workflow_dispatch:
 
 permissions:

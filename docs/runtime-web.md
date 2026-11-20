@@ -10,7 +10,7 @@ is required.
 
 ## Open a Project
 
-1. Open [GAMS Web](https://gams-app.pages.dev/). The default Files Project opens automatically.
+1. Open [GAMS Web](https://gams.z0.lv/app.html). The default Files Project opens automatically.
 2. To open another Project, use the [Web Host URL settings](https://github.com/kkgams/gams/blob/release/cmd/web/README.md#url-settings).
 3. Edit content through the Project's Views and tools.
 4. Save your changes and use **Browser Host → Checkpoint and close** before leaving.

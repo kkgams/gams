@@ -5,9 +5,9 @@ status: reference
 
 # Deploy the browser app
 
-The browser app is a separate, root-hosted Cloudflare Pages site. The existing GitHub Pages promo and documentation deployment stays unchanged. Both use this repository and the `release` branch; no second source repository is required.
+GitHub Pages publishes the promo at `/`, the wiki at `/docs/`, and the browser app at `/app.html` on `gams.z0.lv`. The `release` workflow runs `make pages` with `GAMS_CORS_PROXY`, builds the combined bundle, and deploys it to GitHub Pages. The app enables cross-origin isolation through a service worker on its first visit.
 
-Use the site's root URL, not a subfolder. Released Views import Host modules from `/core/`, `/util/` and `/widgets/`. The browser Host supports FS, layout, Tile Detect, the tested random interfaces, selected Image resource operations and SQL connection/statement/error operations. See `cmd/web/README.md` for exact interfaces and limits. Arbitrary plugin interfaces, component linking and Native shell/process integrations are not supported; select Projects accordingly.
+Serve the app entry and assets at the origin root, not under a subfolder. Released Views import Host modules from `/core/`, `/util/` and `/widgets/`. The browser Host supports FS, layout, Tile Detect, the tested random interfaces, selected Image resource operations and SQL connection/statement/error operations. See `cmd/web/README.md` for exact interfaces and limits. Arbitrary plugin interfaces, component linking and Native shell/process integrations are not supported; select Projects accordingly.
 
 ## Build and preview
 
@@ -27,7 +27,7 @@ Production sources, dependency pins and the static server live in `cmd/web/`; it
 
 Set `GAMS_CORS_PROXY` in the build environment to use a public download relay. Unset/empty leaves direct downloads; fresh default Project startup then fails if GitHub denies browser CORS. Previously installed Units remain usable from OPFS caches. Its value is emitted into public browser settings; no endpoint is hardcoded in GAMS source. Rebuild and reload after changing it.
 
-## Set up Cloudflare Pages
+## Optional standalone Cloudflare Pages deployment
 
 Use a **Direct Upload** Pages project: GitHub Actions will build using pinned Nix and upload the finished files. Do not also connect Cloudflare's Git builds to this project; that would create a second deployment pipeline and would not read GitHub Actions repository variables. Workers & Pages hosts this app as **Pages**, separately from the download relay Worker.
 
@@ -51,13 +51,13 @@ In GitHub repository **Settings → Secrets and variables → Actions**, configu
 
 The workflow reads these explicitly; merely defining a GitHub variable does not put it in a build's environment. The token is exposed only to the deployment step, never to PR builds or the public app output. Do not commit credentials.
 
-`.github/workflows/web.yml` tests/builds pull requests without deployment. Pushes to `release`, or a manual run selecting `release`, test/build and upload to Cloudflare. Required production settings must be configured before pushing this workflow. The existing GitHub Pages workflow continues to publish promo/docs independently.
+To update the standalone Cloudflare copy, manually run `.github/workflows/web.yml` on `release`. The GitHub Pages deployment does not use the Cloudflare Pages credentials.
 
 ## Allow the app to use the relay
 
-Add the **exact stable app origin** (`https://<project-name>.pages.dev`) to the relay's `CORS_PROXY_ALLOWED_ORIGINS`, preserving any other origins you use. Keep that configuration in the relay's deployment configuration so a later Worker redeploy retains it. Only the origin is needed, not a path. The relay's GitHub download host allowlist does not change.
+Add the **exact stable app origin** (`https://gams.z0.lv` for GitHub Pages or `https://<project-name>.pages.dev` for the standalone copy) to the relay's `CORS_PROXY_ALLOWED_ORIGINS`, preserving any other origins you use. Keep that configuration in the relay's deployment configuration so a later Worker redeploy retains it. Only the origin is needed, not a path. The relay's GitHub download host allowlist does not change.
 
-Open the production URL and verify automatic Project startup, file upload, Save, checkpointed close/reopen and an actual remote Unit download. There is no separate welcome page or Open step; session controls stay collapsed unless startup fails. HTTP assets use `Cache-Control: no-store`; OPFS Project/resource/Jco caches are separate and still persist. Missing static paths return 404 rather than a fabricated app response. The assembled `_headers` enables cross-origin isolation for direct OPFS. Other static hosts must set equivalent COOP/COEP headers to run the Web Host.
+Open the production URL and verify automatic Project startup, file upload, Save, checkpointed close/reopen and an actual remote Unit download. There is no separate welcome page or Open step; session controls stay collapsed unless startup fails. HTTP assets use `Cache-Control: no-store`; OPFS Project/resource/Jco caches are separate and still persist. Missing static paths return 404 rather than a fabricated app response. The combined GitHub Pages build uses its service worker for cross-origin isolation. The standalone Cloudflare build uses `_headers`; other hosts serving that build must send equivalent COOP/COEP headers.
 
 ## Add a custom hostname
 

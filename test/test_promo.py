@@ -96,8 +96,8 @@ class PromoContentTests(unittest.TestCase):
 
     def test_launch_links_open_the_web_host_directly(self):
         html = (ROOT / "promo/index.html").read_text()
-        self.assertIn('<a class="launch-app" href="https://gams-app.pages.dev/">Launch App</a>', html)
-        self.assertEqual(html.count('href="https://gams-app.pages.dev/">USE ON WEB</a>'), 2)
+        self.assertIn('<a class="launch-app" href="/app.html">Launch App</a>', html)
+        self.assertEqual(html.count('href="/app.html">USE ON WEB</a>'), 2)
 
     def test_relative_assets_and_documentation_routes_exist(self):
         filename = "index.html"
@@ -109,6 +109,8 @@ class PromoContentTests(unittest.TestCase):
                 url = urlsplit(link)
                 if url.scheme:
                     self.assertEqual(url.scheme, "https")
+                    continue
+                if url.path == "/app.html":  # Added by the combined Pages build.
                     continue
                 self.assertFalse(url.path.startswith("/"), "Keep Pages subpaths portable")
                 if url.path == "docs/":

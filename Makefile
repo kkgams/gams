@@ -6,6 +6,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .DEFAULT_GOAL := run
 
 BUILD_DIR ?= build.nosync
+GAMS_PAGES_APP ?= 0
 export TMPDIR := $(abspath $(BUILD_DIR)/tmp)
 export TMP := $(TMPDIR)
 export TEMP := $(TMPDIR)
@@ -34,13 +35,13 @@ HOST_CXX ?= $(if $(CXX),$(CXX),$(HOST_CXX_AUTO))
 # MSVC discovers its compiler through the native developer environment.
 COMPILER_ENV = case "$$(uname -s)" in MINGW*|MSYS*|CYGWIN*) unset CC CXX ;; *) if [[ -n "$(HOST_CC)" ]]; then export CC="$(HOST_CC)"; fi; if [[ -n "$(HOST_CXX)" ]]; then export CXX="$(HOST_CXX)"; fi ;; esac
 
-.PHONY: run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo web serve-web test-web deploy-web clean
+.PHONY: run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo pages serve-promo web serve-web test-web deploy-web clean
 
 $(BUILD_DIR)/tmp:
 	mkdir -p "$@"
 
 # Order-only: creating the shared temporary directory never invalidates outputs.
-run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo serve-promo web serve-web test-web deploy-web: | $(BUILD_DIR)/tmp
+run open test test-rust build package app-icons game-icons-check docs serve-docs validate-docs promo pages serve-promo web serve-web test-web deploy-web: | $(BUILD_DIR)/tmp
 
 # Source development: no Project means the existing native picker behavior.
 run: app-icons
@@ -251,17 +252,20 @@ promo:
 	$(MAKE) docs DOCS_OUTPUT="$$stage/wiki"
 	mkdir "$$stage/site"
 	cp -R promo/. "$$stage/site/"
-	if [[ -n "$${CLOUDFLARE_PAGES_PROJECT:-}" ]]; then
-	    [[ "$$CLOUDFLARE_PAGES_PROJECT" =~ ^[a-z0-9]+(-[a-z0-9]+)*$$ ]] || { echo 'Invalid CLOUDFLARE_PAGES_PROJECT' >&2; exit 1; }
-	    sed "s|https://gams-app\.pages\.dev/|https://$$CLOUDFLARE_PAGES_PROJECT.pages.dev/|g" promo/index.html > "$$stage/site/index.html"
-	fi
 	cp -RL "$$stage/wiki" "$$stage/site/docs"
+	if [[ "$(GAMS_PAGES_APP)" == 1 ]]; then
+	    python3 scripts/merge-pages-app.py build.nosync/web "$$stage/site" cmd/web
+	fi
 	touch "$$stage/site/.nojekyll"
 	python3 scripts/package-host.py clean "$(BUILD_DIR)/site"
 	mv "$$stage/site" "$(BUILD_DIR)/site"
 	@echo 'Built Pages site: $(BUILD_DIR)/site'
 
-# Independent root-hosted browser app; never merged into the promo/docs site.
+# GitHub Pages uses one static bundle with separate entry pages.
+pages: web
+	$(MAKE) promo GAMS_PAGES_APP=1
+
+# Independent root-hosted browser app, also used as input for GitHub Pages.
 web:
 	$(MAKE) -C cmd/web build
 	python3 scripts/build-web.py
