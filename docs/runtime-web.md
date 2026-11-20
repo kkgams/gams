@@ -10,27 +10,23 @@ is required.
 
 ## Open a Project
 
-1. Open GAMS in your browser.
-2. Choose the Project to work with and grant access to its files when prompted.
+1. Open [GAMS Web](https://gams-app.pages.dev/). The default Files Project opens automatically.
+2. To open another Project, use the [Web Host URL settings](https://github.com/kkgams/gams/blob/release/cmd/web/README.md#url-settings).
 3. Edit content through the Project's Views and tools.
-4. Save or export your changes before closing the workspace.
+4. Save your changes and use **Browser Host → Checkpoint and close** before leaving.
 
-## Arguments and environment
+## Differences from Native
 
-Web has no process arguments or shell environment variables. Choose the Project
-and grant file access in the browser; native startup settings do not apply.
-
-## Files and tools
+Web runs the shared interface and supported WASM plugins, but not every Native workflow is available. It does not expose shell or process execution, native IPC, or unrestricted OS filesystem access. Open the Project in [[runtime-native|Native]] when a workflow needs those facilities.
 
 | Task | What to do |
 | --- | --- |
-| Use local files | Select the files or folder and allow the requested browser access. |
-| Run a tool | Choose a tool available in Web and supply its inputs. |
-| Keep your work | Save to an authorized location or download an export. |
-| Use native commands or server files | Open the Project in [[runtime-native|Native]] or [[runtime-web-server|WebServer]]. |
+| Use local files | Upload them through the Files View into the browser Project. This does not send them to a GAMS backend server. |
+| Keep your work | Save to browser storage or download an export. Storage is tied to the site's origin; clearing site data removes it. |
+| Import over HTTP | An individual download is limited to 64 MiB. This is not a size limit for files already in browser storage. |
+| Start a specific Project | Use URL settings. Web has no process arguments or shell environment variables. |
 
-Web uses browser-supported tools and file access. Selecting a local file does
-not upload it to a GAMS backend server.
+Use a browser that supports OPFS and Web Locks. Self-hosted builds require cross-origin isolation; the production site already provides it. Open one GAMS session per origin. A second tab cannot use the same storage until the first session closes.
 
 See [[runtime|runtime modes]].
 
@@ -49,7 +45,6 @@ or old Lua API. Traps and other unclassified guest exceptions abort linked calls
 retain the Native bridge's declared string-error boundary. A trapped component requires explicit
 reload.
 
-Open one GAMS session per origin. A second tab cannot use the same browser storage until the first session closes.
 UI callbacks temporarily permit nested data operations in the same worker, not
 isolated concurrent callers. Plugin replacement and cache clearing are denied
 inside that window. Graceful close waits for a pending callback to finish;

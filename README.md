@@ -96,9 +96,7 @@ including unmarked downloads and local tool backups. Do not store authored files
 or irreplaceable data in these directories. Other paths are preserved; tracked
 files and symlinks in deletion targets cause cleanup to stop before any deletion.
 
-The production [browser Host](cmd/web/README.md) serves the canonical frontend
-and loads `gams.json` Projects using URL startup settings and OPFS; see its
-compatibility limits before selecting a Project. `cmd/web/` owns the browser
+Use [GAMS Web](https://gams-app.pages.dev/) to open Projects in a browser. The [Web Host](cmd/web/README.md) runs the shared frontend and supported Units, and stores Projects directly in OPFS. See [Web runtime differences](docs/runtime-web.md) before moving a Native workflow to Web. `cmd/web/` owns the browser
 Runtime, shared component helpers, dependency pins and static server. `make web`
 stages production assets in `build.nosync/web-build/site/`, reuses compiler
 dependencies under `build.nosync/web-build/`, then assembles the publishable
