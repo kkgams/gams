@@ -251,6 +251,12 @@ promo:
 	$(MAKE) docs DOCS_OUTPUT="$$stage/wiki"
 	mkdir "$$stage/site"
 	cp -R promo/. "$$stage/site/"
+	if [[ -n "$${CLOUDFLARE_PAGES_PROJECT:-}" ]]; then
+	    [[ "$$CLOUDFLARE_PAGES_PROJECT" =~ ^[a-z0-9]+(-[a-z0-9]+)*$$ ]] || { echo 'Invalid CLOUDFLARE_PAGES_PROJECT' >&2; exit 1; }
+	    for page in index.html app.html; do
+	        sed "s|https://gams-app\.pages\.dev/|https://$$CLOUDFLARE_PAGES_PROJECT.pages.dev/|g" "promo/$$page" > "$$stage/site/$$page"
+	    done
+	fi
 	cp -RL "$$stage/wiki" "$$stage/site/docs"
 	touch "$$stage/site/.nojekyll"
 	python3 scripts/package-host.py clean "$(BUILD_DIR)/site"
