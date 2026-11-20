@@ -1,4 +1,7 @@
+mod scheduler;
 mod values;
+
+use scheduler::{Directory, Scheduler, StoreId};
 
 use anyhow::{bail, Context as AnyhowContext, Result};
 use serde::Serialize;
@@ -29,7 +32,9 @@ pub struct FsPreopen {
 
 #[derive(Clone)]
 pub struct Runtime {
-    inner: Arc<Mutex<RuntimeInner>>,
+    compiler: Arc<Mutex<RuntimeInner>>,
+    directory: Directory,
+    root: PathBuf,
     view_bridge: ViewBridge,
 }
 
@@ -45,6 +50,8 @@ struct RuntimeInner {
     linked_interfaces: BTreeSet<String>,
     compiled_component_cache_dir: PathBuf,
     isolated_stdio: bool,
+    #[cfg(test)]
+    read_only: bool,
 }
 
 #[derive(Clone)]
@@ -68,6 +75,7 @@ struct CallViewRequest {
 }
 
 pub struct HostState {
+    route: Option<(StoreId, std::sync::Weak<Mutex<Scheduler>>)>,
     wasi_ctx: WasiCtx,
     http_ctx: WasiHttpCtx,
     resource_table: ResourceTable,
@@ -76,6 +84,15 @@ pub struct HostState {
     view_bridge: ViewBridge,
     root: PathBuf,
     runtime_funcs: BTreeMap<String, ExportedFunc>,
+}
+
+impl HostState {
+    fn next_resource_id(&mut self) -> String {
+        let owner = self.route.as_ref().expect("plugin Store owner").0;
+        let id = format!("res_{owner:016x}_{:016x}", self.next_json_resource);
+        self.next_json_resource += 1;
+        id
+    }
 }
 
 impl WasiView for HostState {
@@ -127,6 +144,7 @@ pub struct ComponentHandle {
     pub exports: Vec<String>,
 }
 
+#[derive(Clone)]
 struct ComponentCandidate {
     path: String,
     resolved_path: PathBuf,
@@ -250,8 +268,13 @@ impl ViewBridge {
             return Err(format!("failed to emit call-view request `{id}`: {error}"));
         }
 
-        rx.recv()
-            .map_err(|_| format!("frontend view bridge dropped response channel for `{id}`"))?
+        match rx.recv_timeout(Duration::from_secs(30)) {
+            Ok(result) => result,
+            Err(error) => {
+                let _ = self.remove_pending(&id);
+                Err(format!("frontend View reply `{id}` failed: {error}"))
+            }
+        }
     }
 
     fn respond(
@@ -291,7 +314,9 @@ impl Runtime {
     fn new_with_stdio(cwd: PathBuf, preopens: Vec<FsPreopen>, isolated_stdio: bool) -> Result<Self> {
         let view_bridge = ViewBridge::new();
         Ok(Self {
-            inner: Arc::new(Mutex::new(RuntimeInner::new(
+            directory: Directory::default(),
+            root: cwd.clone(),
+            compiler: Arc::new(Mutex::new(RuntimeInner::new(
                 cwd,
                 preopens,
                 view_bridge.clone(),
@@ -307,7 +332,7 @@ impl Runtime {
 
     pub fn set_compiled_component_cache_dir(&self, path: PathBuf) -> Result<(), String> {
         let mut inner = self
-            .inner
+            .compiler
             .lock()
             .map_err(|_| "runtime lock poisoned".to_string())?;
         inner.compiled_component_cache_dir = path;
@@ -325,7 +350,7 @@ impl Runtime {
         .canonicalize()
         .map_err(|error| format!("failed to canonicalize component path: {error}"))?;
         let inner = self
-            .inner
+            .compiler
             .lock()
             .map_err(|_| "runtime lock poisoned".to_string())?;
         let cache_path =
@@ -338,7 +363,7 @@ impl Runtime {
 
     pub fn clear_compiled_component_cache(&self) -> Result<(), String> {
         let inner = self
-            .inner
+            .compiler
             .lock()
             .map_err(|_| "runtime lock poisoned".to_string())?;
         let directory = inner.compiled_component_cache_dir.join(compiled_component_cache_format_dir());
@@ -396,54 +421,84 @@ impl Runtime {
         paths: Vec<String>,
         reload: bool,
     ) -> Result<Vec<ComponentHandle>, String> {
-        let mut inner = self
-            .inner
-            .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        inner
-            .add_plugins(paths, reload)
-            .map_err(|error| error.to_string())
+        self.install_files(reload, |compiler| {
+            paths
+                .iter()
+                .map(|path| resolve_component_path(&compiler.root, &compiler.preopens, path))
+                .collect()
+        })
     }
 
     /// Load ordinary component bytes without writing the source file. The parent
     /// directory of `path` must exist and be covered by a filesystem preopen.
     pub fn load_from_bytes(&self, bytes: Vec<u8>, path: String) -> Result<ComponentHandle, String> {
-        let mut inner = self
-            .inner
+        let change = Scheduler::change(&self.directory)?;
+        let compiler = self.compiler.lock().unwrap();
+        if bytes.len() > 64 * 1024 * 1024 {
+            return Err("component exceeds 64 MiB limit".into());
+        }
+        let resolved = compiler
+            .byte_component_path(&path)
+            .map_err(|error| format!("{error:#}"))?;
+        let existing = self.directory.lock().unwrap().handle(&resolved);
+        if let Some(handle) = existing {
+            return Ok(handle);
+        }
+        // Downloaded bytes are untrusted WASM, never a serialized native cache.
+        let component = Component::from_binary(&compiler.engine, &bytes)
+            .map_err(|error| format!("{error:#}"))?;
+        let candidate = compiler.describe_component(component, path, resolved.clone());
+        change
+            .install(&compiler, vec![candidate], false)
+            .map_err(|error| format!("{error:#}"))?;
+        let handle = self
+            .directory
             .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        inner
-            .load_from_bytes(&bytes, &path)
-            .map_err(|error| format!("{error:#}"))
+            .unwrap()
+            .handle(&resolved)
+            .expect("installed bytes");
+        Ok(handle)
     }
 
     pub fn add_component_files(&self, paths: Vec<PathBuf>) -> Result<Vec<ComponentHandle>, String> {
-        let requests = paths
+        self.install_files(false, |_| {
+            paths
+                .into_iter()
+                .map(|path| Ok(path.canonicalize()?))
+                .collect()
+        })
+    }
+
+    fn install_files(
+        &self,
+        reload: bool,
+        resolve: impl FnOnce(&RuntimeInner) -> Result<Vec<PathBuf>>,
+    ) -> Result<Vec<ComponentHandle>, String> {
+        let change = Scheduler::change(&self.directory)?;
+        let compiler = self.compiler.lock().unwrap();
+        let requests = resolve(&compiler).map_err(|error| format!("{error:#}"))?;
+        let existing = self.directory.lock().unwrap().paths();
+        let mut paths: BTreeSet<_> = requests.iter().cloned().collect();
+        for path in existing {
+            if reload {
+                paths.insert(path);
+            } else {
+                paths.remove(&path);
+            }
+        }
+        let candidates = paths
             .into_iter()
-            .map(|path| {
-                let source = if path.is_absolute() {
-                    path
-                } else {
-                    std::env::current_dir()
-                        .map_err(|error| format!("failed to read current directory: {error}"))?
-                        .join(path)
-                };
-                source
-                    .canonicalize()
-                    .map_err(|error| format!("failed to canonicalize component path: {error}"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let display_paths = requests
+            .map(|resolved| compiler.component_from_file(resolved))
+            .collect::<Result<Vec<_>>>()
+            .map_err(|error| format!("{error:#}"))?;
+        change
+            .install(&compiler, candidates, reload)
+            .map_err(|error| format!("{error:#}"))?;
+        let state = self.directory.lock().unwrap();
+        Ok(requests
             .iter()
-            .map(|path| path.display().to_string())
-            .collect::<Vec<_>>();
-        let mut inner = self
-            .inner
-            .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        inner
-            .add_resolved_plugins(display_paths, requests)
-            .map_err(|error| error.to_string())
+            .map(|path| state.handle(path).expect("installed component"))
+            .collect())
     }
 
     pub fn invoke(
@@ -451,41 +506,23 @@ impl Runtime {
         target: &str,
         args: serde_json::Value,
     ) -> Result<serde_json::Value, String> {
-        let mut inner = self
-            .inner
-            .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        inner
-            .invoke(target, args)
-            .map_err(|error| error.to_string())
+        Scheduler::invoke(&self.directory, &self.root, target, args)
     }
 
     pub fn release_resource(&self, resource: serde_json::Value) -> Result<(), String> {
-        let mut inner = self
-            .inner
-            .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        inner
-            .release_resource(resource)
-            .map_err(|error| error.to_string())
+        Scheduler::release(&self.directory, resource)
     }
 
     pub fn diagnostics(&self) -> Result<serde_json::Value, String> {
-        let inner = self
-            .inner
+        let compiler = self
+            .compiler
+            .try_lock()
+            .map_err(|_| "plugin compiler is busy".to_string())?;
+        Ok(self
+            .directory
             .lock()
-            .map_err(|_| "runtime lock poisoned".to_string())?;
-        Ok(serde_json::json!({
-            "components": inner.components.values().map(|component| serde_json::json!({
-                "handle": component.handle,
-                "path": component.path,
-                "imports": component.imports,
-                "exports": component.exports,
-            })).collect::<Vec<_>>(),
-            "exports": inner.funcs.keys().cloned().collect::<Vec<_>>(),
-            "jsonResourceRefs": inner.store.data().json_resource_refs.len(),
-            "compiledComponentCacheDir": inner.compiled_component_cache_dir.display().to_string(),
-        }))
+            .unwrap()
+            .diagnostics(&compiler.compiled_component_cache_dir))
     }
 }
 
@@ -496,6 +533,32 @@ impl RuntimeInner {
         config.wasm_exceptions(true);
 
         let engine = Engine::new(&config)?;
+        Self::with_engine(cwd, preopens, view_bridge, isolated_stdio, engine, false)
+    }
+
+    fn empty_store(&self) -> Result<Self> {
+        #[cfg(test)]
+        let read_only = self.read_only;
+        #[cfg(not(test))]
+        let read_only = false;
+        Self::with_engine(
+            self.root.clone(),
+            self.preopens.clone(),
+            self.store.data().view_bridge.clone(),
+            self.isolated_stdio,
+            self.engine.clone(),
+            read_only,
+        )
+    }
+
+    fn with_engine(
+        cwd: PathBuf,
+        preopens: Vec<FsPreopen>,
+        view_bridge: ViewBridge,
+        isolated_stdio: bool,
+        engine: Engine,
+        read_only: bool,
+    ) -> Result<Self> {
         let mut linker = Linker::new(&engine);
 
         wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
@@ -516,8 +579,16 @@ impl RuntimeInner {
                 .preopened_dir(
                     &preopen.host_path,
                     &preopen.guest_path,
-                    DirPerms::all(),
-                    FilePerms::all(),
+                    if read_only {
+                        DirPerms::READ
+                    } else {
+                        DirPerms::all()
+                    },
+                    if read_only {
+                        FilePerms::READ
+                    } else {
+                        FilePerms::all()
+                    },
                 )
                 .map_err(|error| {
                     anyhow::anyhow!(
@@ -529,6 +600,7 @@ impl RuntimeInner {
         }
         let wasi_ctx = wasi_builder.build();
         let state = HostState {
+            route: None,
             wasi_ctx,
             http_ctx: WasiHttpCtx::new(),
             resource_table: ResourceTable::new(),
@@ -561,6 +633,8 @@ impl RuntimeInner {
             ]),
             compiled_component_cache_dir: default_compiled_component_cache_dir(&cwd),
             isolated_stdio,
+            #[cfg(test)]
+            read_only,
         })
     }
 
@@ -591,24 +665,7 @@ impl RuntimeInner {
         Ok(component)
     }
 
-    fn add_plugins(&mut self, paths: Vec<String>, reload: bool) -> Result<Vec<ComponentHandle>> {
-        if reload {
-            return self.reload_plugins(paths);
-        }
-
-        let requests = paths
-            .iter()
-            .map(|path| resolve_component_path(&self.root, &self.preopens, path))
-            .collect::<Result<Vec<_>>>()?;
-
-        self.add_resolved_plugins(paths, requests)
-    }
-
-    fn load_from_bytes(&mut self, bytes: &[u8], path: &str) -> Result<ComponentHandle> {
-        anyhow::ensure!(
-            bytes.len() <= 64 * 1024 * 1024,
-            "component exceeds 64 MiB limit"
-        );
+    fn byte_component_path(&self, path: &str) -> Result<PathBuf> {
         let candidate = host_path(&self.root, &self.preopens, path)?;
         let resolved_path = if candidate.exists() {
             candidate.canonicalize()?
@@ -626,188 +683,27 @@ impl RuntimeInner {
             "component path is not under a configured filesystem preopen: {}",
             resolved_path.display()
         );
-        if let Some(existing) = self.component_by_path(&resolved_path) {
-            return Ok(existing);
-        }
-        // Downloaded bytes are untrusted WASM, never a serialized native cache.
-        let component = Component::from_binary(&self.engine, bytes)?;
-        let candidate = ComponentCandidate {
-            path: path.to_string(),
+        Ok(resolved_path)
+    }
+
+    fn component_from_file(&self, resolved_path: PathBuf) -> Result<ComponentCandidate> {
+        let component = self.load_component(&resolved_path)
+            .with_context(|| format!("loading component {}", resolved_path.display()))?;
+        Ok(self.describe_component(
+            component,
+            resolved_path.display().to_string(),
+            resolved_path))
+    }
+
+    fn describe_component(
+        &self, component: Component, path: String, resolved_path: PathBuf
+    ) -> ComponentCandidate {
+        ComponentCandidate {
+            path,
             resolved_path,
             imports: component_imports(&self.engine, &component),
             exports: component_exports(&self.engine, &component),
             component,
-        };
-        self.instantiate_candidate(&candidate)
-    }
-
-    fn add_resolved_plugins(
-        &mut self,
-        paths: Vec<String>,
-        requests: Vec<PathBuf>,
-    ) -> Result<Vec<ComponentHandle>> {
-        let mut candidates = Vec::new();
-        let mut candidate_by_path = BTreeMap::new();
-        for (path, resolved_path) in paths.iter().zip(requests.iter()) {
-            if self.component_by_path(resolved_path).is_some() {
-                continue;
-            }
-            if candidate_by_path.contains_key(resolved_path) {
-                continue;
-            }
-
-            let component = self.load_component(resolved_path).map_err(|error| {
-                anyhow::anyhow!(
-                    "loading component {path} from {}: {error}",
-                    resolved_path.display()
-                )
-            })?;
-            let imports = component_imports(&self.engine, &component);
-            let exports = component_exports(&self.engine, &component);
-            let index = candidates.len();
-            candidate_by_path.insert(resolved_path.clone(), index);
-            candidates.push(ComponentCandidate {
-                path: path.clone(),
-                resolved_path: resolved_path.clone(),
-                component,
-                imports,
-                exports,
-            });
-        }
-
-        let order = self.topo_sort_candidates(&candidates)?;
-        let mut loaded_by_path = BTreeMap::new();
-        for index in order {
-            let handle = self.instantiate_candidate(&candidates[index])?;
-            loaded_by_path.insert(candidates[index].resolved_path.clone(), handle);
-        }
-
-        requests
-            .iter()
-            .map(|path| {
-                if let Some(existing) = self.component_by_path(path) {
-                    return Ok(existing);
-                }
-                loaded_by_path
-                    .get(path)
-                    .cloned()
-                    .with_context(|| format!("component handle not found for {}", path.display()))
-            })
-            .collect()
-    }
-
-    fn reload_plugins(&mut self, paths: Vec<String>) -> Result<Vec<ComponentHandle>> {
-        let root = self.root.clone();
-        let reload_paths = paths
-            .iter()
-            .map(|path| resolve_component_path(&root, &self.preopens, path))
-            .collect::<Result<Vec<_>>>()?;
-
-        let mut all_paths = self
-            .components
-            .values()
-            .map(|component| PathBuf::from(&component.path))
-            .collect::<Vec<_>>();
-        for reload_path in &reload_paths {
-            if !all_paths.iter().any(|path| path == reload_path) {
-                all_paths.push(reload_path.clone());
-            }
-        }
-
-        let view_bridge = self.store.data().view_bridge.clone();
-        let compiled_component_cache_dir = self.compiled_component_cache_dir.clone();
-        let mut rebuilt = RuntimeInner::new(root, self.preopens.clone(), view_bridge, self.isolated_stdio)?;
-        rebuilt.compiled_component_cache_dir = compiled_component_cache_dir;
-        let handles = rebuilt.add_plugins(
-            all_paths
-                .iter()
-                .map(|path| path.display().to_string())
-                .collect::<Vec<_>>(),
-            false,
-        )?;
-        let requested = reload_paths
-            .iter()
-            .map(|path| {
-                handles
-                    .iter()
-                    .find(|handle| PathBuf::from(&handle.path) == *path)
-                    .cloned()
-                    .with_context(|| {
-                        format!("reloaded component handle not found for {}", path.display())
-                    })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        *self = rebuilt;
-        Ok(requested)
-    }
-
-    fn component_by_path(&self, path: &Path) -> Option<ComponentHandle> {
-        self.components
-            .values()
-            .find(|component| PathBuf::from(&component.path) == path)
-            .map(|component| ComponentHandle {
-                handle: component.handle.clone(),
-                path: component.path.clone(),
-                imports: component.imports.clone(),
-                exports: component.exports.clone(),
-            })
-    }
-
-    fn topo_sort_candidates(&self, candidates: &[ComponentCandidate]) -> Result<Vec<usize>> {
-        let providers = self.provider_table(candidates)?;
-        let mut deps = BTreeMap::<usize, BTreeSet<usize>>::new();
-
-        for (index, candidate) in candidates.iter().enumerate() {
-            let mut candidate_deps = BTreeSet::new();
-            for import in &candidate.imports {
-                if is_wasi_interface(import) {
-                    continue;
-                }
-                let Some(provider) = resolve_provider(&providers, import)? else {
-                    bail!(
-                        "missing provider for import `{import}` required by `{}`",
-                        candidate.resolved_path.display()
-                    );
-                };
-                if let ProviderSource::NewComponent {
-                    index: provider_index,
-                    ..
-                } = provider.source
-                {
-                    if provider_index != index {
-                        candidate_deps.insert(provider_index);
-                    }
-                }
-            }
-            deps.insert(index, candidate_deps);
-        }
-
-        let mut done = BTreeSet::new();
-        let mut order = Vec::new();
-        loop {
-            let mut progressed = false;
-            for index in 0..candidates.len() {
-                if done.contains(&index) {
-                    continue;
-                }
-                if deps[&index].iter().all(|dep| done.contains(dep)) {
-                    done.insert(index);
-                    order.push(index);
-                    progressed = true;
-                }
-            }
-
-            if order.len() == candidates.len() {
-                return Ok(order);
-            }
-            if !progressed {
-                let remaining = (0..candidates.len())
-                    .filter(|index| !done.contains(index))
-                    .map(|index| format!("  {}", candidates[index].resolved_path.display()))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                bail!("cycle in component imports/exports:\n{remaining}");
-            }
         }
     }
 
@@ -885,7 +781,14 @@ impl RuntimeInner {
 
         self.expose_instance_exports(&candidate.component, &instance)?;
 
-        let handle = format!("component:{}", self.next_component);
+        let owner = self
+            .store
+            .data()
+            .route
+            .as_ref()
+            .expect("plugin Store owner")
+            .0;
+        let handle = format!("component:{owner}:{}", self.next_component);
         self.next_component += 1;
 
         let path = candidate.resolved_path.display().to_string();
@@ -968,8 +871,7 @@ impl RuntimeInner {
 
         let mut register_resource = |resource: ResourceAny, resource_type_name: &str| {
             let state = self.store.data_mut();
-            let id = format!("res_{:016x}", state.next_json_resource);
-            state.next_json_resource += 1;
+            let id = state.next_resource_id();
             state.json_resource_refs.insert(
                 id.clone(),
                 JsonResourceRef {
@@ -1020,36 +922,7 @@ impl RuntimeInner {
     }
 
     fn resolve_func(&self, target: &str) -> Result<(&String, &ExportedFunc)> {
-        if let Some((key, func)) = self.funcs.get_key_value(target) {
-            return Ok((key, func));
-        }
-
-        let Some((interface, function)) = target.split_once("::") else {
-            bail!("target must be `package/interface::function`");
-        };
-        let requested = parse_invocation_interface_id(interface)?;
-
-        let mut matches = self
-            .funcs
-            .iter()
-            .filter(|(key, _)| invocation_key_matches_request(key, &requested, function))
-            .collect::<Vec<_>>();
-
-        match matches.len() {
-            0 => bail!("no exported function found for `{target}`"),
-            1 => {
-                let (key, func) = matches.swap_remove(0);
-                Ok((key, func))
-            }
-            _ => {
-                let options = matches
-                    .into_iter()
-                    .map(|(key, _)| format!("  {key}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                bail!("ambiguous invocation `{target}` matches:\n{options}");
-            }
-        }
+        resolve_invocation_func(&self.funcs, target)
     }
 
     fn ensure_gams_runtime_import(&mut self, interface_name: &str) -> Result<()> {
@@ -1253,9 +1126,21 @@ fn add_gams_runtime_import(linker: &mut Linker<HostState>, interface_name: &str)
                     )))
                 }
             };
-            match call_runtime_target(&mut _cx, &target, &args) {
+            let routing = _cx.data().route.as_ref().and_then(|(owner, directory)| {
+                directory.upgrade().map(|directory| (*owner, directory))
+            });
+            let result = match &routing {
+                Some((origin, directory)) => {
+                    Scheduler::route_call(directory, *origin, &mut _cx, &target, &args)
+                }
+                None => call_runtime_target(&mut _cx, &target, &args),
+            };
+            match result {
                 Ok(Some(value)) => results[0] = Val::Result(Ok(Some(Box::new(Val::String(value))))),
                 Ok(None) => {
+                    let _waiting = routing
+                        .as_ref()
+                        .map(|(owner, directory)| Scheduler::begin_view_wait(directory, *owner));
                     let bridge = _cx.data().view_bridge.clone();
                     match bridge.call_view(target, args) {
                         Ok(value) => {
@@ -1409,8 +1294,7 @@ fn call_runtime_target(
         .map_err(|error| RuntimeCallError::Trap(format!("calling {target}: {error}")))?;
     let mut register_resource = |resource: ResourceAny, resource_type_name: &str| {
         let state = cx.data_mut();
-        let id = format!("res_{:016x}", state.next_json_resource);
-        state.next_json_resource += 1;
+        let id = state.next_resource_id();
         state.json_resource_refs.insert(
             id.clone(),
             JsonResourceRef {
@@ -1865,6 +1749,23 @@ fn component_imports(engine: &Engine, component: &Component) -> Vec<String> {
         .collect()
 }
 
+fn component_function_keys(engine: &Engine, component: &Component) -> Vec<String> {
+    let mut keys = Vec::new();
+    for (name, item) in component.component_type().exports(engine) {
+        match item {
+            ComponentItem::ComponentFunc(_) => keys.push(name.into()),
+            ComponentItem::ComponentInstance(interface) => {
+                keys.extend(interface.exports(engine).filter_map(|(func, item)| {
+                    matches!(item, ComponentItem::ComponentFunc(_))
+                        .then(|| format!("{name}::{func}"))
+                }));
+            }
+            _ => {}
+        }
+    }
+    keys
+}
+
 fn component_exports(engine: &Engine, component: &Component) -> Vec<String> {
     component
         .component_type()
@@ -1895,10 +1796,45 @@ fn invocation_key_matches_request(
     requested.matches_provider(&candidate)
 }
 
-fn resolve_runtime_call_func<'a>(
-    funcs: &'a BTreeMap<String, ExportedFunc>,
+fn resolve_invocation_func<'a, T>(
+    funcs: &'a BTreeMap<String, T>,
     target: &str,
-) -> Result<Option<(&'a String, &'a ExportedFunc)>> {
+) -> Result<(&'a String, &'a T)> {
+    if let Some((key, func)) = funcs.get_key_value(target) {
+        return Ok((key, func));
+    }
+
+    let Some((interface, function)) = target.split_once("::") else {
+        bail!("target must be `package/interface::function`");
+    };
+    let requested = parse_invocation_interface_id(interface)?;
+
+    let mut matches = funcs
+        .iter()
+        .filter(|(key, _)| invocation_key_matches_request(key, &requested, function))
+        .collect::<Vec<_>>();
+
+    match matches.len() {
+        0 => bail!("no exported function found for `{target}`"),
+        1 => {
+            let (key, func) = matches.swap_remove(0);
+            Ok((key, func))
+        }
+        _ => {
+            let options = matches
+                .into_iter()
+                .map(|(key, _)| format!("  {key}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            bail!("ambiguous invocation `{target}` matches:\n{options}");
+        }
+    }
+}
+
+fn resolve_runtime_call_func<'a, T>(
+    funcs: &'a BTreeMap<String, T>,
+    target: &str,
+) -> Result<Option<(&'a String, &'a T)>> {
     if let Some((key, func)) = funcs.get_key_value(target) {
         return Ok(Some((key, func)));
     }
@@ -2196,16 +2132,7 @@ mod tests {
         let runtime = Runtime::new_at(root.to_path_buf(), preopens.clone()).unwrap();
         // Restrict the supplied Project, including directory-symlink targets, to
         // read-only access without changing the production preopen contract.
-        let mut wasi = wasmtime_wasi::WasiCtx::builder();
-        for preopen in preopens {
-            wasi.preopened_dir(
-                preopen.host_path,
-                preopen.guest_path,
-                if read_only { wasmtime_wasi::DirPerms::READ } else { wasmtime_wasi::DirPerms::all() },
-                if read_only { wasmtime_wasi::FilePerms::READ } else { wasmtime_wasi::FilePerms::all() },
-            ).unwrap();
-        }
-        runtime.inner.lock().unwrap().store.data_mut().wasi_ctx = wasi.build();
+        runtime.compiler.lock().unwrap().read_only = read_only;
         let cache = tempfile::tempdir().unwrap();
         runtime.set_compiled_component_cache_dir(cache.path().to_path_buf()).unwrap();
         runtime.add_plugins(vec![component.display().to_string()], false).unwrap();
@@ -2380,7 +2307,7 @@ mod tests {
         use wasmtime_wasi::p2::bindings::{cli::stdin, sync::io::streams::HostInputStream};
         let root = tempfile::tempdir().unwrap();
         let runtime = Runtime::new_for_repl(root.path().into(), vec![]).unwrap();
-        let mut inner = runtime.inner.lock().unwrap();
+        let mut inner = runtime.compiler.lock().unwrap();
         let state = inner.store.data_mut();
         let stream = stdin::Host::get_stdin(&mut state.cli()).unwrap();
         let result = HostInputStream::read(&mut state.resource_table, stream, 1);

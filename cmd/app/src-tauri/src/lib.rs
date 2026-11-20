@@ -145,8 +145,7 @@ async fn runtime_release_resource(
     resource: serde_json::Value,
     runtime: tauri::State<'_, runtime::Runtime>,
 ) -> Result<(), String> {
-    // Wasmtime calls and resource destruction share a mutex. Never wait for
-    // an in-flight component call on the native event loop.
+    // Resource release runs on the owning Store worker.
     let runtime = runtime.inner().clone();
     tauri::async_runtime::spawn_blocking(move || runtime.release_resource(resource))
         .await
@@ -169,10 +168,13 @@ fn runtime_call_view_response(
 }
 
 #[tauri::command]
-fn runtime_clear_compiled_component_cache(
+async fn runtime_clear_compiled_component_cache(
     runtime: tauri::State<'_, runtime::Runtime>,
 ) -> Result<(), String> {
-    runtime.clear_compiled_component_cache()
+    let runtime = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || runtime.clear_compiled_component_cache())
+        .await
+        .map_err(|error| format!("plugin cache clear task failed: {error}"))?
 }
 
 fn needs_project_picker(gui: bool, cwd: &Path, config_file: &str) -> bool {

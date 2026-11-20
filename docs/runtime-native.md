@@ -69,5 +69,17 @@ it only when you trust those processes. For remote access, use
 
 Disconnecting a terminal or agent leaves your desktop workspace open.
 
+## Concurrent plugin calls
+
+Independent plugin groups can run at the same time. Plugins linked by direct
+component imports run in the same group and share its execution order. A tool
+waiting for a View reply cannot be called again through that same group; the
+Host rejects the recursive call rather than waiting. Reply to View callbacks
+within 30 seconds. A timed-out reply does not undo operations that already ran.
+
+Wait for in-flight calls before loading or reloading plugins. If a new plugin
+links two already loaded groups, reload them together. Reloading invalidates
+existing plugin resource references.
+
 See [[runtime|runtime modes]], [[host-runtime|Project configuration]] and
 [[runtime-terminal|terminal access]].
