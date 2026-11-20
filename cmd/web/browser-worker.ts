@@ -2,11 +2,13 @@ import { DirectOpfsStore } from './opfs-store.ts';
 import { directFilesystemAdapter } from './opfs-filesystem.ts';
 import { BrowserProject } from './browser-project';
 import { BrowserComponents } from './browser-components';
+import { openShowcase } from './browser-showcase.ts';
 import type { BrowserOptions } from './browser-options';
 
 let store: DirectOpfsStore | undefined;
 let project: BrowserProject | undefined;
 let components: BrowserComponents | undefined;
+let pendingShowcase: Awaited<ReturnType<typeof openShowcase>>['pending'];
 let stopped = false;
 let ready = false;
 let closing = false;
@@ -99,18 +101,27 @@ async function handle(data: Request) {
     if (command === 'runtime_shutdown') {
       await Promise.all(downloads);
       if (components) await components.close();
+      if (pendingShowcase) await pendingShowcase.discard();
       result = {closed:true};
     } else if (command === 'runtime_project') {
       if (project) throw new Error('Browser Host Project is already initialized.');
       const options = args.options as BrowserOptions;
       const direct = store = await DirectOpfsStore.open();
-      await store.mkdir(options.cwd);
-      await store.mkdir(options.modulesDir);
-      await store.mkdir(options.pluginCacheDir);
-      project = new BrowserProject(store, options);
-      project.onProgress = snapshot => postMessage({ event:'resolution-progress', id:activeId, snapshot });
-      result = await project.load();
-      components = new BrowserComponents(store, options, {filesystem: async (cwd, modules) => {
+      const onProgress: NonNullable<BrowserProject['onProgress']> = snapshot => postMessage({ event:'resolution-progress', id:activeId, snapshot });
+      if ('showcase' in options) {
+        const opened = await openShowcase(store, options.showcase, options.corsProxy, onProgress);
+        project = opened.project;
+        pendingShowcase = opened.pending;
+        result = opened.result;
+      } else {
+        await store.mkdir(options.cwd);
+        await store.mkdir(options.modulesDir);
+        await store.mkdir(options.pluginCacheDir);
+        project = new BrowserProject(store, options);
+        project.onProgress = onProgress;
+        result = await project.load();
+      }
+      components = new BrowserComponents(store, project.options, {filesystem: async (cwd, modules) => {
         const {createFilesystem} = await import('@bytecodealliance/preview2-shim/filesystem');
         return createFilesystem({adapter:directFilesystemAdapter(direct), preopens:{'.':cwd, '/project':cwd, 'gams_modules':modules}});
       }});
@@ -118,6 +129,9 @@ async function handle(data: Request) {
     } else {
       if (!project || !store || !components) throw new Error('Browser Host Project is not ready.');
       switch (command) {
+        case 'runtime_commit_showcase':
+          if (!pendingShowcase) throw new Error('No fresh showcase to commit.');
+          await pendingShowcase.commit(); pendingShowcase = undefined; result = null; break;
         case 'runtime_add_plugins': result = await components.add(args.paths, args.reload); break;
         case 'runtime_load_from_bytes': result = await components.loadFromBytes(Uint8Array.from(args.bytes), args.path); break;
         case 'runtime_invoke': result = await components.invoke(args.target, args.args); break;

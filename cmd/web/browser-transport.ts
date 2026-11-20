@@ -113,6 +113,7 @@ class BrowserSession {
 }
 let session: BrowserSession | undefined;
 let stopped = false;
+let freshShowcase: string | undefined;
 let listener: ((event:unknown)=>void | Promise<void>) | undefined;
 let viewReady = false;
 
@@ -126,6 +127,7 @@ export async function invokeCommand(command:string,args:any = {}) {
   if (command === 'runtime_project') {
     if (session) throw new Error('Browser Host already has a Project session.');
     const options = getStartupOptions();
+    if ('showcase' in options && options.showcase.zip) freshShowcase = options.showcase.id;
     session = new BrowserSession();
     return await session.request(command,{...args,options});
   }
@@ -141,6 +143,15 @@ export async function listenEvent(name:string,callback:(event:unknown)=>void | P
 export function createProgressChannel(onProgress:(snapshot:unknown)=>void) {
   if (typeof onProgress !== 'function') throw new Error('Progress callback must be a function.');
   return {onmessage:onProgress};
+}
+export async function finishShowcaseLaunch() {
+  if (freshShowcase === undefined) return;
+  if (!session) throw new Error('No browser Host session to commit.');
+  await session.request('runtime_commit_showcase');
+  const url = new URL(location.href);
+  url.searchParams.set('showcase', freshShowcase);
+  history.replaceState(history.state, '', url);
+  freshShowcase = undefined;
 }
 export function hasBrowserSession() {return session !== undefined;}
 export async function closeBrowserSession() {

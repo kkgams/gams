@@ -1,5 +1,5 @@
 import { normalizePath } from './browser-path.ts';
-import { validateCorsProxy } from './browser-options.ts';
+import { validateCorsProxy, type ProjectOptions } from './browser-options.ts';
 
 export interface Store {
   read(path: string): Promise<Uint8Array>;
@@ -12,7 +12,6 @@ export interface Store {
   publishResource?(from: string, to: string): Promise<void>;
   flush(): Promise<void>;
 }
-export interface ProjectOptions { cwd: string; config: string; modulesDir: string; pluginCacheDir: string; source?: string; corsProxy?: string }
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type ObjectJson = { [key: string]: Json };
 export interface ZipMember {
@@ -20,7 +19,7 @@ export interface ZipMember {
   encrypted?: boolean; symlink?: boolean; mode?: number; crc32?: number;
 }
 type DownloadProgress = { downloaded: number; total: number | null };
-type Dependencies = {
+export type ProjectDependencies = {
   download?: (url: string, progress?: (value: DownloadProgress) => void) => Promise<Uint8Array>;
   unzip?: (bytes: Uint8Array) => Promise<ZipMember[]>;
 };
@@ -128,12 +127,12 @@ export class BrowserProject {
   private original?: ObjectJson;
   private resolved?: ObjectJson;
   private source?: URL;
-  private deps: Dependencies;
+  private deps: ProjectDependencies;
   private pending = new Map<string, Promise<string>>();
   private resolvingFiles = 0;
   private fileSources = new Map<string, Json>();
   private snapshot: ResolutionProgress = { operationId: 'browser-project', status: 'resolving', discovered: 0, completed: 0, resources: [], error: null };
-  constructor(store: Store, options: ProjectOptions, dependencies: Dependencies = {}) {
+  constructor(store: Store, options: ProjectOptions, dependencies: ProjectDependencies = {}) {
     this.store = store; this.deps = dependencies;
     for (const key of ['cwd', 'modulesDir', 'pluginCacheDir'] as const) insist(options[key].startsWith('/'), `${key} must be absolute`);
     insist(typeof options.config === 'string' && options.config.length > 0 && !/[\/\\:\x00]/.test(options.config) && options.config !== '.' && options.config !== '..', 'config must be a filename');
@@ -390,6 +389,35 @@ export class BrowserProject {
       if (typeof source === 'string' && source && !/^(?:[a-z][a-z0-9+.-]*:|\/)/i.test(source)) {
         await this.materialize(this.location(source, {kind:'local',path:this.options.cwd}));
       }
+    }
+  }
+  async importShowcaseArchive(url: string): Promise<void> {
+    const event = this.event(url, null);
+    try {
+      event.phase = 'downloading'; event.unit = 'bytes'; this.emit();
+      const bytes = await this.download(url, ({downloaded, total}) => {
+        event.completed = downloaded; event.total = total; this.emit();
+      });
+      const members = await (this.deps.unzip ?? unzipBrowser)(bytes);
+      validateMembers(members);
+      insist(members.some(member => member.name === 'gams.json' && !member.directory && member.bytes), 'showcase ZIP requires gams.json at its root');
+      for (const member of members) {
+        const name = zipName(member.name, member.directory);
+        insist(name.toLowerCase().split('/')[0] !== 'gams_modules', 'showcase ZIP must not contain the Unit cache');
+        insist(member.directory || member.bytes, 'missing showcase ZIP member bytes');
+      }
+      event.phase = 'extracting'; event.unit = 'entries'; event.completed = 0; event.total = members.length; this.emit();
+      for (const member of members) {
+        const path = this.options.cwd + '/' + zipName(member.name, member.directory);
+        if (member.directory) await this.mkdir(path);
+        else { await this.mkdir(parent(path)); await this.store.write(path, member.bytes!); }
+        event.completed++; this.emit();
+      }
+      event.phase = 'ready'; this.snapshot.completed++; this.emit();
+    } catch (error) {
+      event.phase = 'failed'; event.error = String(error);
+      this.snapshot.status = 'failed'; this.snapshot.error = String(error); this.emit();
+      throw error;
     }
   }
   async load(): Promise<{ config: ObjectJson; configFile: string; modulesDir: string }> {

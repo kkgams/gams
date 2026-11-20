@@ -25,6 +25,20 @@ The selected Project opens automatically. The source is an import location: miss
 
 On subsequent visits, omit `source` to reopen the persisted Project. Expand **Browser Host** for **Save Project**, **Checkpoint and close**, **Force stop**, and **Reload**. Close waits for in-flight downloads, guest shutdown and OPFS close; a failed/timed-out close retains the worker and permits retry. Force stop can lose/partially persist changes. Reload is required to reopen a stopped session. Finish operations before closing/reloading; page unload cannot await persistence.
 
+## Showcase launch
+
+Set `showcase` to the URL-encoded pinned `kkgams/showcases` release ZIP, for
+example `https://github.com/kkgams/showcases/releases/download/v0.1.0/tilemap.zip`.
+The archive must contain `gams.json` at its root and may include Project files,
+not a `gams_modules` cache. The configured relay downloads GitHub Release assets.
+
+A fresh link opens a new copy of that demo. A successful startup replaces the
+previous copy and changes the address to `?showcase=tilemap`, which reloads the
+saved demo without reimporting the archive. Ordinary Projects are not replaced.
+For local development on loopback, copy the archive to
+`build.nosync/web/showcases/v0.1.0/tilemap.zip` after building and open
+`/?showcase=/showcases/v0.1.0/tilemap.zip`.
+
 ## Optional download relay
 
 Start the independent `server.cors-proxy` checkout locally:
@@ -59,6 +73,7 @@ Names match applicable Native flags; there are no process environment variables 
 | `config` | Filename within that CWD; default `gams.json`. Paths/empty names fail. |
 | `modules-dir` | Absolute virtual Unit-store path; default `<cwd>/gams_modules`. Can be outside CWD for shared storage. |
 | `plugin-cache-dir` | Jco artifact-cache path; default `/cache/jco`. Relative values resolve from CWD. Must be separate from the modules store and must not contain the Project root. |
+| `showcase` | Pinned showcase ZIP URL (fresh copy) or saved demo ID (reopen). Cannot be combined with Project path, source or cache overrides. |
 | `source` | HTTP(S) directory URL to import missing Project files. Relative URLs resolve against the page URL. Implicit default startup uses same-origin `/browser-default/`; explicit Project/config choices have no automatic source. |
 | `fs` | `opfs` is the default and only supported value. |
 

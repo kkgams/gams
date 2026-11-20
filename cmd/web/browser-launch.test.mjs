@@ -28,7 +28,7 @@ async function launch({backendError,appError,ready=true,closeError,session=true}
   const widgets=[element(),element()];
   const document={createElement:element,getElementById:id=>elements.get(id)??null,querySelectorAll:()=>widgets,
     body:{appendChild(child){elements.set(child.id,child);}}};
-  const platform={hasBrowserSession:()=>active,async closeBrowserSession(){closed++;if(closeError)throw closeError;active=false;},forceStopBrowserSession(){forced++;active=false;}};
+  const platform={async finishShowcaseLaunch(){},hasBrowserSession:()=>active,async closeBrowserSession(){closed++;if(closeError)throw closeError;active=false;},forceStopBrowserSession(){forced++;active=false;}};
   const loadModule=async name=>{imported.push(name);if(name==='/browser-transport.js'){if(backendError)throw backendError;return platform;}if(appError)throw appError;return {};};
   const createStartupProgress=(_document,reload)=>{const screen={reload,fail(error){this.error=error;}};screens.push(screen);return screen;};
   await run(document,loadModule,createStartupProgress,ready?{runtime:{}}:{},{reload(){reloaded++;}},{error(...args){errors.push(args);}});

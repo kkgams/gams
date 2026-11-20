@@ -468,3 +468,17 @@ test('graceful close still permits pending callback data operations and its resp
   const nested=h.api.invokeCommand('runtime_resolve_file',{source:'file'});assert.equal(h.worker().messages.at(-1).callbackId,'closing');h.worker().reply({result:'file'});await nested;
   gate.resolve();await flushCallbacks();h.worker().reply({result:null});await flushCallbacks();h.worker().emit({id:closeId,result:{closed:true}});await closing;
 });
+
+test('a successful fresh showcase commit rewrites the URL for ordinary reload', async t => {
+  const h = await transport(t, 'https://gams.test/app.html?showcase=https%3A%2F%2Fgithub.com%2Fkkgams%2Fshowcases%2Freleases%2Fdownload%2Fv0.1.0%2Ftilemap.zip');
+  const original = Object.getOwnPropertyDescriptor(globalThis,'history');
+  const changes=[];
+  Object.defineProperty(globalThis,'history',{configurable:true,value:{state:null,replaceState(_state,_title,url){changes.push(url.href);}}});
+  t.after(()=>{if(original) Object.defineProperty(globalThis,'history',original); else delete globalThis.history;});
+  await h.open();
+  const finishing=h.api.finishShowcaseLaunch();
+  assert.equal(h.worker().messages.at(-1).command,'runtime_commit_showcase');
+  assert.deepEqual(changes,[]);
+  h.worker().reply({result:null}); await finishing;
+  assert.deepEqual(changes,['https://gams.test/app.html?showcase=tilemap']);
+});

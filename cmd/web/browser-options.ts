@@ -4,13 +4,33 @@ export interface BrowserEnvironment {
   corsProxy?: string | null;
 }
 
-export interface BrowserOptions {
+export const showcaseRoot = '/.gams-showcases';
+export type Showcase = { id: string; zip?: string };
+
+export interface ProjectOptions {
   cwd: string;
   config: string;
   modulesDir: string;
   pluginCacheDir: string;
   source?: string;
   corsProxy?: string;
+}
+
+export type BrowserOptions = ProjectOptions | { showcase: Showcase; corsProxy?: string };
+
+const showcaseId = '[a-z][a-z0-9]*(?:-[a-z0-9]+)*';
+const releaseTag = 'v[0-9]+\\.[0-9]+\\.[0-9]+';
+const releaseZip = new RegExp(`^https://github\\.com/kkgams/showcases/releases/download/${releaseTag}/(${showcaseId})\\.zip$`);
+const localZip = new RegExp(`^/showcases/${releaseTag}/(${showcaseId})\\.zip$`);
+
+function parseShowcase(value: string, page: URL): Showcase {
+  const valid = !/[\x00-\x20]/.test(value);
+  if (valid && value.length <= 64 && new RegExp(`^${showcaseId}$`).test(value)) return {id:value};
+  const release = valid && releaseZip.exec(value);
+  const local = valid && ['localhost', '127.0.0.1', '[::1]'].includes(page.hostname) && localZip.exec(value);
+  if (release && release[1].length <= 64) return {id:release[1], zip:value};
+  if (local && local[1].length <= 64) return {id:local[1], zip:new URL(value,page).href};
+  throw new Error('Showcase must be a saved demo ID or a pinned kkgams/showcases release ZIP.');
 }
 
 export function validateCorsProxy(value: unknown): string | undefined {
@@ -46,7 +66,7 @@ export function virtualPath(value: string, base = '/'): string {
 export function parseBrowserOptions(url: string, environment: BrowserEnvironment = {}): BrowserOptions {
   const corsProxy = validateCorsProxy(environment.corsProxy);
   const page = new URL(url);
-  const allowed = new Set(['project-dir', 'cwd', 'config', 'modules-dir', 'plugin-cache-dir', 'source', 'fs']);
+  const allowed = new Set(['project-dir', 'cwd', 'config', 'modules-dir', 'plugin-cache-dir', 'source', 'fs', 'showcase']);
   for (const key of page.searchParams.keys()) {
     if (!allowed.has(key)) throw new Error(`Unsupported browser startup setting: ${key}`);
     if (page.searchParams.getAll(key).length !== 1) throw new Error(`Duplicate browser startup setting: ${key}`);
@@ -55,6 +75,13 @@ export function parseBrowserOptions(url: string, environment: BrowserEnvironment
   const read = (key: string) => page.searchParams.get(key) ?? undefined;
   if (read('project-dir') && read('cwd')) throw new Error('Use project-dir or cwd, not both.');
   if (read('fs') !== undefined && read('fs') !== 'opfs') throw new Error('Only fs=opfs is supported.');
+  const showcase = read('showcase');
+  if (showcase !== undefined) {
+    if (['project-dir','cwd','config','modules-dir','plugin-cache-dir','source'].some(key => page.searchParams.has(key))) {
+      throw new Error('Showcase cannot be combined with Project path or source settings.');
+    }
+    return {showcase:parseShowcase(showcase,page), ...(corsProxy ? {corsProxy} : {})};
+  }
   const cwd = virtualPath(read('project-dir') ?? read('cwd') ?? '/projects/default');
   const config = read('config') ?? 'gams.json';
   if (config === '.' || config === '..' || /[/\\\0:]/.test(config)) {
@@ -64,6 +91,9 @@ export function parseBrowserOptions(url: string, environment: BrowserEnvironment
   if (modules !== undefined && !modules.startsWith('/')) throw new Error('modules-dir must be an absolute browser filesystem path.');
   const modulesDir = virtualPath(modules ?? `${cwd}/gams_modules`);
   const pluginCacheDir = virtualPath(read('plugin-cache-dir') ?? '/cache/jco', cwd);
+  if ([cwd, modulesDir, pluginCacheDir].some(path => path === '/' || path === showcaseRoot || path.startsWith(showcaseRoot + '/'))) {
+    throw new Error('Project and cache paths cannot expose reserved showcase storage.');
+  }
   // Keep Host-owned caches outside the visible Project or as its own directory,
   // not equal to the Project root where cache clearing would remove user data.
   if (pluginCacheDir === cwd || cwd.startsWith(pluginCacheDir + '/') || pluginCacheDir === '/' || modulesDir === cwd || modulesDir === '/') {

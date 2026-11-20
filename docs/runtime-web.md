@@ -15,6 +15,13 @@ is required.
 3. Edit content through the Project's Views and tools.
 4. Save your changes and use **Browser Host → Checkpoint and close** before leaving.
 
+## Open a showcase
+
+A **Launch fresh** showcase link imports the demo ZIP into a separate browser
+Project. Once the demo opens, reloading keeps your edits. Opening the fresh link
+again resets that demo, without changing your other Projects. Export anything
+you want to keep before resetting.
+
 ## Differences from Native
 
 Web runs the shared interface and supported WASM plugins, but not every Native workflow is available. It does not expose shell or process execution, native IPC, or unrestricted OS filesystem access. Open the Project in [[runtime-native|Native]] when a workflow needs those facilities.

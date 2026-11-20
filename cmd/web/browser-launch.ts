@@ -44,6 +44,7 @@ try {
   platform = await import('/browser-transport.js');
   close.disabled=false;force.disabled=false;
   await import('/app.js');
+  if (globalThis.runtime) await platform.finishShowcaseLaunch();
   state.textContent=globalThis.runtime ? 'Project ready. Single-instance OPFS session.' : 'Project startup failed; see the startup screen.';
   if (!globalThis.runtime) controls.open=true;
 } catch(error) {

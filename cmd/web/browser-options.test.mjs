@@ -51,3 +51,23 @@ test('CORS proxy rejects bad types, relative URLs, credentials, queries, fragmen
     assert.throws(() => parseBrowserOptions(page, {corsProxy}), /corsProxy/, String(corsProxy));
   }
 });
+
+const zip = 'https://github.com/kkgams/showcases/releases/download/v0.1.0/tilemap.zip';
+const fresh = '?showcase=' + encodeURIComponent(zip);
+test('showcase selects a pinned curated ZIP or reopens a saved demo', () => {
+  assert.deepEqual(parseBrowserOptions(page+fresh), {showcase:{id:'tilemap',zip}});
+  assert.deepEqual(parseBrowserOptions(page+'?showcase=tilemap'), {showcase:{id:'tilemap'}});
+  assert.deepEqual(parseBrowserOptions(page+'?showcase=/showcases/v0.1.0/tilemap.zip'), {showcase:{id:'tilemap',zip:'http://127.0.0.1:8093/showcases/v0.1.0/tilemap.zip'}});
+  for (const candidate of [zip.replace('/showcases/', '/other/'), zip.replace('v0.1.0','latest'), zip+'?x=1', zip+'#part',zip+'\n', '../tilemap','a/b','a'.repeat(65),'/showcases/v0.1.0/tilemap.zip']) {
+    assert.throws(()=>parseBrowserOptions('https://gams.test/app.html?showcase='+encodeURIComponent(candidate)), /pinned/);
+  }
+});
+
+test('showcase cannot target caller-chosen Project or cache paths', () => {
+  for (const setting of ['project-dir=/work','cwd=/work','config=other.json','source=/demo/','modules-dir=/units','plugin-cache-dir=.jco']) {
+    assert.throws(()=>parseBrowserOptions(page+fresh+'&'+setting), /cannot be combined/);
+  }
+  for (const setting of ['project-dir=/','cwd=/.gams-showcases','modules-dir=/a/../.gams-showcases/maps','plugin-cache-dir=/.gams-showcases']) {
+    assert.throws(()=>parseBrowserOptions(page+'?'+setting), /reserved showcase storage/);
+  }
+});
