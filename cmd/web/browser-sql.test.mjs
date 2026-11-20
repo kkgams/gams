@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BrowserComponents} from './browser-components.ts';
-import {BrowserStore} from './browser-storage.ts';
+import {TestMemoryStore} from './test-memory-store.mjs';
 import {testSchema} from './test-schemas.mjs';
 const types='wasi:sql/types@0.2.0-draft', readwrite='wasi:sql/readwrite@0.2.0-draft';
 const component=Uint8Array.from([0,97,115,109,13,0,1,0]);
 const dispose=Symbol.dispose||Symbol.for('dispose');
 async function fixture(){
-  const store=new BrowserStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/sql.wasm',component);
+  const store=new TestMemoryStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/sql.wasm',component);
   const events=[];let calls=0;
   const manager=new BrowserComponents(store,{cwd:'/work',modulesDir:'/modules',pluginCacheDir:'/cache'},{
     schema:()=>testSchema([types,readwrite]),

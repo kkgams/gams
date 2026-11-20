@@ -54,7 +54,7 @@ export function parseBrowserOptions(url: string, environment: BrowserEnvironment
   }
   const read = (key: string) => page.searchParams.get(key) ?? undefined;
   if (read('project-dir') && read('cwd')) throw new Error('Use project-dir or cwd, not both.');
-  if (read('fs') !== undefined && read('fs') !== 'opfs') throw new Error('Only fs=opfs is implemented.');
+  if (read('fs') !== undefined && read('fs') !== 'opfs') throw new Error('Only fs=opfs is supported.');
   const cwd = virtualPath(read('project-dir') ?? read('cwd') ?? '/projects/default');
   const config = read('config') ?? 'gams.json';
   if (config === '.' || config === '..' || /[/\\\0:]/.test(config)) {

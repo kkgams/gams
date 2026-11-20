@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BrowserComponents} from './browser-components.ts';
-import {BrowserStore} from './browser-storage.ts';
+import {TestMemoryStore} from './test-memory-store.mjs';
 import {testSchema} from './test-schemas.mjs';
 const name='gams:image/image@1.0.0';
 const component=Uint8Array.from([0,97,115,109,13,0,1,0]);
 const dispose=Symbol.dispose||Symbol.for('dispose');
 async function fixture({failDrop=false,failReload=false,failStopGeneration=0}={}){
-  const store=new BrowserStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/image.wasm',component);
+  const store=new TestMemoryStore({dir:{}});await store.mkdir('/work');await store.mkdir('/modules');await store.write('/work/image.wasm',component);
   const events=[];let generation=0;
   const manager=new BrowserComponents(store,{cwd:'/work',modulesDir:'/modules',pluginCacheDir:'/cache'},{
     schema:()=>testSchema([name]),

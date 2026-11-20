@@ -2,8 +2,8 @@ import { assertComponent, instantiateComponent, type TranspiledComponent } from 
 import { projectPath } from './files-call.ts';
 import { WitCallSchema } from './wit-call.ts';
 import { BrowserResources } from './browser-resources.ts';
-import { projectFilesystemAdapter } from './browser-filesystem.ts';
-import { normalizePath, type BrowserStore } from './browser-storage.ts';
+import type { Store } from './browser-project.ts';
+import { normalizePath } from './browser-path.ts';
 
 const OPTIONS = { name: 'component', instantiation: { tag: 'async' }, noTypescript: true, noNodejsCompat: true, base64Cutoff: 0, bindgenEnableWasmExnref: true } as const;
 const RUNTIME = 'gams:runtime/runtime@1.0.0';
@@ -15,7 +15,7 @@ const decoder = new TextDecoder('utf-8', { fatal: true });
 type Handle = { handle: string; path: string; imports: string[]; exports: string[] };
 type Instance = { info: Handle; bindings: Record<string, unknown>; schema: WitCallSchema; dispose(): Promise<void> };
 type Artifacts = { output: TranspiledComponent; schema: WitCallSchema };
-type Injection = { transpile?: (bytes: Uint8Array, options: CompileOptions) => Promise<TranspiledComponent> | TranspiledComponent; schema?: (bytes: Uint8Array) => unknown | Promise<unknown>; instantiate?: typeof instantiateComponent };
+type Injection = { filesystem?: (cwd: string, modulesDir: string) => Promise<ReturnType<typeof import('@bytecodealliance/preview2-shim/filesystem').createFilesystem>>; transpile?: (bytes: Uint8Array, options: CompileOptions) => Promise<TranspiledComponent> | TranspiledComponent; schema?: (bytes: Uint8Array) => unknown | Promise<unknown>; instantiate?: typeof instantiateComponent };
 const stripVersion = (name: string) => name.replace(/@[^@/]+$/, '');
 const camel = (name: string) => name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 const absent = (error: unknown) => (error as { code?: string })?.code === 'ENOENT';
@@ -54,9 +54,9 @@ export class BrowserComponents {
   private cwd: string;
   private modulesDir: string;
   private cacheDir: string;
-  private store: BrowserStore;
+  private store: Store;
   private injection: Injection;
-  constructor(store: BrowserStore, options: { cwd: string; modulesDir: string; pluginCacheDir: string }, injection: Injection = {}) {
+  constructor(store: Store, options: { cwd: string; modulesDir: string; pluginCacheDir: string }, injection: Injection = {}) {
     this.store = store; this.injection = injection;
     this.cwd = normalizePath(options.cwd); this.modulesDir = normalizePath(options.modulesDir); this.cacheDir = normalizePath(options.pluginCacheDir);
     if (this.cacheDir === '/' || [this.cwd, this.modulesDir].some(path => path === this.cacheDir || path.startsWith(`${this.cacheDir}/`))) throw new Error('Plugin cache must not contain Project or modules roots');
@@ -186,10 +186,8 @@ export class BrowserComponents {
     }
     const wasi = required.filter(name => !imports.has(name));
     if (!wasi.length) return { imports, dispose: async () => {} };
-    const { createFilesystem, InMemoryFilesystemAdapter } = await import('@bytecodealliance/preview2-shim/filesystem');
-    const root = this.store.entry(this.cwd);
-    // C/WASI libc resolves relative paths through a dot preopen, not initialCwd.
-    const fs = createFilesystem({ adapter: projectFilesystemAdapter(new InMemoryFilesystemAdapter()), preopens: { '.': root, '/project': root, 'gams_modules': this.store.entry(this.modulesDir) } });
+    const fs = this.injection.filesystem ? await this.injection.filesystem(this.cwd, this.modulesDir) : undefined;
+    if (!fs) throw new Error('WASI requires a filesystem factory.');
     try {
       const shim = await import('@bytecodealliance/preview2-shim');
       const cli = shim.cli.createCli({ environment: {}, arguments: [], initialCwd: '/project' });

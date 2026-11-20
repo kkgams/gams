@@ -5,8 +5,8 @@ import {stripTypeScriptTypes} from 'node:module';
 import {runInNewContext} from 'node:vm';
 const source=stripTypeScriptTypes(await readFile(new URL('./browser-worker.ts',import.meta.url),'utf8')).replace(/^import .*?;\n/gm,'');
 function worker({loadError=false,failShutdown=false,invoke=async()=>null}={}) {
-  const messages=[],released=[];let checkpoints=0,closes=0;
-  const store={async mkdir(){},async flush(){if(++checkpoints===2&&failShutdown)throw Error('checkpoint failed');}};
+  const messages=[],released=[];let storageCloses=0,closes=0;
+  const store={async mkdir(){},async close(){if(++storageCloses===1&&failShutdown)throw Error('storage close failed');}};
   class Project {
     async load(){this.onProgress({status:'resolving'});if(loadError)throw Error('invalid config');return {config:{},configFile:'gams.json',modulesDir:'/modules'};}
     async prepareConfig(config){await Promise.resolve();return config;}
@@ -14,11 +14,11 @@ function worker({loadError=false,failShutdown=false,invoke=async()=>null}={}) {
   }
   class Components {async close(){closes++;}async releaseResource(ref){released.push(ref);}async invoke(target,args){return invoke(this,target,args);}}
   const handle=runInNewContext(source+'\ndispatch',{
-    BrowserStore:{open:async()=>store},BrowserProject:Project,BrowserComponents:Components,
+    DirectOpfsStore:{open:async()=>store},BrowserProject:Project,BrowserComponents:Components,
     self:{},postMessage:data=>messages.push(structuredClone(data)),performance,
   });
   let id=0;
-  return {messages,released,checkpoints:()=>checkpoints,closes:()=>closes,
+  return {messages,released,storageCloses:()=>storageCloses,closes:()=>closes,
     async call(command,args={},callbackId){const request=++id;await handle({id:request,command,args,...(callbackId===undefined?{}:{callbackId})});return messages.find(x=>x.id===request&&!x.event);},
     async init(){return this.call('runtime_project',{options:{cwd:'/project',modulesDir:'/modules',pluginCacheDir:'/cache'}});}
   };
@@ -27,19 +27,19 @@ test('worker acknowledges shutdown retry after the original success and denies o
   const w=worker();await w.init();
   assert.deepEqual((await w.call('runtime_shutdown')).result,{closed:true});
   assert.deepEqual((await w.call('runtime_shutdown')).result,{closed:true});
-  assert.equal(w.closes(),1);assert.equal(w.checkpoints(),2);
+  assert.equal(w.closes(),1);assert.equal(w.storageCloses(),1);
   assert.match((await w.call('runtime_invoke')).error,/stopped/);
 });
 test('worker permits checkpointed shutdown after startup failed before components existed',async()=>{
   const w=worker({loadError:true});assert.match((await w.init()).error,/invalid config/);
   assert.deepEqual((await w.call('runtime_shutdown')).result,{closed:true});
-  assert.equal(w.closes(),0);assert.equal(w.checkpoints(),1);
+  assert.equal(w.closes(),0);assert.equal(w.storageCloses(),1);
 });
-test('failed shutdown checkpoint does not mark worker stopped and can be retried',async()=>{
+test('failed storage close does not mark worker stopped and can be retried',async()=>{
   const w=worker({failShutdown:true});await w.init();
-  assert.match((await w.call('runtime_shutdown')).error,/checkpoint failed/);
+  assert.match((await w.call('runtime_shutdown')).error,/storage close failed/);
   assert.deepEqual((await w.call('runtime_shutdown')).result,{closed:true});
-  assert.equal(w.checkpoints(),3);
+  assert.equal(w.storageCloses(),2);
 });
 test('worker awaits async Save preparation and labels progress with the active request',async()=>{
   const w=worker();await w.init();
@@ -47,10 +47,10 @@ test('worker awaits async Save preparation and labels progress with the active r
   await w.call('runtime_resolve_file',{source:'file'});
   assert.deepEqual(w.messages.filter(x=>x.event).map(x=>x.id),[1,3]);
 });
-test('worker routes resource release and checkpoints before acknowledging',async()=>{
+test('worker routes resource release without closing storage',async()=>{
   const w=worker();await w.init();const ref={$resource:'gams:image/image',id:'opaque'};
   assert.equal((await w.call('runtime_release_resource',{resource:ref})).result,null);
-  assert.deepEqual(w.released,[ref]);assert.equal(w.checkpoints(),2);
+  assert.deepEqual(w.released,[ref]);assert.equal(w.storageCloses(),0);
 });
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('View reply and ordered nested invocations bypass the suspended parent queue',async()=>{
@@ -81,7 +81,7 @@ test('callback restrictions and invalid replies do not consume a pending request
   assert.match((await outer).error,/removed View/);
   assert.deepEqual((await w.call('runtime_shutdown')).result,{closed:true});
 });
-test('nested View callbacks use separate lanes and resource release checkpoints',async()=>{
+test('nested View callbacks use separate lanes and resource releases',async()=>{
   const w=worker({invoke:(c,target)=>c.callView(target,'[]')});await w.init();
   const outer=w.call('runtime_invoke',{target:'view.outer',args:[]});await tick();
   const first=w.messages.find(x=>x.event==='call-view').payload.id;

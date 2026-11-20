@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BrowserComponents } from './browser-components.ts';
-import { BrowserStore } from './browser-storage.ts';
+import { TestMemoryStore } from './test-memory-store.mjs';
 import { unfamiliarSchema } from './test-schemas.mjs';
 
 // Actual plugin.js componentWitJson graph; runtime import version is not
@@ -13,7 +13,7 @@ const runtimeName = 'gams:runtime/runtime';
 const counterName = 'acme:metrics/counter@2.3.0';
 const options = { cwd:'/work', modulesDir:'/modules', pluginCacheDir:'/cache' };
 async function fixture(graph = jsSchema, next = n=>n+1n) {
-  const store = new BrowserStore({ dir:{} });
+  const store = new TestMemoryStore({ dir:{} });
   for (const path of ['/work','/modules']) await store.mkdir(path);
   for (let id=0; id<2; id++) await store.write(`/work/${id}.wasm`, Uint8Array.of(0,97,115,109,13,0,1,0,id));
   let provider, generation;

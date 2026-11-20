@@ -1,9 +1,10 @@
-import { BrowserStore } from './browser-storage';
+import { DirectOpfsStore } from './opfs-store.ts';
+import { directFilesystemAdapter } from './opfs-filesystem.ts';
 import { BrowserProject } from './browser-project';
 import { BrowserComponents } from './browser-components';
 import type { BrowserOptions } from './browser-options';
 
-let store: BrowserStore | undefined;
+let store: DirectOpfsStore | undefined;
 let project: BrowserProject | undefined;
 let components: BrowserComponents | undefined;
 let stopped = false;
@@ -71,14 +72,17 @@ async function handle({ id, command, args }: Request) {
     } else if (command === 'runtime_project') {
       if (project) throw new Error('Browser Host Project is already initialized.');
       const options = args.options as BrowserOptions;
-      store = await BrowserStore.open();
+      const direct = store = await DirectOpfsStore.open();
       await store.mkdir(options.cwd);
       await store.mkdir(options.modulesDir);
       await store.mkdir(options.pluginCacheDir);
       project = new BrowserProject(store, options);
       project.onProgress = snapshot => postMessage({ event:'resolution-progress', id:activeId, snapshot });
       result = await project.load();
-      components = new BrowserComponents(store, options);
+      components = new BrowserComponents(store, options, {filesystem: async (cwd, modules) => {
+        const {createFilesystem} = await import('@bytecodealliance/preview2-shim/filesystem');
+        return createFilesystem({adapter:directFilesystemAdapter(direct), preopens:{'.':cwd, '/project':cwd, 'gams_modules':modules}});
+      }});
       components.callView = callView;
     } else {
       if (!project || !store || !components) throw new Error('Browser Host Project is not ready.');
@@ -91,15 +95,12 @@ async function handle({ id, command, args }: Request) {
         case 'runtime_download': result = Array.from(await project.download(args.url, progress => postMessage({event:'download-progress', id, progress}))); break;
         case 'runtime_prepare_config': result = await project.prepareConfig(args.config); break;
         case 'runtime_resolution_progress': result = project.progress; break;
-        case 'runtime_diagnostics': result = await components.diagnostics(); break;
+        case 'runtime_diagnostics': result = {...await components.diagnostics(), directOpfs:{...store.metrics}}; break;
         case 'runtime_clear_compiled_component_cache': result = await components.clearCache(); break;
         default: throw new Error(`Unsupported browser Host command: ${command}`);
       }
     }
-    // Host writes and WASI calls mutate one shared tree. Never acknowledge a
-    // successful operation before the injected storage has checkpointed it.
-    if (store) await store.flush();
-    if (command === 'runtime_shutdown') stopped = true;
+    if (command === 'runtime_shutdown') { await store?.close(); stopped = true; }
     postMessage({ id, result, durationMs:performance.now()-started });
   } catch (error) {
     postMessage({ id, error: error instanceof Error ? error.message : String(error) });

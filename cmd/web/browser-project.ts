@@ -1,4 +1,4 @@
-import { normalizePath } from './browser-storage.ts';
+import { normalizePath } from './browser-path.ts';
 import { validateCorsProxy } from './browser-options.ts';
 
 export interface Store {
@@ -9,6 +9,7 @@ export interface Store {
   list(path: string): Promise<string[]>;
   remove(path: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
+  publishResource?(from: string, to: string): Promise<void>;
   flush(): Promise<void>;
 }
 export interface ProjectOptions { cwd: string; config: string; modulesDir: string; pluginCacheDir: string; source?: string; corsProxy?: string }
@@ -295,7 +296,10 @@ export class BrowserProject {
       }
       await this.store.flush();
       await this.store.write(stage + '/' + MARKER, encoder.encode(JSON.stringify({ url, path })));
-      await this.store.flush(); await this.store.rename(stage, root); stage = undefined; await this.store.flush();
+      await this.store.flush();
+      if (this.store.publishResource) await this.store.publishResource(stage, root);
+      else await this.store.rename(stage, root);
+      stage = undefined; await this.store.flush();
       event.phase = 'ready'; this.snapshot.completed++; this.emit(); return normalizePath(path, root);
     } catch (error) { event.phase = 'failed'; event.error = String(error); this.emit(); throw error;
     } finally { if (stage) { await this.store.remove(stage); await this.store.flush(); } }

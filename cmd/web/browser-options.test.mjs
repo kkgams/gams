@@ -11,7 +11,7 @@ test('browser startup defaults and Native-compatible URL names', () => {
   assert.equal(parseBrowserOptions(page+'?cwd=/work').cwd, '/work');
 });
 test('malformed, duplicate and unimplemented settings fail explicitly', () => {
-  for (const query of ['config=','config=a/b.json','config=..','cwd=/a&project-dir=/b','cwd=/a&cwd=/b','modules-dir=relative','plugin-cache-dir=/','modules-dir=/work&cwd=/work','plugin-cache-dir=/same&modules-dir=/same','source=file:///x','source=https://u:p@example.com/x','source=http://example.com/x','fs=webdav','runtime=native']) {
+  for (const query of ['config=','config=a/b.json','config=..','cwd=/a&project-dir=/b','cwd=/a&cwd=/b','modules-dir=relative','plugin-cache-dir=/','modules-dir=/work&cwd=/work','plugin-cache-dir=/same&modules-dir=/same','source=file:///x','source=https://u:p@example.com/x','source=http://example.com/x','fs=webdav','fs=opfs-direct','runtime=native']) {
     assert.throws(()=>parseBrowserOptions(page+'?'+query), undefined, query);
   }
 });

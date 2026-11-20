@@ -58,6 +58,7 @@ def prepare_compiler(site):
         f"--alias:@bytecodealliance/jco-transpile/component={deps['jco-transpile']}/dist/component.js",
         f"--alias:@bytecodealliance/jco-transpile/wasm-tools={deps['jco-transpile']}/dist/wasm-tools.js",
         f'--alias:@bytecodealliance/preview2-shim/instantiation={shim}/dist/common/instantiation.js',
+        f'--alias:@bytecodealliance/preview2-shim/browser-io={shim}/dist/browser/io.js',
         f'--alias:@bytecodealliance/preview2-shim/filesystem={shim}/dist/browser/filesystem.js',
         f'--alias:@bytecodealliance/preview2-shim={shim}/dist/browser/index.js',
     ]
@@ -90,6 +91,7 @@ def build(site=SITE):
     aliases = prepare_compiler(site)
     for source, output, extra in (
         ('browser-worker.ts', 'vendor/browser-worker.js', ['--external:node:*', '--external:/util/*', *aliases]),
+        ('opfs-worker.ts', 'vendor/opfs-worker.js', []),
         ('component-schema.ts', 'vendor/component-schema.js', ['--external:node:*', *aliases]),
         ('browser-transport.ts', 'browser-transport.js', ['--external:/core/*']),
         ('browser-launch.ts', 'browser-launch.js', ['--external:/app.js', '--external:/browser-transport.js', '--external:/core/*']),

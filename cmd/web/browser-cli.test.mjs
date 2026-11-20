@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import test from 'node:test';
 import { BrowserComponents } from './browser-components.ts';
-import { BrowserStore } from './browser-storage.ts';
+import { TestMemoryStore } from './test-memory-store.mjs';
 import { unfamiliarSchema } from './test-schemas.mjs';
 
 const bytes = Uint8Array.from([0,97,115,109,13,0,1,0]);
@@ -31,8 +31,7 @@ test('components receive isolated CLI environment/exit bindings; unrelated impor
     resolve(specifier, context, nextResolve) {
       let source;
       if (specifier === '@bytecodealliance/preview2-shim/filesystem') {
-        source = 'export class InMemoryFilesystemAdapter {};' +
-          'export const createFilesystem = (...args) => globalThis.__browserCliTest.createFilesystem(...args);';
+        source = 'export const createFilesystem = (...args) => globalThis.__browserCliTest.createFilesystem(...args);';
       } else if (specifier === '@bytecodealliance/preview2-shim') {
         source = 'export const cli = { createCli: config => globalThis.__browserCliTest.createCli(config) };' +
           'export const io = {}, clocks = {}, random = {};';
@@ -41,9 +40,10 @@ test('components receive isolated CLI environment/exit bindings; unrelated impor
     },
   });
   async function manager(imports, instantiate) {
-    const store = new BrowserStore({ dir: {} });
+    const store = new TestMemoryStore({ dir: {} });
     await store.mkdir('/project'); await store.mkdir('/modules');
     return new BrowserComponents(store, { cwd: '/project', modulesDir: '/modules', pluginCacheDir: '/cache' }, {
+      filesystem: async (cwd, modules) => (await import('@bytecodealliance/preview2-shim/filesystem')).createFilesystem({preopens:{'.':cwd, '/project':cwd, gams_modules:modules}}),
       schema: () => unfamiliarSchema([]),
       transpile: async () => ({ imports, exports: [], files: [['component.js', encode('test')]] }),
       instantiate,

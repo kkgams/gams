@@ -25,7 +25,7 @@ RUNTIME_DATA = {"fonts/game-icons.json"}
 LEGAL_NAMES = {"LICENSE", "PROVENANCE.md", "GAME-ICONS-PROVENANCE.md"}
 GENERATED = (
     "browser-launch.js", "browser-transport.js", "browser-environment.json",
-    "core/runtime/native.js", "core/menu/native.js", "vendor/browser-worker.js",
+    "core/runtime/native.js", "core/menu/native.js", "vendor/browser-worker.js", "vendor/opfs-worker.js",
     "vendor/js-component-bindgen-component.core.wasm",
     "vendor/js-component-bindgen-component.core2.wasm",
     "vendor/js-component-bindgen-component.core3.wasm",
@@ -34,7 +34,7 @@ GENERATED = (
     "vendor/wasm-tools.core2.wasm", "vendor/wasm-tools.core3.wasm",
     "vendor/wasm-tools.core4.wasm",
 )
-HEADERS = "/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n" + ''.join(
+HEADERS = "/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n  Cross-Origin-Opener-Policy: same-origin\n  Cross-Origin-Embedder-Policy: require-corp\n" + ''.join(
     f"\n/{name}\n  Content-Type: application/wasm\n"
     for name in GENERATED if name.endswith('.wasm')
 )

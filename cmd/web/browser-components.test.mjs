@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BrowserComponents } from './browser-components.ts';
-import { BrowserStore } from './browser-storage.ts';
+import { TestMemoryStore } from './test-memory-store.mjs';
 import { testSchema, unfamiliarSchema } from './test-schemas.mjs';
 const bytes = Uint8Array.from([0,97,115,109,13,0,1,0]);
 const encode = text => new TextEncoder().encode(text);
@@ -9,7 +9,7 @@ const options = { cwd: '/work', modulesDir: '/external/modules', pluginCacheDir:
 const fsName = 'gams:fs/fs@1.2.0';
 const layoutName = 'gams:layout/layout@1.0.0';
 async function fixture(names = [fsName], bindings = {}, schema = () => testSchema(names)) {
-  const store = new BrowserStore({dir:{}});
+  const store = new TestMemoryStore({dir:{}});
   await store.mkdir('/work'); await store.mkdir('/external/modules'); await store.write('/work/plugin.wasm', bytes);
   let transpilations = 0, instantiations = 0, stops = 0;
   const injection = {

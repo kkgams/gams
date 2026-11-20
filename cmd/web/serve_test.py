@@ -37,6 +37,8 @@ class StaticServingTests(unittest.TestCase):
             self.assertEqual(response.status, 200)
             self.assertEqual(response.read(), b'export const current = true;')
             self.assertEqual(response.headers['Cache-Control'], 'no-store')
+            self.assertEqual(response.headers['Cross-Origin-Opener-Policy'], 'same-origin')
+            self.assertEqual(response.headers['Cross-Origin-Embedder-Policy'], 'require-corp')
 
     def test_head_and_parallel_accept_queue(self):
         with urlopen(Request(self.url, method='HEAD')) as response:

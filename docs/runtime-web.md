@@ -49,7 +49,7 @@ or old Lua API. Traps and other unclassified guest exceptions abort linked calls
 retain the Native bridge's declared string-error boundary. A trapped component requires explicit
 reload.
 
-Use one session per origin: different Project tabs share the same OPFS snapshot.
+Open one GAMS session per origin. A second tab cannot use the same browser storage until the first session closes.
 UI callbacks temporarily permit nested data operations in the same worker, not
 isolated concurrent callers. Plugin replacement and cache clearing are denied
 inside that window. Graceful close waits for a pending callback to finish;
