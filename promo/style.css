@@ -855,16 +855,3 @@ blockquote {
         transition: none;
     }
 }
-
-.coming-soon {
-    min-height: 100dvh;
-    display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: 24px;
-    padding: 112px max(24px, calc((100vw - 960px) / 2)) 64px;
-}
-.coming-soon h1, .coming-soon p { margin: 0; }
-.coming-soon > p:not(.eyebrow) { max-width: 48ch; color: var(--muted); line-height: 1.7; }
-.coming-soon .closing-links { gap: 32px; }
-.coming-soon .text-link { margin-top: 0; }

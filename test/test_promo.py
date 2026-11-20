@@ -85,42 +85,45 @@ class PromoContentTests(unittest.TestCase):
         self.assertEqual(len(paths), 1)
         self.assertEqual(logo.get("fill"), "currentColor")
         self.assertEqual(logo.get("viewBox"), "16 16 179.066 168")
-        for filename in ["index.html", "app.html"]:
-            with self.subTest(page=filename):
-                html = (ROOT / "promo" / filename).read_text()
-                match = re.search(r'<svg class="brand-mark".*?</svg>', html)
-                self.assertIsNotNone(match)
-                inline = ET.fromstring(match.group(0))
-                self.assertEqual(inline.get("fill"), "currentColor")
-                self.assertEqual(inline.get("viewBox"), logo.get("viewBox"))
-                self.assertEqual(inline.get("aria-hidden"), "true")
-                self.assertEqual(inline.find("svg:path", ns).get("d"), paths[0].get("d"))
+        html = (ROOT / "promo/index.html").read_text()
+        match = re.search(r'<svg class="brand-mark".*?</svg>', html)
+        self.assertIsNotNone(match)
+        inline = ET.fromstring(match.group(0))
+        self.assertEqual(inline.get("fill"), "currentColor")
+        self.assertEqual(inline.get("viewBox"), logo.get("viewBox"))
+        self.assertEqual(inline.get("aria-hidden"), "true")
+        self.assertEqual(inline.find("svg:path", ns).get("d"), paths[0].get("d"))
+
+    def test_launch_links_open_the_web_host_directly(self):
+        html = (ROOT / "promo/index.html").read_text()
+        self.assertIn('<a class="launch-app" href="https://gams-app.pages.dev/">Launch App</a>', html)
+        self.assertEqual(html.count('href="https://gams-app.pages.dev/">USE ON WEB</a>'), 2)
 
     def test_relative_assets_and_documentation_routes_exist(self):
-        for filename in ["index.html", "app.html"]:
-            page = PageLinks()
-            page.feed((ROOT / "promo" / filename).read_text())
-            self.assertEqual(len(page.ids), len(set(page.ids)))
-            for link in page.links:
-                with self.subTest(page=filename, link=link):
-                    url = urlsplit(link)
-                    if url.scheme:
-                        self.assertEqual(url.scheme, "https")
-                        continue
-                    self.assertFalse(url.path.startswith("/"), "Keep Pages subpaths portable")
-                    if url.path == "docs/":
-                        if url.fragment:
-                            route = url.fragment.removeprefix("/").split("?")[0]
-                            self.assertTrue((ROOT / "docs" / f"{route}.md").is_file())
-                        continue
-                    target = ROOT / "promo" / (url.path or filename)
-                    if target.is_dir():
-                        target /= "index.html"
-                    self.assertTrue(target.is_file())
+        filename = "index.html"
+        page = PageLinks()
+        page.feed((ROOT / "promo" / filename).read_text())
+        self.assertEqual(len(page.ids), len(set(page.ids)))
+        for link in page.links:
+            with self.subTest(page=filename, link=link):
+                url = urlsplit(link)
+                if url.scheme:
+                    self.assertEqual(url.scheme, "https")
+                    continue
+                self.assertFalse(url.path.startswith("/"), "Keep Pages subpaths portable")
+                if url.path == "docs/":
                     if url.fragment:
-                        destination = PageLinks()
-                        destination.feed(target.read_text())
-                        self.assertIn(url.fragment, destination.ids)
+                        route = url.fragment.removeprefix("/").split("?")[0]
+                        self.assertTrue((ROOT / "docs" / f"{route}.md").is_file())
+                    continue
+                target = ROOT / "promo" / (url.path or filename)
+                if target.is_dir():
+                    target /= "index.html"
+                self.assertTrue(target.is_file())
+                if url.fragment:
+                    destination = PageLinks()
+                    destination.feed(target.read_text())
+                    self.assertIn(url.fragment, destination.ids)
 
 
 class PromoPreviewTests(unittest.TestCase):
