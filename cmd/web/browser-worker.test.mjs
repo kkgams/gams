@@ -4,11 +4,12 @@ import {readFile} from 'node:fs/promises';
 import {stripTypeScriptTypes} from 'node:module';
 import {runInNewContext} from 'node:vm';
 const source=stripTypeScriptTypes(await readFile(new URL('./browser-worker.ts',import.meta.url),'utf8')).replace(/^import .*?;\n/gm,'');
-function worker({loadError=false,failShutdown=false,invoke=async()=>null}={}) {
+function worker({loadError=false,failShutdown=false,invoke=async()=>null,download=async()=>new Uint8Array()}={}) {
   const messages=[],released=[];let storageCloses=0,closes=0;
   const store={async mkdir(){},async close(){if(++storageCloses===1&&failShutdown)throw Error('storage close failed');}};
   class Project {
     async load(){this.onProgress({status:'resolving'});if(loadError)throw Error('invalid config');return {config:{},configFile:'gams.json',modulesDir:'/modules'};}
+    async download(url,progress){return download(url,progress);}
     async prepareConfig(config){await Promise.resolve();return config;}
     async resolveFile(){this.onProgress({status:'ready'});return 'file';}
   }
@@ -101,4 +102,79 @@ test('registered UI callbacks can resolve/download/prepare data; lifecycle mutat
   for(const command of ['runtime_add_plugins','runtime_load_from_bytes','runtime_clear_compiled_component_cache'])
     assert.match((await w.call(command,{},id)).error,/Denied command/);
   await w.call('runtime_call_view_response',{id,ok:'true',err:null});assert.equal((await outer).result,'true');
+});
+
+
+test('pending byte download does not queue plugin calls',async()=>{
+  let finish;
+  const fetching = new Promise(resolve => { finish=resolve; });
+  const w=worker({download:()=>fetching,invoke:async()=>42});await w.init();
+  const download=w.call('runtime_download',{url:'fixture'});
+  let invoked=false;
+  const plugin=w.call('runtime_invoke',{target:'work',args:[]}).then(reply=>{invoked=true;return reply;});
+  await tick();
+  const ranDuringFetch=invoked;
+  finish(new Uint8Array([0,255]));
+  assert.deepEqual((await download).result,[0,255]);
+  assert.equal((await plugin).result,42);
+  assert.equal(ranDuringFetch,true);
+});
+
+test('interleaved downloads retain their progress IDs and failure does not delay Project work',async()=>{
+  const pending=new Map();
+  const w=worker({download:(url,progress)=>new Promise((resolve,reject)=>{
+    pending.set(url,{resolve,reject,progress});
+  })});await w.init();
+  const first=w.call('runtime_download',{url:'first'});
+  const second=w.call('runtime_download',{url:'second'});
+  await tick();
+  pending.get('second').progress({downloaded:2,total:2});
+  const resolved=await w.call('runtime_resolve_file',{source:'file'});
+  pending.get('first').progress({downloaded:1,total:2});
+  pending.get('first').reject(new Error('fetch failed'));
+  pending.get('second').resolve(new Uint8Array([1,2]));
+  const failed=await first, done=await second;
+  assert.match(failed.error,/fetch failed/);
+  assert.deepEqual(done.result,[1,2]);
+  assert.deepEqual(w.messages.filter(x=>x.event).slice(1).map(x=>[x.event,x.id]),[
+    ['download-progress',done.id],['resolution-progress',resolved.id],['download-progress',failed.id],
+  ]);
+  assert.equal(w.storageCloses(),0);
+});
+
+test('shutdown drains accepted byte downloads and refuses new root downloads',async()=>{
+  let finish;
+  const w=worker({download:()=>new Promise(resolve=>{finish=resolve;})});await w.init();
+  const fetching=w.call('runtime_download',{url:'started'});
+  const closing=w.call('runtime_shutdown');
+  await tick();
+  assert.equal(w.closes(),0);
+  assert.match((await w.call('runtime_download',{url:'late'})).error,/closing/);
+  finish(new Uint8Array([17]));
+  assert.deepEqual((await fetching).result,[17]);
+  assert.deepEqual((await closing).result,{closed:true});
+  assert.match((await w.call('runtime_download',{url:'stopped'})).error,/stopped/);
+  assert.equal(w.storageCloses(),1);
+});
+
+test('callback downloads bypass nested plugin work but drain before resuming Lua during close',async()=>{
+  let finishDownload;
+  const w=worker({invoke:(c)=>c.callView('view.read','[]'),download:()=>new Promise(resolve=>{finishDownload=resolve;})});
+  await w.init();
+  const outer=w.call('runtime_invoke',{target:'lua',args:[]});await tick();
+  const {id}=w.messages.find(x=>x.event==='call-view').payload;
+  const closing=w.call('runtime_shutdown');
+  assert.match((await w.call('runtime_download',{url:'invalid'},'stale')).error,/unknown.*callback/i);
+  const fetching=w.call('runtime_download',{url:'nested'},id);
+  assert.deepEqual((await w.call('runtime_prepare_config',{config:{ready:true}},id)).result,{ready:true});
+  const replying=w.call('runtime_call_view_response',{id,ok:'true',err:null});
+  await tick();
+  assert.equal(w.closes(),0);
+  assert.equal(w.messages.some(x=>x.result==='true'),false);
+  finishDownload(new Uint8Array([42]));
+  assert.deepEqual((await fetching).result,[42]);
+  assert.equal((await replying).result,null);
+  assert.equal((await outer).result,'true');
+  assert.deepEqual((await closing).result,{closed:true});
+  assert.equal(w.storageCloses(),1);
 });
