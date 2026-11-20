@@ -413,6 +413,8 @@ test('relay JSON resolution, relative files, cache markers, progress and Save re
 test('default Project installs published Units only into gams_modules and reopens offline', async () => {
   const originalBytes = await readFile(new URL('./browser-default/gams.json', import.meta.url));
   const original = JSON.parse(originalBytes);
+  assert.deepEqual(original.ui.theme, {$ref:'#/ui/themes/the98'});
+  assert.deepEqual(Object.keys(original.ui.themes).sort(), ['orange','the98']);
   const entries = new Map();
   const plugins = JSON.parse(await readFile(new URL('./plugins.json', import.meta.url)));
   const units = JSON.parse(await readFile(new URL('./view-assets.json', import.meta.url)));
@@ -422,7 +424,7 @@ test('default Project installs published Units only into gams_modules and reopen
     ...units.map(pin => `https://github.com/${pin.repository}/releases/download/${pin.tag}/${pin.archive}`),
   ]);
   const resources = original.plugins.map(plugin => plugin.$file);
-  for (const group of ['services','views']) for (const unit of Object.values(original.ui[group])) {
+  for (const group of ['services','views','themes']) for (const unit of Object.values(original.ui[group])) {
     const {url,entry} = unit.url.$file;
     resources.push(url);
     if (!entries.has(url)) entries.set(url,new Set(['LICENSE']));
@@ -444,7 +446,10 @@ test('default Project installs published Units only into gams_modules and reopen
   const {config} = await project.load();
   assert.deepEqual((await store.list('/project')).sort(),['gams.dev.json','gams_modules']);
   for (const path of config.plugins) assert.match(path,/^gams_modules\//);
-  for (const group of ['services','views']) for (const unit of Object.values(config.ui[group])) assert.match(unit.url,/^gams_modules\//);
+  for (const group of ['services','views','themes']) for (const unit of Object.values(config.ui[group])) assert.match(unit.url,/^gams_modules\//);
+  assert.deepEqual(config.ui.theme,config.ui.themes.the98);
+  assert.match(config.ui.themes.the98.url,/\/themes\/the98\.css$/);
+  assert.match(config.ui.themes.orange.url,/\/themes\/orange\.css$/);
   assert.equal(calls.length,1+new Set(resources).size);
   assert.deepEqual(await project.prepareConfig(config),original);
   assert.equal(text(await store.read('/project/gams.dev.json')),text(originalBytes));

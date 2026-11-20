@@ -9,7 +9,25 @@
   ],
   "ui": {
     "keys": [],
-    "theme": null,
+    "theme": { "$ref": "#/ui/themes/the98" },
+    "themes": {
+      "the98": {
+        "url": {
+          "$file": {
+            "url": "https://github.com/kkgams/theme.gams/releases/download/v1.0.2/theme.gams.zip",
+            "entry": "themes/the98.css"
+          }
+        }
+      },
+      "orange": {
+        "url": {
+          "$file": {
+            "url": "https://github.com/kkgams/theme.gams/releases/download/v1.0.2/theme.gams.zip",
+            "entry": "themes/orange.css"
+          }
+        }
+      }
+    },
     "services": {
       "ui-context": {
         "url": {
